@@ -31,7 +31,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var cfgFileFlag  string
+var cfgFileFlag string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -50,14 +50,14 @@ to quickly create a Cobra application.`,
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {// {{{
+func Execute() { // {{{
 	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}
 }// }}}
 
-func init() {// {{{
+func init() { // {{{
 	cobra.OnInitialize(initConfig)
 
 	// Here you will define your flags and configuration settings.
