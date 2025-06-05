@@ -14,6 +14,8 @@ import (
 
 var cfgFileFlag string
 
+var cfgFilePath string
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "tms",
@@ -45,8 +47,13 @@ func init() { // {{{
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFileFlag, "config", "", "config file (default is $HOME/.tms.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFileFlag, "config", "", "config file (default $XDG_CONFIG_HOME/tms/config.yaml)")
 
+<<<<<<< HEAD
+=======
+	rootCmd.Flags().IntP("depth", "d", 1, "Maximum traversal depth")
+
+>>>>>>> 27f7c23 (Feat: add init subcommand)
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
@@ -61,7 +68,8 @@ func initConfig() {
 
 	if cfgFileFlag != "" {
 		// Use config file from the flag.
-		viper.SetConfigFile(cfgFileFlag)
+		cfgFilePath = cfgFileFlag
+		viper.SetConfigFile(cfgFilePath)
 	} else {
 		if _, err := os.Stat(appConfigDir); os.IsNotExist(err) {
 			cobra.CheckErr(os.MkdirAll(appConfigDir, 0o755))
@@ -71,6 +79,7 @@ func initConfig() {
 		viper.AddConfigPath(".")
 		viper.SetConfigType("yaml")
 		viper.SetConfigName("config")
+		cfgFilePath = filepath.Join(cfgDir, "config.yaml")
 	}
 
 	// viper.SetDefault("default_workspace", "inbox")
@@ -78,19 +87,10 @@ func initConfig() {
 
 	viper.AutomaticEnv() // read in environment variables that match
 
-	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			if cfgFileFlag == "" {
-				configFilePath := filepath.Join(appConfigDir, "config.yaml")
-
-				fmt.Println("Config file not found, creating default config file...")
-				cobra.CheckErr(viper.SafeWriteConfigAs(configFilePath))
-				fmt.Printf("Created default config file at: %s\n", configFilePath)
-
-				cobra.CheckErr(viper.ReadInConfig())
-			}
-		} else {
-			cobra.CheckErr(err)
-		}
+	// If a config file is found, read it in.
+	if err := viper.ReadInConfig(); err == nil {
+		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+	} else {
+		fmt.Fprintln(os.Stderr, "Config file doesn't exist or is corrupted.\nUse `tms init <config> [opts]` to create one!")
 	}
 }
