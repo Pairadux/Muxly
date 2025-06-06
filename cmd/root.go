@@ -17,9 +17,12 @@ import (
 	"github.com/spf13/viper"
 )
 
-var cfgFileFlag string
-
-var cfgFilePath string
+var (
+	cfgFileFlag string
+	cfgFilePath string
+	scan_dirs   []string
+	entry_dirs  []string
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
