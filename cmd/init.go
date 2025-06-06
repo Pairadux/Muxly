@@ -24,10 +24,10 @@ The flags provided are used to overwrite those values in the config file.
 Any flags that are omitted will be assigned the default values shown.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if scan_dirs, _ := cmd.Flags().GetStringArray("scan_dirs"); len(scan_dirs) > 0 {
-			viper.SetDefault("scan_dirs", scan_dirs)
+			viper.Set("scan_dirs", scan_dirs)
 		}
 		if entry_dirs, _ := cmd.Flags().GetStringArray("entry_dirs"); len(entry_dirs) > 0 {
-			viper.SetDefault("entry_dirs", entry_dirs)
+			viper.Set("entry_dirs", entry_dirs)
 		}
 		viper.SetDefault("example_string", "test")
 		viper.SetDefault("example_int", 1)
