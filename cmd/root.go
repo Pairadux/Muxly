@@ -33,6 +33,10 @@ var rootCmd = &cobra.Command{
 		// 	fmt.Println("failed")
 		// }
 
+		if viper.ConfigFileUsed() == "" {
+			fmt.Fprintln(os.Stderr, "No config file found, please generate with `tms init [OPTIONS]\nSee `tms init --help` for additional details.")
+		}
+
 		// TODO: replace these hardcoded entries with entries supplied by the entries in the config file and the utility.ResolvePath function
 		// {{{
 		homeDir, err := os.UserHomeDir()
