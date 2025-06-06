@@ -19,13 +19,10 @@ var cfgFilePath string
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "tms",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Short: "A tool for quickly opening tmux sessions",
+	Long: `A tool for quickly opening tmux sessions
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Based on ThePrimeagen's Tmux-Sessionator script.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
@@ -58,23 +55,11 @@ func init() { // {{{
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	homeDir, err := os.UserHomeDir()
-	cobra.CheckErr(err)
-
-	appConfigDir := filepath.Join(homeDir, ".config", "tms")
-
 	if cfgFileFlag != "" {
 		// Use config file from the flag.
 		cfgFilePath = cfgFileFlag
 		viper.SetConfigFile(cfgFilePath)
 	} else {
-<<<<<<< HEAD
-		if _, err := os.Stat(appConfigDir); os.IsNotExist(err) {
-			cobra.CheckErr(os.MkdirAll(appConfigDir, 0o755))
-		}
-
-		viper.AddConfigPath(appConfigDir)
-=======
 		var configDir string 
 		xdg_config_home := os.Getenv("XDG_CONFIG_HOME")
 		if xdg_config_home != "" {
@@ -86,7 +71,6 @@ func initConfig() {
 		}
 		cfgDir := filepath.Join(configDir, "tms")
 		viper.AddConfigPath(cfgDir)
->>>>>>> 2635c48 (Fix: respect XDG_CONFIG_HOME even on Mac)
 		viper.AddConfigPath(".")
 		viper.SetConfigType("yaml")
 		viper.SetConfigName("config")
