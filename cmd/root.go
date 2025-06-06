@@ -25,9 +25,7 @@ var cfgFilePath string
 var rootCmd = &cobra.Command{
 	Use:   "tms",
 	Short: "A tool for quickly opening tmux sessions",
-	Long: `A tool for quickly opening tmux sessions
-
-Based on ThePrimeagen's Tmux-Sessionator script.`,
+	Long:  "A tool for quickly opening tmux sessions.\n\nBased on ThePrimeagen's Tmux-Sessionator script.",
 	Run: func(cmd *cobra.Command, args []string) {
 		// if viper.GetString("example_default") == "test" {
 		// 	fmt.Println("passed")
