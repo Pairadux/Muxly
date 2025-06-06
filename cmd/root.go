@@ -68,11 +68,25 @@ func initConfig() {
 		cfgFilePath = cfgFileFlag
 		viper.SetConfigFile(cfgFilePath)
 	} else {
+<<<<<<< HEAD
 		if _, err := os.Stat(appConfigDir); os.IsNotExist(err) {
 			cobra.CheckErr(os.MkdirAll(appConfigDir, 0o755))
 		}
 
 		viper.AddConfigPath(appConfigDir)
+=======
+		var configDir string 
+		xdg_config_home := os.Getenv("XDG_CONFIG_HOME")
+		if xdg_config_home != "" {
+			configDir = xdg_config_home
+		} else {
+			var err error
+			configDir, err = os.UserConfigDir()
+			cobra.CheckErr(err)
+		}
+		cfgDir := filepath.Join(configDir, "tms")
+		viper.AddConfigPath(cfgDir)
+>>>>>>> 2635c48 (Fix: respect XDG_CONFIG_HOME even on Mac)
 		viper.AddConfigPath(".")
 		viper.SetConfigType("yaml")
 		viper.SetConfigName("config")
