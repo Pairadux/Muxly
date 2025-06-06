@@ -6,7 +6,12 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"slices"
+	"strings"
+
+	"github.com/Pairadux/tms/internal/utility"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -23,9 +28,52 @@ var rootCmd = &cobra.Command{
 	Long: `A tool for quickly opening tmux sessions
 
 Based on ThePrimeagen's Tmux-Sessionator script.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+	Run: func(cmd *cobra.Command, args []string) {
+		// if viper.GetString("example_default") == "test" {
+		// 	fmt.Println("passed")
+		// } else {
+		// 	fmt.Println("failed")
+		// }
+
+		// TODO: replace these hardcoded entries with entries supplied by the entries in the config file and the utility.ResolvePath function
+		// {{{
+		homeDir, err := os.UserHomeDir()
+		cobra.CheckErr(err)
+		devDir := filepath.Join(homeDir, "Dev")
+		dotfilesDir := filepath.Join(homeDir, ".dotfiles")
+
+		utility.ResolvePath()
+
+		devEntries, err := os.ReadDir(devDir)
+		cobra.CheckErr(err)
+		dotfilesEntries, err := os.ReadDir(dotfilesDir)
+		cobra.CheckErr(err)
+		// }}}
+
+		entries := slices.Concat(devEntries, dotfilesEntries)
+		cobra.CheckErr(err)
+
+		// TODO: make a function that accepts several directory types and expands them
+		dirs := []string{"Documents"}
+		for _, e := range entries {
+			if e.IsDir() {
+				dirs = append(dirs, e.Name())
+			}
+		}
+
+		fzf := exec.Command("fzf")
+		fzf.Stdin = strings.NewReader(strings.Join(dirs, "\n"))
+		choice, err := fzf.Output()
+		cobra.CheckErr(err)
+
+		command := exec.Command("echo", string(choice))
+		command.Stdout = os.Stdout
+		command.Run()
+
+		depth, err := cmd.Flags().GetInt("depth")
+		cobra.CheckErr(err)
+		fmt.Printf("Depth: %d\n", depth)
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -35,7 +83,7 @@ func Execute() { // {{{
 	if err != nil {
 		os.Exit(1)
 	}
-}// }}}
+} // }}}
 
 func init() { // {{{
 	cobra.OnInitialize(initConfig)
@@ -51,16 +99,16 @@ func init() { // {{{
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-}// }}}
+} // }}}
 
 // initConfig reads in config file and ENV variables if set.
-func initConfig() {
+func initConfig() { // {{{
 	if cfgFileFlag != "" {
 		// Use config file from the flag.
 		cfgFilePath = cfgFileFlag
 		viper.SetConfigFile(cfgFilePath)
 	} else {
-		var configDir string 
+		var configDir string
 		xdg_config_home := os.Getenv("XDG_CONFIG_HOME")
 		if xdg_config_home != "" {
 			configDir = xdg_config_home
@@ -88,4 +136,4 @@ func initConfig() {
 	} else {
 		fmt.Fprintln(os.Stderr, "Config file doesn't exist or is corrupted.\nUse `tms init <config> [opts]` to create one!")
 	}
-}
+} // }}}
