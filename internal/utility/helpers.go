@@ -94,3 +94,15 @@ func GetTmuxSessions() map[string]bool {
 	}
 	return sessions
 }
+
+func GetCurrentTmuxSession() string {
+	if os.Getenv("TMUX") == "" {
+		return ""
+	}
+	cmd := exec.Command("tmux", "display-message", "-p", "#{session_name}")
+	output, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(output))
+}

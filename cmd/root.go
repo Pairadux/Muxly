@@ -217,12 +217,16 @@ func validateConfig() error {
 func buildDirectoryEntries(maxDepth int) (map[string]string, error) {
 	entries := make(map[string]string)
 	existingSessions := utility.GetTmuxSessions()
+	currentSession := utility.GetCurrentTmuxSession()
 	addEntry := func(path string) error {
 		resolved, err := utility.ResolvePath(path)
 		if err != nil {
 			return err
 		}
 		name := filepath.Base(resolved)
+		if name == currentSession {
+			return nil
+		}
 		displayName := name
 		if existingSessions[name] {
 			displayName = "[TMUX] " + name
@@ -238,6 +242,15 @@ func buildDirectoryEntries(maxDepth int) (map[string]string, error) {
 	for _, entryDir := range viper.GetStringSlice("entry_dirs") {
 		if err := addEntry(entryDir); err != nil {
 			return nil, err
+		}
+	}
+	for sessionName := range existingSessions {
+		if sessionName == currentSession {
+			continue
+		}
+		displayName := "[TMUX] " + sessionName
+		if _, exists := entries[displayName]; !exists {
+			entries[displayName] = sessionName
 		}
 	}
 	return entries, nil
