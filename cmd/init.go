@@ -41,6 +41,9 @@ Any flags that are omitted will be assigned the default values shown.`,
 		if tmuxBase, _ := cmd.Flags().GetInt("tmux_base"); tmuxBase >= 0 {
 			fresh.Set("tmux_base", tmuxBase)
 		}
+		if defaultDepth, _ := cmd.Flags().GetInt("default_depth"); defaultDepth >= 0 {
+			fresh.Set("default_depth", defaultDepth)
+		}
 
 		sessionLayout := models.SessionLayout{
 			Windows: []models.Window{
@@ -77,6 +80,7 @@ func init() { // {{{
 
 	initCmd.Flags().IntP("tmux_base", "b", 1, "What number your windows start ordering at.")
 	initCmd.Flags().StringP("default_session", "d", "Documents", "The name of the default session to fall back to.")
+	initCmd.Flags().IntP("default_depth", "d", 1, "Default depth to scan.")
 	initCmd.Flags().StringArrayP("scan_dirs", "s", []string{"~/Dev", "~/.dotfiles/dot_config"}, "A list of paths that should always be scanned.\nConcat with :int for depth.")
 	initCmd.Flags().StringArrayP("entry_dirs", "e", []string{"~/Documents", "~/Cloud"}, "A list of paths that are entries themselves.")
 } // }}}

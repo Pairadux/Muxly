@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/Pairadux/tms/internal/models"
@@ -36,9 +37,8 @@ var rootCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		maxDepth, err := cmd.Flags().GetInt("depth")
-		cobra.CheckErr(err)
-		entries, err := buildDirectoryEntries(maxDepth)
+		flagDepth, _ := cmd.Flags().GetInt("depth")
+		entries, err := buildDirectoryEntries(flagDepth)
 		cobra.CheckErr(err)
 
 		var choiceStr string
@@ -113,7 +113,7 @@ func init() { // {{{
 
 	rootCmd.PersistentFlags().StringVar(&cfgFileFlag, "config", "", "config file (default $XDG_CONFIG_HOME/tms/config.yaml)")
 
-	rootCmd.Flags().IntP("depth", "d", 1, "Maximum traversal depth")
+	rootCmd.Flags().IntP("depth", "d", 0, "Maximum traversal depth")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -214,7 +214,7 @@ func validateConfig() error {
 	return nil
 }
 
-func buildDirectoryEntries(maxDepth int) (map[string]string, error) {
+func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 	entries := make(map[string]string)
 	existingSessions := utility.GetTmuxSessions()
 	currentSession := utility.GetCurrentTmuxSession()
@@ -227,6 +227,19 @@ func buildDirectoryEntries(maxDepth int) (map[string]string, error) {
 		if name == currentSession {
 			return nil
 		}
+		ignoreDirs := viper.GetStringSlice("ignore_dirs")
+		for _, ignoreDir := range ignoreDirs {
+			ignoredResolved, err := utility.ResolvePath(ignoreDir)
+			if err != nil {
+				if name == ignoreDir {
+					return nil
+				}
+				continue
+			}
+			if resolved == ignoredResolved {
+				return nil
+			}
+		}
 		displayName := name
 		if existingSessions[name] {
 			displayName = "[TMUX] " + name
@@ -235,7 +248,7 @@ func buildDirectoryEntries(maxDepth int) (map[string]string, error) {
 		return nil
 	}
 	for _, scanDir := range viper.GetStringSlice("scan_dirs") {
-		if err := processScanDir(scanDir, maxDepth, addEntry); err != nil {
+		if err := processScanDir(scanDir, flagDepth, addEntry); err != nil {
 			return nil, err
 		}
 	}
@@ -256,12 +269,27 @@ func buildDirectoryEntries(maxDepth int) (map[string]string, error) {
 	return entries, nil
 }
 
-func processScanDir(scanDir string, maxDepth int, addEntry func(string) error) error {
-	resolved, err := utility.ResolvePath(scanDir)
+func processScanDir(scanDir string, flagDepth int, addEntry func(string) error) error {
+	var path string
+	var scanDepth int
+	if p, depthStr, found := strings.Cut(scanDir, ":"); found {
+		if d, err := strconv.Atoi(depthStr); err == nil {
+			path = p
+			scanDepth = d
+		} else {
+			path = scanDir
+			scanDepth = 0
+		}
+	} else {
+		path = scanDir
+		scanDepth = 0
+	}
+	effectiveDepth := getEffectiveDepth(flagDepth, scanDepth)
+	resolved, err := utility.ResolvePath(path)
 	if err != nil {
 		return err
 	}
-	subDirs, err := utility.GetSubDirs(maxDepth, resolved)
+	subDirs, err := utility.GetSubDirs(effectiveDepth, resolved)
 	if err != nil {
 		return err
 	}
@@ -286,4 +314,18 @@ func selectWithFzf(options []string) (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(string(choice)), nil
+}
+
+func getEffectiveDepth(scanDepth int, flagDepth int) int {
+	if flagDepth > 0 {
+		return flagDepth
+	}
+	if scanDepth > 0 {
+		return scanDepth
+	}
+	defaultDepth := viper.GetInt("default_depth")
+	if defaultDepth > 0 {
+		return defaultDepth
+	}
+	return 1
 }
