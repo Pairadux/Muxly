@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Pairadux/tms/internal/models"
 	"github.com/Pairadux/tms/internal/utility"
 
 	"github.com/spf13/cobra"
@@ -88,7 +87,7 @@ var rootCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if err := tmuxSwitchSession(sessionName, selectedPath); err != nil {
+		if err := utility.TmuxSwitchSession(sessionName, selectedPath); err != nil {
 			fmt.Fprintf(os.Stderr, "failed to switch session: %v\n", err)
 			os.Exit(1)
 		}
@@ -155,54 +154,6 @@ func initConfig() { // {{{
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
 } // }}}
-
-func tmuxSwitchSession(name, cwd string) error {
-	if err := exec.Command("tmux", "has-session", "-t", name).Run(); err != nil {
-		var sessionLayout models.SessionLayout
-		if err := viper.UnmarshalKey("session_layout", &sessionLayout); err != nil {
-			return fmt.Errorf("failed to decode session_layout: %w", err)
-		}
-		if err := createSession(sessionLayout, name, cwd); err != nil {
-			return fmt.Errorf("creating session: %w", err)
-		}
-	}
-	tmuxBase := viper.GetInt("tmux_base")
-	target := fmt.Sprintf("%s:%d", name, tmuxBase)
-	if os.Getenv("TMUX") == "" {
-		if err := exec.Command("tmux", "attach-session", "-t", target).Run(); err != nil {
-			return fmt.Errorf("attaching to session: %w", err)
-		}
-	} else {
-		if err := exec.Command("tmux", "switch-client", "-t", target).Run(); err != nil {
-			return fmt.Errorf("switching to session: %w", err)
-		}
-	}
-	return nil
-}
-
-func createSession(sessionLayout models.SessionLayout, session, dir string) error {
-	if len(sessionLayout.Windows) == 0 {
-		return fmt.Errorf("no windows defined in session layout")
-	}
-	w0 := sessionLayout.Windows[0]
-	args := []string{"new-session", "-ds", session, "-n", w0.Name, "-c", dir}
-	if w0.Cmd != "" {
-		args = append(args, w0.Cmd)
-	}
-	if err := exec.Command("tmux", args...).Run(); err != nil {
-		return err
-	}
-	for _, w := range sessionLayout.Windows[1:] {
-		args = []string{"new-window", "-t", session, "-n", w.Name, "-c", dir}
-		if w.Cmd != "" {
-			args = append(args, w.Cmd)
-		}
-		if err := exec.Command("tmux", args...).Run(); err != nil {
-			return err
-		}
-	}
-	return nil
-}
 
 func validateConfig() error {
 	if viper.ConfigFileUsed() == "" {

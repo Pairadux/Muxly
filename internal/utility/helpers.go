@@ -13,7 +13,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Pairadux/tms/internal/models"
+
 	"github.com/charlievieth/fastwalk"
+	"github.com/spf13/viper"
 ) // }}}
 
 // ResolvePath takes an “unknown” path pattern and returns an absolute path.
@@ -106,3 +109,52 @@ func GetCurrentTmuxSession() string {
 	}
 	return strings.TrimSpace(string(output))
 }
+
+func TmuxSwitchSession(name, cwd string) error {
+	if err := exec.Command("tmux", "has-session", "-t", name).Run(); err != nil {
+		var sessionLayout models.SessionLayout
+		if err := viper.UnmarshalKey("session_layout", &sessionLayout); err != nil {
+			return fmt.Errorf("failed to decode session_layout: %w", err)
+		}
+		if err := CreateSession(sessionLayout, name, cwd); err != nil {
+			return fmt.Errorf("creating session: %w", err)
+		}
+	}
+	tmuxBase := viper.GetInt("tmux_base")
+	target := fmt.Sprintf("%s:%d", name, tmuxBase)
+	if os.Getenv("TMUX") == "" {
+		if err := exec.Command("tmux", "attach-session", "-t", target).Run(); err != nil {
+			return fmt.Errorf("attaching to session: %w", err)
+		}
+	} else {
+		if err := exec.Command("tmux", "switch-client", "-t", target).Run(); err != nil {
+			return fmt.Errorf("switching to session: %w", err)
+		}
+	}
+	return nil
+}
+
+func CreateSession(sessionLayout models.SessionLayout, session, dir string) error {
+	if len(sessionLayout.Windows) == 0 {
+		return fmt.Errorf("no windows defined in session layout")
+	}
+	w0 := sessionLayout.Windows[0]
+	args := []string{"new-session", "-ds", session, "-n", w0.Name, "-c", dir}
+	if w0.Cmd != "" {
+		args = append(args, w0.Cmd)
+	}
+	if err := exec.Command("tmux", args...).Run(); err != nil {
+		return err
+	}
+	for _, w := range sessionLayout.Windows[1:] {
+		args = []string{"new-window", "-t", session, "-n", w.Name, "-c", dir}
+		if w.Cmd != "" {
+			args = append(args, w.Cmd)
+		}
+		if err := exec.Command("tmux", args...).Run(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
