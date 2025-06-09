@@ -40,7 +40,7 @@ func ResolvePath(p string) (string, error) {
 		}
 	}
 	if strings.HasPrefix(p, "./") || strings.HasPrefix(p, "../") || p == "." || p == ".." {
-		return "", errors.New("relative pats not allowed: " + p)
+		return "", errors.New("relative paths not allowed: " + p)
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
