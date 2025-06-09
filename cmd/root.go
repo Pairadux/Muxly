@@ -8,10 +8,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"slices"
+	"sort"
 	"strings"
 
 	"github.com/Pairadux/tms/internal/utility"
+	// "github.com/Pairadux/tms/internal/models"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -20,8 +21,6 @@ import (
 var (
 	cfgFileFlag string
 	cfgFilePath string
-	scan_dirs   []string
-	entry_dirs  []string
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -32,46 +31,70 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		if viper.ConfigFileUsed() == "" {
 			fmt.Fprintln(os.Stderr, "No config file found, please generate with `tms init [OPTIONS]\nSee `tms init --help` for additional details.")
+			os.Exit(1)
 		}
 
-		// TODO: replace these hardcoded entries with entries supplied by the entries in the config file and the utility.ResolvePath function
-		// {{{
-		homeDir, err := os.UserHomeDir()
-		cobra.CheckErr(err)
-		devDir := filepath.Join(homeDir, "Dev")
-		dotfilesDir := filepath.Join(homeDir, ".dotfiles")
+		entries := make(map[string]string)
+		var scanDirs []string
 
-		utility.ResolvePath()
-
-		devEntries, err := os.ReadDir(devDir)
+		entryDirs := viper.GetStringSlice("entry_dirs")
+		maxDepth, err := cmd.Flags().GetInt("depth")
 		cobra.CheckErr(err)
-		dotfilesEntries, err := os.ReadDir(dotfilesDir)
-		cobra.CheckErr(err)
-		// }}}
+		scanDirsPre := viper.GetStringSlice("scan_dirs")
 
-		entries := slices.Concat(devEntries, dotfilesEntries)
-		cobra.CheckErr(err)
+		for _, e := range scanDirsPre {
+			resolvedPath, err := utility.ResolvePath(e)
+			cobra.CheckErr(err)
+			scanDirs = append(scanDirs, resolvedPath)
+		}
 
-		// TODO: make a function that accepts several directory types and expands them
-		dirs := []string{"Documents"}
-		for _, e := range entries {
-			if e.IsDir() {
-				dirs = append(dirs, e.Name())
+		for _, scanDir := range scanDirs {
+			subDirs, err := utility.GetSubDirs(maxDepth, scanDir)
+			cobra.CheckErr(err)
+			for _, subDir := range subDirs {
+				entries[filepath.Base(subDir)] = subDir
 			}
 		}
 
+		for _, e := range entryDirs {
+			resolvedPath, err := utility.ResolvePath(e)
+			cobra.CheckErr(err)
+			entries[filepath.Base(resolvedPath)] = resolvedPath
+		}
+
+		names := make([]string, 0, len(entries))
+		for name := range entries {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+
 		fzf := exec.Command("fzf")
-		fzf.Stdin = strings.NewReader(strings.Join(dirs, "\n"))
+		fzf.Stdin = strings.NewReader(strings.Join(names, "\n"))
+		fzf.Stderr = os.Stderr
+
 		choice, err := fzf.Output()
-		cobra.CheckErr(err)
+		if err != nil {
+			if exitError, ok := err.(*exec.ExitError); ok && exitError.ExitCode() == 130 {
+				os.Exit(0)
+			}
+			cobra.CheckErr(err)
+		}
 
-		command := exec.Command("echo", string(choice))
-		command.Stdout = os.Stdout
-		command.Run()
+		choiceStr := strings.TrimSpace(string(choice))
+		if choiceStr == "" {
+			os.Exit(0)
+		}
 
-		depth, err := cmd.Flags().GetInt("depth")
-		cobra.CheckErr(err)
-		fmt.Printf("Depth: %d\n", depth)
+		selectedPath, exists := entries[choiceStr]
+		if !exists {
+			fmt.Fprintf(os.Stderr, "Selected directory not found: %s\n", choiceStr)
+			os.Exit(1)
+		}
+		fmt.Printf("%s", selectedPath)
+
+		// command := exec.Command("echo", entries[string(choice)])
+		// command.Stdout = os.Stdout
+		// command.Run()
 	},
 }
 

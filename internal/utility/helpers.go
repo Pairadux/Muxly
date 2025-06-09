@@ -5,23 +5,76 @@ package utility
 
 // IMPORTS {{{
 import (
-	// "fmt"
-	// "os"
-	//
-	// "github.com/spf13/cobra"
-	// "github.com/spf13/viper"
+	"errors"
+	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/charlievieth/fastwalk"
 ) // }}}
 
-// ResolvePath takes a path of an unknown type and converts it into an absolute path
+// ResolvePath takes an “unknown” path pattern and returns an absolute path.
 //
-// determine path type based on prefix, can use `strings.Prefix` or `strings.HasPrefix` for this along with `filepath.Abs` and `os.UserHomeDir`
-// if the path is an absolute path (starts with /) leave as is
-// if the path is a home folder path (starts with ~ or ~/) expand to absolute path
-// if the path is a relative path (starts with ./ or similar) error out
-	// Make sure to include . paths though, given the next stipulation
-// if the path is "implied" (starts with a word) assume its from the home directory
-func ResolvePath() string {
-	return ""
+//   - Absolute (/…):               returned as-is
+//   - Home (~ or ~/…):             expanded via os.UserHomeDir()
+//   - Explicit relative (./, ../): error
+//   - Implicit (foo/bar):          treated as ~/foo/bar
+func ResolvePath(p string) (string, error) {
+	if filepath.IsAbs(p) {
+		return p, nil
+	}
+	if strings.HasPrefix(p, "~") {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		switch {
+		case p == "~":
+			return home, nil
+		case strings.HasPrefix(p, "~/"):
+			return filepath.Join(home, p[2:]), nil
+		default:
+			return "", errors.New("invalid home-path syntax")
+		}
+	}
+	if strings.HasPrefix(p, "./") || strings.HasPrefix(p, "../") || p == "." || p == ".." {
+		return "", errors.New("relative pats not allowed: " + p)
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, p), nil
+}
+
+func GetSubDirs(maxDepth int, root string) ([]string, error) {
+	dirChan := make(chan string, 100)
+	cfg := &fastwalk.Config{MaxDepth: maxDepth}
+	walkFn := func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "walk error %q: %v\n", path, err)
+			return nil
+		}
+		if d.IsDir() {
+			dirChan <- path
+		}
+		return nil
+	}
+	var dirs []string
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for dir := range dirChan {
+			dirs = append(dirs, dir)
+		}
+	}()
+	err := fastwalk.Walk(cfg, root, walkFn)
+	close(dirChan)
+	<-done
+	if err != nil {
+		return nil, err
+	}
+	return dirs, nil
 }
