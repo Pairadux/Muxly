@@ -13,10 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Pairadux/tms/internal/models"
-
 	"github.com/charlievieth/fastwalk"
-	"github.com/spf13/viper"
 ) // }}}
 
 // ResolvePath takes an “unknown” path pattern and returns an absolute path.
@@ -83,93 +80,18 @@ func GetSubDirs(maxDepth int, root string) ([]string, error) {
 	return dirs, nil
 }
 
-func GetTmuxSessions() map[string]bool {
-	sessions := make(map[string]bool)
-	cmd := exec.Command("tmux", "list-sessions", "-F", "#{session_name}")
-	output, err := cmd.Output()
+func SelectWithFzf(options []string) (string, error) {
+	fzf := exec.Command("fzf")
+	fzf.Stdin = strings.NewReader(strings.Join(options, "\n"))
+	fzf.Stderr = os.Stderr
+	choice, err := fzf.Output()
 	if err != nil {
-		return sessions
-	}
-	for line := range strings.SplitSeq(strings.TrimSpace(string(output)), "\n") {
-		if line != "" {
-			sessions[line] = true
+		// Exit gracefully if user quits
+		if exitError, ok := err.(*exec.ExitError); ok && exitError.ExitCode() == 130 {
+			return "", fmt.Errorf("user cancelled")
 		}
+		return "", err
 	}
-	return sessions
-}
-
-func GetCurrentTmuxSession() string {
-	if os.Getenv("TMUX") == "" {
-		return ""
-	}
-	cmd := exec.Command("tmux", "display-message", "-p", "#{session_name}")
-	output, err := cmd.Output()
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(string(output))
-}
-
-func TmuxSwitchSession(name, cwd string) error {
-	var sessionLayout models.SessionLayout
-	if err := viper.UnmarshalKey("session_layout", &sessionLayout); err != nil {
-		return fmt.Errorf("failed to decode session_layout: %w", err)
-	}
-	sessionExists := exec.Command("tmux", "has-session", "-t", name).Run() == nil
-	if !sessionExists {
-		if err := CreateSession(sessionLayout, name, cwd); err != nil {
-			return fmt.Errorf("creating session: %w", err)
-		}
-	}
-	tmuxBase := viper.GetInt("tmux_base")
-	target := fmt.Sprintf("%s:%d", name, tmuxBase)
-	if os.Getenv("TMUX") == "" {
-		cmd := exec.Command("tmux", "attach-session", "-t", target)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Stdin = os.Stdin
-		if err := cmd.Run(); err != nil {
-			if target != name {
-				cmd := exec.Command("tmux", "attach-session", "-t", name)
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-				cmd.Stdin = os.Stdin
-				return cmd.Run()
-			}
-			return fmt.Errorf("attaching to session: %w", err)
-		}
-	} else {
-		if err := exec.Command("tmux", "switch-client", "-t", target).Run(); err != nil {
-			if target != name {
-				return exec.Command("tmux", "switch-client", "-t", target).Run()
-			}
-			return fmt.Errorf("switching to session: %w", err)
-		}
-	}
-	return nil
-}
-
-func CreateSession(sessionLayout models.SessionLayout, session, dir string) error {
-	if len(sessionLayout.Windows) == 0 {
-		return fmt.Errorf("no windows defined in session layout")
-	}
-	w0 := sessionLayout.Windows[0]
-	args := []string{"new-session", "-ds", session, "-n", w0.Name, "-c", dir}
-	if w0.Cmd != "" {
-		args = append(args, strings.Fields(w0.Cmd)...)
-	}
-	if err := exec.Command("tmux", args...).Run(); err != nil {
-		return err
-	}
-	for _, w := range sessionLayout.Windows[1:] {
-		args = []string{"new-window", "-t", session, "-n", w.Name, "-c", dir}
-		if w.Cmd != "" {
-			args = append(args, w.Cmd)
-		}
-		if err := exec.Command("tmux", args...).Run(); err != nil {
-			return err
-		}
-	}
-	return nil
+	return strings.TrimSpace(string(choice)), nil
 }
 

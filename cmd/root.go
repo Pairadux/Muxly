@@ -7,13 +7,13 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/Pairadux/tms/internal/utility"
+	"github.com/Pairadux/tms/internal/tmux"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -31,6 +31,11 @@ var rootCmd = &cobra.Command{
 	Long:  "A tool for quickly opening tmux sessions.\n\nBased on ThePrimeagen's Tmux-Sessionator script.",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		if err := tmux.ValidateTmuxAvailable(); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
+
 		if err := validateConfig(); err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
@@ -63,7 +68,7 @@ var rootCmd = &cobra.Command{
 				}
 				return strings.Compare(a, b)
 			})
-			choiceStr, err = selectWithFzf(names)
+			choiceStr, err = utility.SelectWithFzf(names)
 			if err != nil {
 				if err.Error() == "user cancelled" {
 					os.Exit(0)
@@ -87,7 +92,7 @@ var rootCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if err := utility.TmuxSwitchSession(sessionName, selectedPath); err != nil {
+		if err := tmux.TmuxSwitchSession(sessionName, selectedPath); err != nil {
 			fmt.Fprintf(os.Stderr, "failed to switch session: %v\n", err)
 			os.Exit(1)
 		}
@@ -157,7 +162,7 @@ func initConfig() { // {{{
 
 func validateConfig() error {
 	if viper.ConfigFileUsed() == "" {
-		return fmt.Errorf("no config file found, please generate with `tms init [OPTIONS]`")
+		return fmt.Errorf("no config file found\nRun 'tms init' to create one, or use --config to specify a path")
 	}
 	if (len(viper.GetStringSlice("scan_dirs")) == 0) && (len(viper.GetStringSlice("entry_dirs")) == 0) {
 		return fmt.Errorf("no directories configured for scanning")
@@ -167,8 +172,8 @@ func validateConfig() error {
 
 func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 	entries := make(map[string]string)
-	existingSessions := utility.GetTmuxSessions()
-	currentSession := utility.GetCurrentTmuxSession()
+	existingSessions := tmux.GetTmuxSessions()
+	currentSession := tmux.GetCurrentTmuxSession()
 	addEntry := func(path string) error {
 		resolved, err := utility.ResolvePath(path)
 		if err != nil {
@@ -250,21 +255,6 @@ func processScanDir(scanDir string, flagDepth int, addEntry func(string) error) 
 		}
 	}
 	return nil
-}
-
-func selectWithFzf(options []string) (string, error) {
-	fzf := exec.Command("fzf")
-	fzf.Stdin = strings.NewReader(strings.Join(options, "\n"))
-	fzf.Stderr = os.Stderr
-	choice, err := fzf.Output()
-	if err != nil {
-		// Exit gracefully if user quits
-		if exitError, ok := err.(*exec.ExitError); ok && exitError.ExitCode() == 130 {
-			return "", fmt.Errorf("user cancelled")
-		}
-		return "", err
-	}
-	return strings.TrimSpace(string(choice)), nil
 }
 
 func getEffectiveDepth(scanDepth int, flagDepth int) int {
