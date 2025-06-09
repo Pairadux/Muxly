@@ -29,8 +29,6 @@ Any flags that are omitted will be assigned the default values shown.`,
 		if entry_dirs, _ := cmd.Flags().GetStringArray("entry_dirs"); len(entry_dirs) > 0 {
 			viper.Set("entry_dirs", entry_dirs)
 		}
-		viper.SetDefault("example_string", "test")
-		viper.SetDefault("example_int", 1)
 
 		parent := filepath.Dir(cfgFilePath)
 		_ = os.MkdirAll(parent, 0o755)
@@ -61,7 +59,7 @@ func init() {// {{{
 	// is called directly, e.g.:
 	// initCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
-	initCmd.Flags().StringArrayP("scan_dirs", "s", []string{"~/Dev", "~/.dotfiles"}, "A list of paths that should always be scanned.\nConcat with :int for depth.")	
+	initCmd.Flags().StringArrayP("scan_dirs", "s", []string{"~/Dev", "~/.dotfiles/dot_config"}, "A list of paths that should always be scanned.\nConcat with :int for depth.")	
 	initCmd.Flags().StringArrayP("entry_dirs", "e", []string{"~/Documents", "~/Cloud"}, "A list of paths that are entries themselves.")	
 }// }}}
 
