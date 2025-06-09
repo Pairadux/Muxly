@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Pairadux/tms/internal/models"
 	"github.com/Pairadux/tms/internal/utility"
 	// "github.com/Pairadux/tms/internal/models"
 
@@ -169,34 +170,48 @@ func initConfig() { // {{{
 
 func tmuxSwitchSession(name, cwd string) error {
 	if err := exec.Command("tmux", "has-session", "-t", name).Run(); err != nil {
-		if err := exec.Command("tmux", "new-session", "-ds", name, "-c", cwd).Run(); err != nil {
-			return fmt.Errorf("creating tmux session: %w", err)
+		var sessionLayout models.SessionLayout
+		if err := viper.UnmarshalKey("session_layout", &sessionLayout); err != nil {
+			return fmt.Errorf("failed to decode session_layout: %w", err)
 		}
-		if err := populate(name, cwd); err != nil {
-			return fmt.Errorf("populating session: %w", err)
+		if err := createSession(sessionLayout, name, cwd); err != nil {
+			return fmt.Errorf("creating session: %w", err)
 		}
 	}
-	if err := exec.Command("tmux", "switch-client", "-t", name).Run(); err != nil {
-		return fmt.Errorf("switching to session: %w", err)
+	tmuxBase := viper.GetInt("tmux_base")
+	target := fmt.Sprintf("%s:%d", name, tmuxBase)
+	if os.Getenv("TMUX") == "" {
+		if err := exec.Command("tmux", "attach-session", "-t", target).Run(); err != nil {
+			return fmt.Errorf("attaching to session: %w", err)
+		}
+	} else {
+		if err := exec.Command("tmux", "switch-client", "-t", target).Run(); err != nil {
+			return fmt.Errorf("switching to session: %w", err)
+		}
 	}
 	return nil
 }
 
-func populate(session, dir string) error {
-	projFile := filepath.Join(dir, ".tms")
-	home, _ := os.UserHomeDir()
-	homeFile := filepath.Join(home, ".tms")
-	var src string
-	if _, err := os.Stat(projFile); err == nil {
-		src = projFile
-		fmt.Fprintln(os.Stderr, "Used projFile")
-	} else if _, err := os.Stat(homeFile); err == nil {
-		src = homeFile
-		fmt.Fprintln(os.Stderr, "Used homeFile")
-	} else {
-		fmt.Fprintln(os.Stderr, "No populate file found")
-		return nil
+func createSession(sessionLayout models.SessionLayout, session, dir string) error {
+	if len(sessionLayout.Windows) == 0 {
+		return fmt.Errorf("No windows defined in session layout.")
 	}
-	cmd := exec.Command("tmux", "send-keys", "-t", session, "source "+src, "C-m")
-	return cmd.Run()
+	w0 := sessionLayout.Windows[0]
+	args := []string{"new-session", "-ds", session, "-n", w0.Name, "-c", dir}
+	if w0.Cmd != "" {
+		args = append(args, w0.Cmd)
+	}
+	if err := exec.Command("tmux", args...).Run(); err != nil {
+		return err
+	}
+	for _, w := range sessionLayout.Windows[1:] {
+		args = []string{"new-window", "-t", session, "-n", w.Name, "-c", dir}
+		if w.Cmd != "" {
+			args = append(args, w.Cmd)
+		}
+		if err := exec.Command("tmux", args...).Run(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
