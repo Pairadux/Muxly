@@ -30,6 +30,29 @@ var rootCmd = &cobra.Command{
 	Short: "A tool for quickly opening tmux sessions",
 	Long:  "A tool for quickly opening tmux sessions.\n\nBased on ThePrimeagen's Tmux-Sessionator script.",
 	Run: func(cmd *cobra.Command, args []string) {
+
+		// ORDER OF OPS
+		//
+		// get search paths
+		//
+		// get subdir paths from search paths
+		//
+		// get entry paths
+		//
+		// combine subdir paths with entry paths
+		//
+		// if arg is given, switch to or create that session
+		//
+		// if after this point, selected == "", exit 0
+		//
+		// get the basename from selected
+		//
+		// check if tmux is running
+		//
+		// if tmux not open, new-session "hydrate" that session
+		//
+		// if !has-session, new-session then "hydrate" that session
+
 		// if viper.GetString("example_default") == "test" {
 		// 	fmt.Println("passed")
 		// } else {
