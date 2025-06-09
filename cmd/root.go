@@ -14,7 +14,6 @@ import (
 
 	"github.com/Pairadux/tms/internal/models"
 	"github.com/Pairadux/tms/internal/utility"
-	// "github.com/Pairadux/tms/internal/models"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -32,43 +31,20 @@ var rootCmd = &cobra.Command{
 	Long:  "A tool for quickly opening tmux sessions.\n\nBased on ThePrimeagen's Tmux-Sessionator script.",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if viper.ConfigFileUsed() == "" {
-			fmt.Fprintln(os.Stderr, "No config file found, please generate with `tms init [OPTIONS]\nSee `tms init --help` for additional details.")
+		if err := validateConfig(); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
 
-		entries := make(map[string]string)
-		var scanDirs []string
+		maxDepth, err := cmd.Flags().GetInt("depth")
+		cobra.CheckErr(err)
+		entries, err := buildDirectoryEntries(maxDepth)
+		cobra.CheckErr(err)
+
 		var choiceStr string
 
 		if len(args) == 1 {
-			// TODO: switch to or create the specified session
 			choiceStr = args[0]
-		}
-
-		entryDirs := viper.GetStringSlice("entry_dirs")
-		maxDepth, err := cmd.Flags().GetInt("depth")
-		cobra.CheckErr(err)
-		scanDirsPre := viper.GetStringSlice("scan_dirs")
-
-		for _, e := range scanDirsPre {
-			resolvedPath, err := utility.ResolvePath(e)
-			cobra.CheckErr(err)
-			scanDirs = append(scanDirs, resolvedPath)
-		}
-
-		for _, scanDir := range scanDirs {
-			subDirs, err := utility.GetSubDirs(maxDepth, scanDir)
-			cobra.CheckErr(err)
-			for _, subDir := range subDirs {
-				entries[filepath.Base(subDir)] = subDir
-			}
-		}
-
-		for _, e := range entryDirs {
-			resolvedPath, err := utility.ResolvePath(e)
-			cobra.CheckErr(err)
-			entries[filepath.Base(resolvedPath)] = resolvedPath
 		}
 
 		if choiceStr == "" {
@@ -76,22 +52,15 @@ var rootCmd = &cobra.Command{
 			for name := range entries {
 				names = append(names, name)
 			}
-			sort.Strings(names)
 
-			fzf := exec.Command("fzf")
-			fzf.Stdin = strings.NewReader(strings.Join(names, "\n"))
-			fzf.Stderr = os.Stderr
-
-			choice, err := fzf.Output()
+			choiceStr, err = selectWithFzf(names)
 			if err != nil {
-				// Exit gracefully if user quits
-				if exitError, ok := err.(*exec.ExitError); ok && exitError.ExitCode() == 130 {
+				if err.Error() == "user cancelled" {
 					os.Exit(0)
 				}
 				cobra.CheckErr(err)
 			}
 
-			choiceStr = strings.TrimSpace(string(choice))
 			if choiceStr == "" {
 				os.Exit(0)
 			}
@@ -103,7 +72,10 @@ var rootCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		tmuxSwitchSession(choiceStr, selectedPath)
+		if err := tmuxSwitchSession(choiceStr, selectedPath); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to switch session: %v\n", err)
+			os.Exit(1)
+		}
 	},
 }
 
@@ -194,7 +166,7 @@ func tmuxSwitchSession(name, cwd string) error {
 
 func createSession(sessionLayout models.SessionLayout, session, dir string) error {
 	if len(sessionLayout.Windows) == 0 {
-		return fmt.Errorf("No windows defined in session layout.")
+		return fmt.Errorf("no windows defined in session layout")
 	}
 	w0 := sessionLayout.Windows[0]
 	args := []string{"new-session", "-ds", session, "-n", w0.Name, "-c", dir}
@@ -214,4 +186,71 @@ func createSession(sessionLayout models.SessionLayout, session, dir string) erro
 		}
 	}
 	return nil
+}
+
+func validateConfig() error {
+	if viper.ConfigFileUsed() == "" {
+		return fmt.Errorf("no config file found, please generate with `tms init [OPTIONS]`")
+	}
+	if (len(viper.GetStringSlice("scan_dirs")) == 0) && (len(viper.GetStringSlice("entry_dirs")) == 0) {
+		return fmt.Errorf("no directories configured for scanning")
+	}
+	return nil
+}
+
+func buildDirectoryEntries(maxDepth int) (map[string]string, error) {
+	entries := make(map[string]string)
+	addEntry := func(path string) error {
+		resolved, err := utility.ResolvePath(path)
+		if err != nil {
+			return err
+		}
+		name := filepath.Base(resolved)
+		entries[name] = resolved
+		return nil
+	}
+	for _, scanDir := range viper.GetStringSlice("scan_dirs") {
+		if err := processScanDir(scanDir, maxDepth, addEntry); err != nil {
+			return nil, err
+		}
+	}
+	for _, entryDir := range viper.GetStringSlice("entry_dirs") {
+		if err := addEntry(entryDir); err != nil {
+			return nil, err
+		}
+	}
+	return entries, nil
+}
+
+func processScanDir(scanDir string, maxDepth int, addEntry func(string) error) error {
+	resolved, err := utility.ResolvePath(scanDir)
+	if err != nil {
+		return err
+	}
+	subDirs, err := utility.GetSubDirs(maxDepth, resolved)
+	if err != nil {
+		return err
+	}
+	for _, subDir := range subDirs {
+		if err := addEntry(subDir); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func selectWithFzf(options []string) (string, error) {
+	sort.Strings(options)
+	fzf := exec.Command("fzf")
+	fzf.Stdin = strings.NewReader(strings.Join(options, "\n"))
+	fzf.Stderr = os.Stderr
+	choice, err := fzf.Output()
+	if err != nil {
+		// Exit gracefully if user quits
+		if exitError, ok := err.(*exec.ExitError); ok && exitError.ExitCode() == 130 {
+			return "", fmt.Errorf("user cancelled")
+		}
+		return "", err
+	}
+	return strings.TrimSpace(string(choice)), nil
 }
