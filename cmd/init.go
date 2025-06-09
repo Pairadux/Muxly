@@ -35,6 +35,9 @@ Any flags that are omitted will be assigned the default values shown.`,
 		if entryDirs, _ := cmd.Flags().GetStringArray("entry_dirs"); len(entryDirs) > 0 {
 			fresh.Set("entry_dirs", entryDirs)
 		}
+		if ignoreDirs, _ := cmd.Flags().GetStringArray("ignore_dirs"); len(ignoreDirs) > 0 {
+			fresh.Set("ignore_dirs", ignoreDirs)
+		}
 		if defaultSession, _ := cmd.Flags().GetString("default_session"); defaultSession != "" {
 			fresh.Set("fallback_session", defaultSession)
 		}
@@ -79,8 +82,9 @@ func init() { // {{{
 	// initCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
 	initCmd.Flags().IntP("tmux_base", "b", 1, "What number your windows start ordering at.")
-	initCmd.Flags().StringP("default_session", "d", "Documents", "The name of the default session to fall back to.")
 	initCmd.Flags().IntP("default_depth", "d", 1, "Default depth to scan.")
+	initCmd.Flags().StringP("default_session", "D", "Documents", "The name of the default session to fall back to.")
 	initCmd.Flags().StringArrayP("scan_dirs", "s", []string{"~/Dev", "~/.dotfiles/dot_config"}, "A list of paths that should always be scanned.\nConcat with :int for depth.")
 	initCmd.Flags().StringArrayP("entry_dirs", "e", []string{"~/Documents", "~/Cloud"}, "A list of paths that are entries themselves.")
+	initCmd.Flags().StringArrayP("ignore_dirs", "i", []string{"~/Dev/_practice", "~/Dev/CS-Homework"}, "A list of paths that should be removed.")
 } // }}}
