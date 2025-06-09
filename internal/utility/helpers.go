@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -79,3 +80,17 @@ func GetSubDirs(maxDepth int, root string) ([]string, error) {
 	return dirs, nil
 }
 
+func GetTmuxSessions() map[string]bool {
+	sessions := make(map[string]bool)
+	cmd := exec.Command("tmux", "list-sessions", "-F", "#{session_name}")
+	output, err := cmd.Output()
+	if err != nil {
+		return sessions
+	}
+	for line := range strings.SplitSeq(strings.TrimSpace(string(output)), "\n") {
+		if line != "" {
+			sessions[line] = true
+		}
+	}
+	return sessions
+}

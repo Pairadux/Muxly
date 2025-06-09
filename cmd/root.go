@@ -9,7 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/Pairadux/tms/internal/models"
@@ -53,6 +53,17 @@ var rootCmd = &cobra.Command{
 				names = append(names, name)
 			}
 
+			slices.SortFunc(names, func(a, b string) int {
+				isTmuxA := strings.HasPrefix(a, "[TMUX] ")
+				isTmuxB := strings.HasPrefix(b, "[TMUX] ")
+				if isTmuxA && !isTmuxB {
+					return -1
+				}
+				if !isTmuxA && isTmuxB {
+					return 1
+				}
+				return strings.Compare(a, b)
+			})
 			choiceStr, err = selectWithFzf(names)
 			if err != nil {
 				if err.Error() == "user cancelled" {
@@ -66,13 +77,18 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
+		sessionName := choiceStr
+		if strings.HasPrefix(choiceStr, "[TMUX] ") {
+			sessionName = strings.TrimPrefix(choiceStr, "[TMUX] ")
+		}
+
 		selectedPath, exists := entries[choiceStr]
 		if !exists {
 			fmt.Fprintf(os.Stderr, "Selected directory not found: %s\n", choiceStr)
 			os.Exit(1)
 		}
 
-		if err := tmuxSwitchSession(choiceStr, selectedPath); err != nil {
+		if err := tmuxSwitchSession(sessionName, selectedPath); err != nil {
 			fmt.Fprintf(os.Stderr, "failed to switch session: %v\n", err)
 			os.Exit(1)
 		}
@@ -200,13 +216,18 @@ func validateConfig() error {
 
 func buildDirectoryEntries(maxDepth int) (map[string]string, error) {
 	entries := make(map[string]string)
+	existingSessions := utility.GetTmuxSessions()
 	addEntry := func(path string) error {
 		resolved, err := utility.ResolvePath(path)
 		if err != nil {
 			return err
 		}
 		name := filepath.Base(resolved)
-		entries[name] = resolved
+		displayName := name
+		if existingSessions[name] {
+			displayName = "[TMUX] " + name
+		}
+		entries[displayName] = resolved
 		return nil
 	}
 	for _, scanDir := range viper.GetStringSlice("scan_dirs") {
@@ -240,7 +261,6 @@ func processScanDir(scanDir string, maxDepth int, addEntry func(string) error) e
 }
 
 func selectWithFzf(options []string) (string, error) {
-	sort.Strings(options)
 	fzf := exec.Command("fzf")
 	fzf.Stdin = strings.NewReader(strings.Join(options, "\n"))
 	fzf.Stderr = os.Stderr
