@@ -38,6 +38,9 @@ Any flags that are omitted will be assigned the default values shown.`,
 		if defaultSession, _ := cmd.Flags().GetString("default_session"); defaultSession != "" {
 			fresh.Set("fallback_session", defaultSession)
 		}
+		if tmuxBase, _ := cmd.Flags().GetInt("tmux_base"); tmuxBase >= 0 {
+			fresh.Set("tmux_base", tmuxBase)
+		}
 
 		sessionLayout := models.SessionLayout{
 			Windows: []models.Window{
@@ -72,6 +75,7 @@ func init() { // {{{
 	// is called directly, e.g.:
 	// initCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
+	initCmd.Flags().IntP("tmux_base", "b", 1, "What number your windows start ordering at.")
 	initCmd.Flags().StringP("default_session", "d", "Documents", "The name of the default session to fall back to.")
 	initCmd.Flags().StringArrayP("scan_dirs", "s", []string{"~/Dev", "~/.dotfiles/dot_config"}, "A list of paths that should always be scanned.\nConcat with :int for depth.")
 	initCmd.Flags().StringArrayP("entry_dirs", "e", []string{"~/Documents", "~/Cloud"}, "A list of paths that are entries themselves.")
