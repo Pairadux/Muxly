@@ -78,3 +78,4 @@ func GetSubDirs(maxDepth int, root string) ([]string, error) {
 	}
 	return dirs, nil
 }
+
