@@ -10,6 +10,8 @@ import (
 	//
 	// "github.com/spf13/cobra"
 	// "github.com/spf13/viper"
+
+	"github.com/charlievieth/fastwalk"
 ) // }}}
 
 // ResolvePath takes a path of an unknown type and converts it into an absolute path

@@ -3,6 +3,7 @@ module github.com/Pairadux/tms
 go 1.24.3
 
 require (
+	github.com/charlievieth/fastwalk v1.0.11 // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
