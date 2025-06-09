@@ -12,8 +12,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Pairadux/tms/internal/utility"
 	"github.com/Pairadux/tms/internal/tmux"
+	"github.com/Pairadux/tms/internal/utility"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -35,22 +35,17 @@ var rootCmd = &cobra.Command{
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
-
 		if err := validateConfig(); err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
-
 		flagDepth, _ := cmd.Flags().GetInt("depth")
 		entries, err := buildDirectoryEntries(flagDepth)
 		cobra.CheckErr(err)
-
 		var choiceStr string
-
 		if len(args) == 1 {
 			choiceStr = args[0]
 		}
-
 		if choiceStr == "" {
 			names := make([]string, 0, len(entries))
 			for name := range entries {
@@ -80,18 +75,15 @@ var rootCmd = &cobra.Command{
 				os.Exit(0)
 			}
 		}
-
 		sessionName := choiceStr
 		if strings.HasPrefix(choiceStr, "[TMUX] ") {
 			sessionName = strings.TrimPrefix(choiceStr, "[TMUX] ")
 		}
-
 		selectedPath, exists := entries[choiceStr]
 		if !exists {
 			fmt.Fprintf(os.Stderr, "Selected directory not found: %s\n", choiceStr)
 			os.Exit(1)
 		}
-
 		if err := tmux.TmuxSwitchSession(sessionName, selectedPath); err != nil {
 			fmt.Fprintf(os.Stderr, "failed to switch session: %v\n", err)
 			os.Exit(1)

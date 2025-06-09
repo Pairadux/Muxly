@@ -94,4 +94,3 @@ func SelectWithFzf(options []string) (string, error) {
 	}
 	return strings.TrimSpace(string(choice)), nil
 }
-

@@ -13,7 +13,7 @@ import (
 	"github.com/Pairadux/tms/internal/models"
 
 	"github.com/spf13/viper"
-)// }}}
+) // }}}
 
 func GetTmuxSessions() map[string]bool {
 	sessions := make(map[string]bool)
