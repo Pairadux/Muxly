@@ -111,11 +111,12 @@ func GetCurrentTmuxSession() string {
 }
 
 func TmuxSwitchSession(name, cwd string) error {
-	if err := exec.Command("tmux", "has-session", "-t", name).Run(); err != nil {
-		var sessionLayout models.SessionLayout
-		if err := viper.UnmarshalKey("session_layout", &sessionLayout); err != nil {
-			return fmt.Errorf("failed to decode session_layout: %w", err)
-		}
+	var sessionLayout models.SessionLayout
+	if err := viper.UnmarshalKey("session_layout", &sessionLayout); err != nil {
+		return fmt.Errorf("failed to decode session_layout: %w", err)
+	}
+	sessionExists := exec.Command("tmux", "has-session", "-t", name).Run() == nil
+	if !sessionExists {
 		if err := CreateSession(sessionLayout, name, cwd); err != nil {
 			return fmt.Errorf("creating session: %w", err)
 		}
@@ -123,11 +124,25 @@ func TmuxSwitchSession(name, cwd string) error {
 	tmuxBase := viper.GetInt("tmux_base")
 	target := fmt.Sprintf("%s:%d", name, tmuxBase)
 	if os.Getenv("TMUX") == "" {
-		if err := exec.Command("tmux", "attach-session", "-t", target).Run(); err != nil {
+		cmd := exec.Command("tmux", "attach-session", "-t", target)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		cmd.Stdin = os.Stdin
+		if err := cmd.Run(); err != nil {
+			if target != name {
+				cmd := exec.Command("tmux", "attach-session", "-t", name)
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				cmd.Stdin = os.Stdin
+				return cmd.Run()
+			}
 			return fmt.Errorf("attaching to session: %w", err)
 		}
 	} else {
 		if err := exec.Command("tmux", "switch-client", "-t", target).Run(); err != nil {
+			if target != name {
+				return exec.Command("tmux", "switch-client", "-t", target).Run()
+			}
 			return fmt.Errorf("switching to session: %w", err)
 		}
 	}
@@ -141,7 +156,7 @@ func CreateSession(sessionLayout models.SessionLayout, session, dir string) erro
 	w0 := sessionLayout.Windows[0]
 	args := []string{"new-session", "-ds", session, "-n", w0.Name, "-c", dir}
 	if w0.Cmd != "" {
-		args = append(args, w0.Cmd)
+		args = append(args, strings.Fields(w0.Cmd)...)
 	}
 	if err := exec.Command("tmux", args...).Run(); err != nil {
 		return err
