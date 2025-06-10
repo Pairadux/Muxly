@@ -13,9 +13,11 @@ import (
 
 // editCmd represents the edit command
 var editCmd = &cobra.Command{
-	Use:   "edit",
+	Use:   "edit [editor]",
 	Short: "Edit the config file",
-	Long: "Edit the config file\n\nUses the $EDITOR by default.",
+	Long: `Edit the config file
+
+If you pass an optional [editor] it'll be used instead of the default $EDITOR.`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		editor := os.Getenv("EDITOR")

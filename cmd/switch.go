@@ -16,7 +16,7 @@ import (
 
 // switchCmd represents the switch command
 var switchCmd = &cobra.Command{
-	Use:   "switch",
+	Use:   "switch [SESSION]",
 	Short: "Switch to an active session",
 	Long:  "Switch to an active session\n\nDisplays a fzf picker list of active sessions.",
 	Args:  cobra.MaximumNArgs(1),

@@ -28,7 +28,7 @@ var (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "tms",
+	Use:   "tms [SESSION]",
 	Short: "A tool for quickly opening tmux sessions",
 	Long:  "A tool for quickly opening tmux sessions\n\nBased on ThePrimeagen's Tmux-Sessionator script.",
 	Args:  cobra.MaximumNArgs(1),
