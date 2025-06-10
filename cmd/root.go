@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Pairadux/tms/internal/fzf"
 	"github.com/Pairadux/tms/internal/tmux"
 	"github.com/Pairadux/tms/internal/utility"
 
@@ -63,7 +64,7 @@ var rootCmd = &cobra.Command{
 				}
 				return strings.Compare(a, b)
 			})
-			choiceStr, err = utility.SelectWithFzf(names)
+			choiceStr, err = fzf.SelectWithFzf(names)
 			if err != nil {
 				if err.Error() == "user cancelled" {
 					os.Exit(0)
