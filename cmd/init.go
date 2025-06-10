@@ -18,8 +18,8 @@ import (
 // initCmd represents the init command
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Initialize config file",
-	Long: `Initialize config file
+	Short: "Create a new config file",
+	Long: `Create a new config file
 
 Creates a config file at the specified location (default location if no argument passed) if no config file exists.
 Otherwise, the current config file is overwritten.

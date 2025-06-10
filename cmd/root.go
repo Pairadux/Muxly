@@ -30,7 +30,7 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "tms",
 	Short: "A tool for quickly opening tmux sessions",
-	Long:  "A tool for quickly opening tmux sessions.\n\nBased on ThePrimeagen's Tmux-Sessionator script.",
+	Long:  "A tool for quickly opening tmux sessions\n\nBased on ThePrimeagen's Tmux-Sessionator script.",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := tmux.ValidateTmuxAvailable(); err != nil {
