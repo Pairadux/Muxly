@@ -85,7 +85,7 @@ var rootCmd = &cobra.Command{
 			fmt.Fprintf(os.Stderr, "Selected directory not found: %s\n", choiceStr)
 			os.Exit(1)
 		}
-		if err := tmux.TmuxSwitchSession(sessionName, selectedPath); err != nil {
+		if err := tmux.CreateAndSwitchSession(sessionName, selectedPath); err != nil {
 			fmt.Fprintf(os.Stderr, "failed to switch session: %v\n", err)
 			os.Exit(1)
 		}

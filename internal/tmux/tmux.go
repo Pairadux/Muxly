@@ -70,51 +70,89 @@ func GetCurrentTmuxSession() string {
 	return strings.TrimSpace(string(output))
 }
 
-// TmuxSwitchSession switches to or creates a tmux session with the given name
-// and working directory. If the session doesn't exist, it creates it using the
-// configured session layout. The function handles both cases of running inside
-// an existing tmux session (uses switch-client) and outside tmux (uses attach-session).
-//
-// It attempts to target a specific window using the tmux_base configuration value,
-// falling back to the session name if the specific window target fails.
-func TmuxSwitchSession(name, cwd string) error {
+// SwitchToExistingSession switches to an existing tmux session by name.
+// This function assumes the session already exists and will return an error if it doesn't.
+// It handles both cases of running inside tmux (switch-client) and outside tmux (attach-session).
+func SwitchToExistingSession(name string) error {
 	if err := ValidateTmuxAvailable(); err != nil {
 		return err
 	}
+	
+	if !HasTmuxSession(name) {
+		return fmt.Errorf("session '%s' does not exist", name)
+	}
+
+	target := getSessionTarget(name)
+	
+	if os.Getenv("TMUX") == "" {
+		return attachToSession(target, name)
+	} else {
+		return switchClientToSession(target, name)
+	}
+}
+
+// CreateAndSwitchSession creates a new tmux session and switches to it.
+// If the session already exists, it just switches to it.
+func CreateAndSwitchSession(name, cwd string) error {
+	if err := ValidateTmuxAvailable(); err != nil {
+		return err
+	}
+	
+	if HasTmuxSession(name) {
+		return SwitchToExistingSession(name)
+	}
+	
 	var sessionLayout models.SessionLayout
 	if err := viper.UnmarshalKey("session_layout", &sessionLayout); err != nil {
 		return fmt.Errorf("failed to decode session_layout: %w", err)
 	}
-	sessionExists := exec.Command("tmux", "has-session", "-t", name).Run() == nil
-	if !sessionExists {
-		if err := CreateSession(sessionLayout, name, cwd); err != nil {
-			return fmt.Errorf("creating session: %w", err)
-		}
+	
+	if err := CreateSession(sessionLayout, name, cwd); err != nil {
+		return fmt.Errorf("creating session: %w", err)
 	}
+	
+	return SwitchToExistingSession(name)
+}
+
+// getSessionTarget returns the target string for tmux commands, 
+// incorporating the tmux_base configuration for window targeting.
+func getSessionTarget(name string) string {
 	tmuxBase := viper.GetInt("tmux_base")
-	target := fmt.Sprintf("%s:%d", name, tmuxBase)
-	if os.Getenv("TMUX") == "" {
-		cmd := exec.Command("tmux", "attach-session", "-t", target)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Stdin = os.Stdin
-		if err := cmd.Run(); err != nil {
-			if target != name {
-				cmd := exec.Command("tmux", "attach-session", "-t", name)
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-				cmd.Stdin = os.Stdin
-				return cmd.Run()
-			}
-			return fmt.Errorf("attaching to session: %w", err)
+	if tmuxBase >= 0 {
+		return fmt.Sprintf("%s:%d", name, tmuxBase)
+	}
+	return name
+}
+
+// attachToSession attaches to a session when not currently in tmux
+func attachToSession(target, fallbackName string) error {
+	cmd := exec.Command("tmux", "attach-session", "-t", target)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	
+	if err := cmd.Run(); err != nil {
+		// If targeting a specific window failed, try just the session name
+		if target != fallbackName {
+			cmd := exec.Command("tmux", "attach-session", "-t", fallbackName)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			cmd.Stdin = os.Stdin
+			return cmd.Run()
 		}
-	} else {
-		if err := exec.Command("tmux", "switch-client", "-t", target).Run(); err != nil {
-			if target != name {
-				return exec.Command("tmux", "switch-client", "-t", name).Run()
-			}
-			return fmt.Errorf("switching to session: %w", err)
+		return fmt.Errorf("attaching to session: %w", err)
+	}
+	return nil
+}
+
+// switchClientToSession switches to a session when already in tmux
+func switchClientToSession(target, fallbackName string) error {
+	if err := exec.Command("tmux", "switch-client", "-t", target).Run(); err != nil {
+		// If targeting a specific window failed, try just the session name
+		if target != fallbackName {
+			return exec.Command("tmux", "switch-client", "-t", fallbackName).Run()
 		}
+		return fmt.Errorf("switching to session: %w", err)
 	}
 	return nil
 }
