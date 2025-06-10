@@ -3,13 +3,14 @@
 
 package cmd
 
+// IMPORTS {{{
 import (
 	"fmt"
 	"os"
 	"os/exec"
 
 	"github.com/spf13/cobra"
-)
+)// }}}
 
 // editCmd represents the edit command
 var editCmd = &cobra.Command{
