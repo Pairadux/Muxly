@@ -74,17 +74,6 @@ Any flags that are omitted will be assigned the default values shown.`,
 
 func init() { // {{{
 	configCmd.AddCommand(initCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// initCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// initCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-
 	initCmd.Flags().IntP("tmux_base", "b", 1, "What number your windows start ordering at.")
 	initCmd.Flags().IntP("default_depth", "d", 1, "Default depth to scan.")
 	initCmd.Flags().StringP("default_session", "D", "Documents", "The name of the default session to fall back to.")
