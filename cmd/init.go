@@ -26,6 +26,8 @@ Otherwise, the current config file is overwritten.
 The flags provided are used to overwrite those values in the config file.
 Any flags that are omitted will be assigned the default values shown.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		// TODO: move all of this to a manually created config file
+		// So that comments and such can be added to explain each option
 		fresh := viper.New()
 		fresh.SetConfigFile(cfgFilePath)
 
