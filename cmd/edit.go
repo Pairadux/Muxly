@@ -5,6 +5,8 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
 
 	"github.com/spf13/cobra"
 )
@@ -14,8 +16,22 @@ var editCmd = &cobra.Command{
 	Use:   "edit",
 	Short: "Edit the config file",
 	Long: "Edit the config file\n\nUses the $EDITOR by default.",
+	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("edit called")
+		editor := os.Getenv("EDITOR")
+		if len(args) > 0 {
+			editor = args[0]
+		}
+		if editor == "" {
+			editor = "vi"
+		}
+		editCmd := exec.Command(editor, cfgFilePath)
+		editCmd.Stdin = os.Stdin
+		editCmd.Stdout = os.Stdout
+		editCmd.Stderr = os.Stderr
+		if err := editCmd.Run(); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+		}
 	},
 }
 
