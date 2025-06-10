@@ -73,7 +73,7 @@ Any flags that are omitted will be assigned the default values shown.`,
 }
 
 func init() { // {{{
-	rootCmd.AddCommand(initCmd)
+	configCmd.AddCommand(initCmd)
 
 	// Here you will define your flags and configuration settings.
 
