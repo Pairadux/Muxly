@@ -66,7 +66,9 @@ Any flags that are omitted will be assigned the default values shown.`,
 			fmt.Fprintln(os.Stderr, "cannot write config:", err)
 			os.Exit(1)
 		}
-		fmt.Println("Wrote config to", cfgFilePath)
+		if verbose {
+			fmt.Println("Wrote config to", cfgFilePath)
+		}
 	},
 }
 

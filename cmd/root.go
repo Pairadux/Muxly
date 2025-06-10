@@ -23,6 +23,7 @@ import (
 var (
 	cfgFileFlag string
 	cfgFilePath string
+	verbose bool
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -109,6 +110,7 @@ func init() { // {{{
 	// will be global for your application.
 
 	rootCmd.PersistentFlags().StringVar(&cfgFileFlag, "config", "", "config file (default $XDG_CONFIG_HOME/tms/config.yaml)")
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
 
 	rootCmd.Flags().IntP("depth", "d", 0, "Maximum traversal depth")
 
@@ -148,7 +150,7 @@ func initConfig() { // {{{
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			fmt.Fprintln(os.Stderr, "Config file is corrupted or unreadable:", err)
 		}
-	} else {
+	} else if verbose {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
 } // }}}
