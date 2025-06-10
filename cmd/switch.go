@@ -70,3 +70,4 @@ func init() { // {{{
 	// is called directly, e.g.:
 	// switchCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 } // }}}
+
