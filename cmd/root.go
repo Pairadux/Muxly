@@ -178,7 +178,7 @@ func validateConfig() error {
 // or session names for existing tmux sessions.
 func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 	entries := make(map[string]string)
-	existingSessions := tmux.GetTmuxSessions()
+	existingSessions := tmux.GetTmuxSessionSet()
 	currentSession := tmux.GetCurrentTmuxSession()
 	addEntry := func(path string) error {
 		resolved, err := utility.ResolvePath(path)

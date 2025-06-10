@@ -15,26 +15,44 @@ import (
 	"github.com/spf13/viper"
 ) // }}}
 
-// GetTmuxSessions returns a map of all active tmux session names.
-// The map values are always true; the map serves as a set for quick
-// membership testing. Returns an empty map if tmux is not available
-// or if there's an error listing sessions.
-func GetTmuxSessions() map[string]bool {
-	sessions := make(map[string]bool)
-	if err := ValidateTmuxAvailable(); err != nil {
-		return sessions
-	}
-	cmd := exec.Command("tmux", "list-sessions", "-F", "#{session_name}")
-	output, err := cmd.Output()
-	if err != nil {
-		return sessions
-	}
-	for line := range strings.SplitSeq(strings.TrimSpace(string(output)), "\n") {
-		if line != "" {
-			sessions[line] = true
-		}
-	}
-	return sessions
+// GetTmuxSessionNames returns a slice of all active tmux session names.
+// Returns an empty slice if tmux is not available or if there's an error.
+func GetTmuxSessionNames() []string {
+    if err := ValidateTmuxAvailable(); err != nil {
+        return nil
+    }
+    cmd := exec.Command("tmux", "list-sessions", "-F", "#{session_name}")
+    output, err := cmd.Output()
+    if err != nil {
+        return nil
+    }
+    
+    var sessions []string
+    for line := range strings.SplitSeq(strings.TrimSpace(string(output)), "\n") {
+        if line != "" {
+            sessions = append(sessions, line)
+        }
+    }
+    return sessions
+}
+
+// HasTmuxSession checks if a tmux session with the given name exists.
+func HasTmuxSession(name string) bool {
+    if err := ValidateTmuxAvailable(); err != nil {
+        return false
+    }
+    return exec.Command("tmux", "has-session", "-t", name).Run() == nil
+}
+
+// GetTmuxSessionSet returns a set (map[string]bool) of active session names
+// for efficient membership testing when you need to check many sessions.
+func GetTmuxSessionSet() map[string]bool {
+    sessions := make(map[string]bool)
+    names := GetTmuxSessionNames()
+    for _, name := range names {
+        sessions[name] = true
+    }
+    return sessions
 }
 
 // GetCurrentTmuxSession returns the name of the current tmux session.
