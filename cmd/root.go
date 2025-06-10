@@ -153,6 +153,10 @@ func initConfig() { // {{{
 	}
 } // }}}
 
+// validateConfig ensures that the application configuration is valid and complete.
+// It checks for the presence of a config file and verifies that at least one
+// directory is configured for scanning (either scan_dirs or entry_dirs).
+// Returns an error with helpful instructions if validation fails.
 func validateConfig() error {
 	if viper.ConfigFileUsed() == "" {
 		return fmt.Errorf("no config file found\nRun 'tms init' to create one, or use --config to specify a path")
@@ -163,6 +167,15 @@ func validateConfig() error {
 	return nil
 }
 
+// buildDirectoryEntries creates a map of display names to directory paths by
+// processing scan_dirs and entry_dirs from the configuration. It handles
+// directory scanning at specified depths, filters out ignored directories,
+// excludes the current tmux session, and marks existing tmux sessions with
+// a "[TMUX]" prefix.
+//
+// The flagDepth parameter can override the scanning depth for scan_dirs.
+// Returns a map where keys are display names and values are resolved paths
+// or session names for existing tmux sessions.
 func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 	entries := make(map[string]string)
 	existingSessions := tmux.GetTmuxSessions()
@@ -218,6 +231,13 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 	return entries, nil
 }
 
+// processScanDir processes a single scan directory configuration entry,
+// which may include an optional depth specification in the format "path:depth".
+// It scans the directory at the effective depth and calls addEntry for each
+// subdirectory found.
+//
+// The flagDepth parameter can override the depth specified in the scanDir string.
+// The addEntry function is called for each discovered subdirectory.
 func processScanDir(scanDir string, flagDepth int, addEntry func(string) error) error {
 	var path string
 	var scanDepth int
@@ -250,6 +270,12 @@ func processScanDir(scanDir string, flagDepth int, addEntry func(string) error) 
 	return nil
 }
 
+// getEffectiveDepth determines the scanning depth to use based on a priority
+// hierarchy: flagDepth (highest priority), scanDepth from config, default_depth
+// from config, or 1 as the final fallback.
+//
+// This allows command-line flags to override per-directory depth settings,
+// which in turn override the global default depth setting.
 func getEffectiveDepth(scanDepth int, flagDepth int) int {
 	if flagDepth > 0 {
 		return flagDepth
