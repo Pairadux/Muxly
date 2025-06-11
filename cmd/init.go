@@ -6,6 +6,8 @@ package cmd
 // IMPORTS {{{
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -37,6 +39,7 @@ Otherwise, the current config file is overwritten.
 The flags provided are used to overwrite those values in the config file.
 Any flags that are omitted will be assigned the default values shown.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		// TODO: make an interactive menu for assigning these values
 		scanDirs := getScanDirsOrDefault(cmd, "scan_dirs", defaultScanDirs)
 		entryDirs := getStringArrayOrDefault(cmd, "entry_dirs", defaultEntryDirs)
 		ignoreDirs := getStringArrayOrDefault(cmd, "ignore_dirs", defaultIgnoreDirs)
@@ -60,8 +63,17 @@ Any flags that are omitted will be assigned the default values shown.`,
 			SessionLayout:   sessionLayout,
 		})
 
-		// Handle the config content (write to file, etc.)
-		fmt.Println(configContent)
+		parent := filepath.Dir(cfgFilePath)
+		_ = os.MkdirAll(parent, 0o755)
+		
+		if err := os.WriteFile(cfgFilePath, []byte(configContent), 0o644); err != nil {
+			fmt.Fprintln(os.Stderr, "cannot write config:", err)
+			os.Exit(1)
+		}
+		
+		if verbose {
+			fmt.Println("Wrote config to", cfgFilePath)
+		}
 	},
 }
 
@@ -82,7 +94,7 @@ func generateConfigYAML(params models.Config) string {
 
 	b.WriteString("# Directories to scan for projects\n")
 	b.WriteString("# Each entry can be a simple path or include depth:\n")
-	b.WriteString("#   - path: ~/Dev\n")
+	b.WriteString("#   - path: ~/\n")
 	b.WriteString("#     depth: 3\n")
 	b.WriteString("scan_dirs:\n")
 	for _, dir := range params.ScanDirs {
