@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-)// }}}
+) // }}}
 
 // killCmd represents the kill command
 var killCmd = &cobra.Command{

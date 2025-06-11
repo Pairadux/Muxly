@@ -65,12 +65,12 @@ Any flags that are omitted will be assigned the default values shown.`,
 
 		parent := filepath.Dir(cfgFilePath)
 		_ = os.MkdirAll(parent, 0o755)
-		
+
 		if err := os.WriteFile(cfgFilePath, []byte(configContent), 0o644); err != nil {
 			fmt.Fprintln(os.Stderr, "cannot write config:", err)
 			os.Exit(1)
 		}
-		
+
 		if verbose {
 			fmt.Println("Wrote config to", cfgFilePath)
 		}
