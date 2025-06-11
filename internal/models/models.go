@@ -19,6 +19,12 @@ type ScanDir struct {
 	Depth *int   `mapstructure:"depth,omitempty"`
 }
 
+// WIP
+type Session struct {
+	Name string
+	Layout SessionLayout
+}
+
 // GetDepth returns the depth for this scan directory, with fallback logic
 func (s ScanDir) GetDepth(flagDepth, defaultDepth int) int {
 	if flagDepth > 0 {
