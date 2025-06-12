@@ -209,8 +209,12 @@ func buildWindowArgs(isFirst bool, session, windowName, dir, cmd string) []strin
 	}
 
 	if cmd != "" {
-		cmdStr := cmd + "; exec $SHELL"
-		args = append(args, "--", "$SHELL", "-lc", cmdStr)
+		shell := os.Getenv("SHELL")
+		if shell == "" {
+			shell = "/bin/bash"
+		}
+		cmdStr := cmd + "; exec " + shell
+		args = append(args, "--", shell, "-lc", cmdStr)
 	}
 
 	return args
