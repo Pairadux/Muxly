@@ -63,6 +63,9 @@ func GetSubDirs(maxDepth int, root string) ([]string, error) {
 			fmt.Fprintf(os.Stderr, "walk error %q: %v\n", path, err)
 			return nil
 		}
+		if d.Name() == filepath.Base(root) {
+			return nil
+		}
 		if d.IsDir() {
 			dirChan <- path
 		}
