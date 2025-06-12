@@ -18,41 +18,45 @@ import (
 // GetTmuxSessionNames returns a slice of all active tmux session names.
 // Returns an empty slice if tmux is not available or if there's an error.
 func GetTmuxSessionNames() []string {
-    if err := ValidateTmuxAvailable(); err != nil {
-        return nil
-    }
-    cmd := exec.Command("tmux", "list-sessions", "-F", "#{session_name}")
-    output, err := cmd.Output()
-    if err != nil {
-        return nil
-    }
-    
-    var sessions []string
-    for line := range strings.SplitSeq(strings.TrimSpace(string(output)), "\n") {
-        if line != "" {
-            sessions = append(sessions, line)
-        }
-    }
-    return sessions
+	if err := ValidateTmuxAvailable(); err != nil {
+		return nil
+	}
+
+	cmd := exec.Command("tmux", "list-sessions", "-F", "#{session_name}")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil
+	}
+
+	var sessions []string
+	for line := range strings.SplitSeq(strings.TrimSpace(string(output)), "\n") {
+		if line != "" {
+			sessions = append(sessions, line)
+		}
+	}
+
+	return sessions
 }
 
 // HasTmuxSession checks if a tmux session with the given name exists.
 func HasTmuxSession(name string) bool {
-    if err := ValidateTmuxAvailable(); err != nil {
-        return false
-    }
-    return exec.Command("tmux", "has-session", "-t", name).Run() == nil
+	if err := ValidateTmuxAvailable(); err != nil {
+		return false
+	}
+
+	return exec.Command("tmux", "has-session", "-t", name).Run() == nil
 }
 
 // GetTmuxSessionSet returns a set (map[string]bool) of active session names
 // for efficient membership testing when you need to check many sessions.
 func GetTmuxSessionSet() map[string]bool {
-    sessions := make(map[string]bool)
-    names := GetTmuxSessionNames()
-    for _, name := range names {
-        sessions[name] = true
-    }
-    return sessions
+	sessions := make(map[string]bool)
+	names := GetTmuxSessionNames()
+	for _, name := range names {
+		sessions[name] = true
+	}
+
+	return sessions
 }
 
 // GetCurrentTmuxSession returns the name of the current tmux session.
@@ -62,11 +66,13 @@ func GetCurrentTmuxSession() string {
 	if os.Getenv("TMUX") == "" {
 		return ""
 	}
+
 	cmd := exec.Command("tmux", "display-message", "-p", "#{session_name}")
 	output, err := cmd.Output()
 	if err != nil {
 		return ""
 	}
+
 	return strings.TrimSpace(string(output))
 }
 
@@ -77,13 +83,13 @@ func SwitchToExistingSession(name string) error {
 	if err := ValidateTmuxAvailable(); err != nil {
 		return err
 	}
-	
+
 	if !HasTmuxSession(name) {
 		return fmt.Errorf("session '%s' does not exist", name)
 	}
 
 	target := getSessionTarget(name)
-	
+
 	if os.Getenv("TMUX") == "" {
 		return attachToSession(target, name)
 	} else {
@@ -97,30 +103,31 @@ func CreateAndSwitchSession(name, cwd string) error {
 	if err := ValidateTmuxAvailable(); err != nil {
 		return err
 	}
-	
+
 	if HasTmuxSession(name) {
 		return SwitchToExistingSession(name)
 	}
-	
+
 	var sessionLayout models.SessionLayout
 	if err := viper.UnmarshalKey("session_layout", &sessionLayout); err != nil {
 		return fmt.Errorf("failed to decode session_layout: %w", err)
 	}
-	
+
 	if err := CreateSession(sessionLayout, name, cwd); err != nil {
 		return fmt.Errorf("creating session: %w", err)
 	}
-	
+
 	return SwitchToExistingSession(name)
 }
 
-// getSessionTarget returns the target string for tmux commands, 
+// getSessionTarget returns the target string for tmux commands,
 // incorporating the tmux_base configuration for window targeting.
 func getSessionTarget(name string) string {
 	tmuxBase := viper.GetInt("tmux_base")
 	if tmuxBase >= 0 {
 		return fmt.Sprintf("%s:%d", name, tmuxBase)
 	}
+
 	return name
 }
 
@@ -130,7 +137,7 @@ func attachToSession(target, fallbackName string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
-	
+
 	if err := cmd.Run(); err != nil {
 		// If targeting a specific window failed, try just the session name
 		if target != fallbackName {
@@ -140,8 +147,10 @@ func attachToSession(target, fallbackName string) error {
 			cmd.Stdin = os.Stdin
 			return cmd.Run()
 		}
+
 		return fmt.Errorf("attaching to session: %w", err)
 	}
+
 	return nil
 }
 
@@ -152,8 +161,10 @@ func switchClientToSession(target, fallbackName string) error {
 		if target != fallbackName {
 			return exec.Command("tmux", "switch-client", "-t", fallbackName).Run()
 		}
+
 		return fmt.Errorf("switching to session: %w", err)
 	}
+
 	return nil
 }
 
@@ -168,6 +179,7 @@ func CreateSession(sessionLayout models.SessionLayout, session, dir string) erro
 	if len(sessionLayout.Windows) == 0 {
 		return fmt.Errorf("no windows defined in session layout")
 	}
+
 	w0 := sessionLayout.Windows[0]
 	args := []string{"new-session", "-ds", session, "-n", w0.Name, "-c", dir}
 	if w0.Cmd != "" {
@@ -176,6 +188,7 @@ func CreateSession(sessionLayout models.SessionLayout, session, dir string) erro
 	if err := exec.Command("tmux", args...).Run(); err != nil {
 		return err
 	}
+
 	for _, w := range sessionLayout.Windows[1:] {
 		args = []string{"new-window", "-t", session, "-n", w.Name, "-c", dir}
 		if w.Cmd != "" {
@@ -185,14 +198,17 @@ func CreateSession(sessionLayout models.SessionLayout, session, dir string) erro
 			return err
 		}
 	}
+
 	return nil
 }
 
 // ValidateTmuxAvailable checks if the tmux command is available in the system PATH.
+//
 // Returns an error if tmux is not found.
 func ValidateTmuxAvailable() error {
 	if _, err := exec.LookPath("tmux"); err != nil {
 		return fmt.Errorf("tmux not found in PATH: %w", err)
 	}
+
 	return nil
 }
