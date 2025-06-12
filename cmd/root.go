@@ -20,6 +20,11 @@ import (
 	"github.com/spf13/viper"
 ) // }}}
 
+const (
+	TmuxSessionPrefix = "[TMUX] "
+	DefaultEditor     = "vi"
+)
+
 var (
 	cfgFileFlag string
 	cfgFilePath string
@@ -57,8 +62,8 @@ var rootCmd = &cobra.Command{
 			}
 
 			slices.SortFunc(names, func(a, b string) int {
-				isTmuxA := strings.HasPrefix(a, "[TMUX] ")
-				isTmuxB := strings.HasPrefix(b, "[TMUX] ")
+				isTmuxA := strings.HasPrefix(a, TmuxSessionPrefix)
+				isTmuxB := strings.HasPrefix(b, TmuxSessionPrefix)
 				if isTmuxA && !isTmuxB {
 					return -1
 				}
@@ -82,8 +87,8 @@ var rootCmd = &cobra.Command{
 		}
 
 		sessionName := choiceStr
-		if strings.HasPrefix(choiceStr, "[TMUX] ") {
-			sessionName = strings.TrimPrefix(choiceStr, "[TMUX] ")
+		if strings.HasPrefix(choiceStr, TmuxSessionPrefix) {
+			sessionName = strings.TrimPrefix(choiceStr, TmuxSessionPrefix)
 		}
 
 		selectedPath, exists := entries[choiceStr]
@@ -208,7 +213,7 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 
 		displayName := name
 		if existingSessions[name] {
-			displayName = "[TMUX] " + name
+			displayName = TmuxSessionPrefix + name
 		}
 
 		entries[displayName] = resolved
@@ -236,7 +241,7 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 		if sessionName == currentSession {
 			continue
 		}
-		displayName := "[TMUX] " + sessionName
+		displayName := TmuxSessionPrefix + sessionName
 		if _, exists := entries[displayName]; !exists {
 			entries[displayName] = sessionName
 		}
@@ -268,25 +273,4 @@ func processScanDir(scanDir models.ScanDir, flagDepth int, addEntry func(string)
 	}
 
 	return nil
-}
-
-// getEffectiveDepth determines the scanning depth to use based on a priority
-// hierarchy: flagDepth (highest priority), scanDepth from config, default_depth
-// from config, or 1 as the final fallback.
-//
-// This allows command-line flags to override per-directory depth settings,
-// which in turn override the global default depth setting.
-func getEffectiveDepth(scanDepth int, flagDepth int) int {
-	if flagDepth > 0 {
-		return flagDepth
-	}
-	if scanDepth > 0 {
-		return scanDepth
-	}
-	defaultDepth := viper.GetInt("default_depth")
-	if defaultDepth > 0 {
-		return defaultDepth
-	}
-
-	return 1
 }

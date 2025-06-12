@@ -16,6 +16,8 @@ import (
 	"github.com/spf13/viper"
 ) // }}}
 
+const DefaultShell = "/bin/bash"
+
 // GetTmuxSessionNames returns a slice of all active tmux session names.
 // Returns an empty slice if tmux is not available or if there's an error.
 func GetTmuxSessionNames() []string {
@@ -220,7 +222,7 @@ func buildWindowArgs(isFirst bool, session, windowName, dir, cmd string) []strin
 	if cmd != "" {
 		shell := os.Getenv("SHELL")
 		if shell == "" {
-			shell = "/bin/bash"
+			shell = DefaultShell
 		}
 		cmdStr := cmd + "; exec " + shell
 		args = append(args, "--", shell, "-lc", cmdStr)

@@ -33,7 +33,7 @@ You can also set the default editor in the config file that will always be used 
 		} else if cfgEditor := viper.GetString("editor"); cfgEditor != "" {
 			editor = cfgEditor
 		} else {
-			editor = "vi"
+			editor = DefaultEditor
 		}
 		editCmd := exec.Command(editor, cfgFilePath)
 		editCmd.Stdin = os.Stdin
