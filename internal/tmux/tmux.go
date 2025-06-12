@@ -239,6 +239,61 @@ func KillSession(target string) error {
 	return nil
 }
 
+// CreateDefaultSession creates and switches to the configured fallback session.
+// If no fallback session is configured, it uses "default" as the session name.
+// The session is created in the user's home directory with the configured layout.
+//
+// Returns an error if session creation or switching fails.
+func CreateDefaultSession() error {
+	if err := ValidateTmuxAvailable(); err != nil {
+		return err
+	}
+
+	// Get fallback session name from config
+	sessionName := viper.GetString("fallback_session")
+	if sessionName == "" {
+		sessionName = "default"
+	}
+
+	// If session already exists, just switch to it
+	if HasTmuxSession(sessionName) {
+		return SwitchToExistingSession(sessionName)
+	}
+
+	// Use home directory as the working directory for default session
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get home directory: %w", err)
+	}
+
+	// Create and switch to the default session
+	if err := CreateAndSwitchSession(sessionName, homeDir); err != nil {
+		return fmt.Errorf("failed to create default session '%s': %w", sessionName, err)
+	}
+
+	return nil
+}
+
+// GetOrCreateDefaultSession returns the name of the configured fallback session,
+// creating it if it doesn't exist. This is useful when you need the session name
+// but want to ensure it exists.
+//
+// Returns the session name and an error if creation fails.
+func GetOrCreateDefaultSession() (string, error) {
+	sessionName := viper.GetString("fallback_session")
+	if sessionName == "" {
+		sessionName = "default"
+	}
+
+	if !HasTmuxSession(sessionName) {
+		if err := CreateDefaultSession(); err != nil {
+			return "", err
+		}
+	}
+
+	return sessionName, nil
+}
+
 // ValidateTmuxAvailable checks if the tmux command is available in the system PATH.
 //
 // Returns an error if tmux is not found.
