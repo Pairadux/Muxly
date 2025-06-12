@@ -51,9 +51,7 @@ var initCmd = &cobra.Command{
 	Long: `Create a new config file
 
 Creates a config file at the specified location (default location if no argument passed) if no config file exists.
-Otherwise, the current config file is overwritten.
-The flags provided are used to overwrite those values in the config file.
-Any flags that are omitted will be assigned the default values shown.`,
+Otherwise, the current config file is overwritten.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: make an interactive menu for assigning these values
 		scanDirs := defaultScanDirs
