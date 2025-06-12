@@ -181,25 +181,39 @@ func CreateSession(sessionLayout models.SessionLayout, session, dir string) erro
 	}
 
 	w0 := sessionLayout.Windows[0]
-	args := []string{"new-session", "-ds", session, "-n", w0.Name, "-c", dir}
-	if w0.Cmd != "" {
-		args = append(args, strings.Fields(w0.Cmd)...)
-	}
+	args := buildWindowArgs(true, session, w0.Name, dir, w0.Cmd)
 	if err := exec.Command("tmux", args...).Run(); err != nil {
 		return err
 	}
 
 	for _, w := range sessionLayout.Windows[1:] {
-		args = []string{"new-window", "-t", session, "-n", w.Name, "-c", dir}
-		if w.Cmd != "" {
-			args = append(args, w.Cmd)
-		}
+		args := buildWindowArgs(false, session, w.Name, dir, w.Cmd)
 		if err := exec.Command("tmux", args...).Run(); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+// buildWindowArgs constructs tmux command arguments for creating a window.
+//
+// For the first window it uses new-session, for subsequent windows it uses new-window.
+// If cmd is provided, it wraps it with shell execution to keep the window open.
+func buildWindowArgs(isFirst bool, session, windowName, dir, cmd string) []string {
+	var args []string
+	if isFirst {
+		args = []string{"new-session", "-ds", session, "-n", windowName, "-c", dir}
+	} else {
+		args = []string{"new-window", "-t", session, "-n", windowName, "-c", dir}
+	}
+
+	if cmd != "" {
+		cmdStr := cmd + "; exec $SHELL"
+		args = append(args, "--", "$SHELL", "-lc", cmdStr)
+	}
+
+	return args
 }
 
 // ValidateTmuxAvailable checks if the tmux command is available in the system PATH.
