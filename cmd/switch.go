@@ -19,7 +19,10 @@ import (
 var switchCmd = &cobra.Command{
 	Use:   "switch [SESSION]",
 	Short: "Switch to an active session",
-	Long:  "Switch to an active session\n\nDisplays a fzf picker list of active sessions.",
+	Long:  `Switch to an active session
+
+Displays a fzf picker list of active sessions.
+If no other sessions found, exit.`,
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := tmux.ValidateTmuxAvailable(); err != nil {
