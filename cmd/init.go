@@ -19,7 +19,7 @@ import (
 var (
 	defaultScanDirs = []models.ScanDir{
 		{Path: "~/Dev", Depth: nil},
-		{Path: "~/.dotfiles/dot_config/", Depth: nil},
+		{Path: "~/.dotfiles/dot_config", Depth: nil},
 	}
 	defaultEntryDirs  = []string{"~/Documents", "~/Cloud"}
 	defaultIgnoreDirs = []string{"~/Dev/_practice", "~/Dev/CS-Homework"}
