@@ -10,6 +10,7 @@ import (
 
 	"github.com/Pairadux/tms/internal/fzf"
 	"github.com/Pairadux/tms/internal/tmux"
+	"github.com/Pairadux/tms/internal/utility"
 
 	"github.com/spf13/cobra"
 ) // ) // }}}
@@ -27,7 +28,7 @@ If there are no other sessions however, the default sessions configured in the c
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
-		if err := validateConfig(); err != nil {
+		if err := utility.ValidateConfig(); err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}

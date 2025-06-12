@@ -42,7 +42,7 @@ var rootCmd = &cobra.Command{
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
-		if err := validateConfig(); err != nil {
+		if err := utility.ValidateConfig(); err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
@@ -155,19 +155,9 @@ func initConfig() { // {{{
 	} else if verbose {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
+
 } // }}}
 
-// validateConfig ensures that the application configuration is valid and complete.
-// It checks for the presence of a config file and verifies that at least one
-// directory is configured for scanning (either scan_dirs or entry_dirs).
-// Returns an error with helpful instructions if validation fails.
-func validateConfig() error {
-	if viper.ConfigFileUsed() == "" {
-		return fmt.Errorf("no config file found\nRun 'tms init' to create one, or use --config to specify a path")
-	}
-	if (len(viper.GetStringSlice("scan_dirs")) == 0) && (len(viper.GetStringSlice("entry_dirs")) == 0) {
-		return fmt.Errorf("no directories configured for scanning")
-	}
 
 	return nil
 }

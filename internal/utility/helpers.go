@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/charlievieth/fastwalk"
+	"github.com/spf13/viper"
 ) // }}}
 
 // ResolvePath takes an “unknown” path pattern and returns an absolute path.
@@ -88,5 +89,21 @@ func GetSubDirs(maxDepth int, root string) ([]string, error) {
 		return nil, err
 	}
 	return dirs, nil
+}
+
+// validateConfig ensures that the application configuration is valid and complete.
+// It checks for the presence of a config file and verifies that at least one
+// directory is configured for scanning (either scan_dirs or entry_dirs).
+// Returns an error with helpful instructions if validation fails.
+func ValidateConfig() error {
+	// FIXME: make this check the values of the setup config struct to ensure compliance
+	if viper.ConfigFileUsed() == "" {
+		return fmt.Errorf("no config file found\nRun 'tms init' to create one, or use --config to specify a path")
+	}
+	if (len(viper.GetStringSlice("scan_dirs")) == 0) && (len(viper.GetStringSlice("entry_dirs")) == 0) {
+		return fmt.Errorf("no directories configured for scanning")
+	}
+
+	return nil
 }
 

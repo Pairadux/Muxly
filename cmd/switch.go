@@ -10,6 +10,7 @@ import (
 
 	"github.com/Pairadux/tms/internal/fzf"
 	"github.com/Pairadux/tms/internal/tmux"
+	"github.com/Pairadux/tms/internal/utility"
 
 	"github.com/spf13/cobra"
 ) // }}}
@@ -25,7 +26,7 @@ var switchCmd = &cobra.Command{
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
-		if err := validateConfig(); err != nil {
+		if err := utility.ValidateConfig(); err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
