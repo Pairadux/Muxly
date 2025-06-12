@@ -98,7 +98,7 @@ var rootCmd = &cobra.Command{
 		}
 
 		if err := tmux.CreateAndSwitchSession(sessionName, selectedPath); err != nil {
-			fmt.Fprintf(os.Stderr, "failed to switch session: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Failed to switch session: %v\n", err)
 			os.Exit(1)
 		}
 	},

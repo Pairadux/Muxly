@@ -59,7 +59,7 @@ If no other sessions found, exit.`,
 		}
 		sessionName := choiceStr
 		if err := tmux.SwitchToExistingSession(sessionName); err != nil {
-			fmt.Fprintf(os.Stderr, "failed to switch session: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Failed to switch session: %v\n", err)
 			os.Exit(1)
 		}
 	},

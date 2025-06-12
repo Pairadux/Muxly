@@ -58,12 +58,12 @@ If there are no other sessions however, the default sessions configured in the c
 		}
 		sessionName := choiceStr
 		if err := tmux.SwitchToExistingSession(sessionName); err != nil {
-			fmt.Fprintf(os.Stderr, "failed to switch session: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Failed to switch session: %v\n", err)
 			os.Exit(1)
 		}
 
 		if err := tmux.KillSession(currentSession); err != nil {
-			fmt.Fprintf(os.Stderr, "failed to kill session: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Failed to kill session: %v\n", err)
 			os.Exit(1)
 		}
 	},

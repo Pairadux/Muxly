@@ -61,7 +61,7 @@ func GetSubDirs(maxDepth int, root string) ([]string, error) {
 	cfg := &fastwalk.Config{MaxDepth: maxDepth}
 	walkFn := func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "walk error %q: %v\n", path, err)
+			fmt.Fprintf(os.Stderr, "Walk error %q: %v\n", path, err)
 			return nil
 		}
 		// NOTE: might make this into a flag or config option
