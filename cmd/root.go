@@ -160,6 +160,7 @@ func initConfig() { // {{{
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			fmt.Fprintln(os.Stderr, "Config file is corrupted or unreadable:", err)
+			os.Exit(1)
 		}
 	} else if verbose {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
