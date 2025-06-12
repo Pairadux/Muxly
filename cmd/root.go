@@ -9,10 +9,10 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/Pairadux/tms/internal/fzf"
+	"github.com/Pairadux/tms/internal/models"
 	"github.com/Pairadux/tms/internal/tmux"
 	"github.com/Pairadux/tms/internal/utility"
 
@@ -172,15 +172,18 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 	entries := make(map[string]string)
 	existingSessions := tmux.GetTmuxSessionSet()
 	currentSession := tmux.GetCurrentTmuxSession()
+
 	addEntry := func(path string) error {
 		resolved, err := utility.ResolvePath(path)
 		if err != nil {
 			return err
 		}
+
 		name := filepath.Base(resolved)
 		if name == currentSession {
 			return nil
 		}
+
 		ignoreDirs := viper.GetStringSlice("ignore_dirs")
 		for _, ignoreDir := range ignoreDirs {
 			ignoredResolved, err := utility.ResolvePath(ignoreDir)
@@ -194,23 +197,33 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 				return nil
 			}
 		}
+
 		displayName := name
 		if existingSessions[name] {
 			displayName = "[TMUX] " + name
 		}
+
 		entries[displayName] = resolved
 		return nil
 	}
-	for _, scanDir := range viper.GetStringSlice("scan_dirs") {
+
+	var scanDirs []models.ScanDir
+	if err := viper.UnmarshalKey("scan_dirs", &scanDirs); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal scan_dirs: %w", err)
+	}
+
+	for _, scanDir := range scanDirs {
 		if err := processScanDir(scanDir, flagDepth, addEntry); err != nil {
 			return nil, err
 		}
 	}
+
 	for _, entryDir := range viper.GetStringSlice("entry_dirs") {
 		if err := addEntry(entryDir); err != nil {
 			return nil, err
 		}
 	}
+
 	for sessionName := range existingSessions {
 		if sessionName == currentSession {
 			continue
@@ -220,40 +233,26 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 			entries[displayName] = sessionName
 		}
 	}
+
 	return entries, nil
 }
 
-// processScanDir processes a single scan directory configuration entry,
-// which may include an optional depth specification in the format "path:depth".
-// It scans the directory at the effective depth and calls addEntry for each
-// subdirectory found.
-//
-// The flagDepth parameter can override the depth specified in the scanDir string.
-// The addEntry function is called for each discovered subdirectory.
-func processScanDir(scanDir string, flagDepth int, addEntry func(string) error) error {
-	var path string
-	var scanDepth int
-	if p, depthStr, found := strings.Cut(scanDir, ":"); found {
-		if d, err := strconv.Atoi(depthStr); err == nil {
-			path = p
-			scanDepth = d
-		} else {
-			path = scanDir
-			scanDepth = 0
-		}
-	} else {
-		path = scanDir
-		scanDepth = 0
-	}
-	effectiveDepth := getEffectiveDepth(flagDepth, scanDepth)
-	resolved, err := utility.ResolvePath(path)
+// processScanDir processes a ScanDir struct, using the struct's depth
+// and the existing depth priority logic from the ScanDir.GetDepth method.
+func processScanDir(scanDir models.ScanDir, flagDepth int, addEntry func(string) error) error {
+	defaultDepth := viper.GetInt("default_depth")
+	effectiveDepth := scanDir.GetDepth(flagDepth, defaultDepth)
+	
+	resolved, err := utility.ResolvePath(scanDir.Path)
 	if err != nil {
 		return err
 	}
+	
 	subDirs, err := utility.GetSubDirs(effectiveDepth, resolved)
 	if err != nil {
 		return err
 	}
+	
 	for _, subDir := range subDirs {
 		if err := addEntry(subDir); err != nil {
 			return err
