@@ -222,12 +222,7 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 		return nil
 	}
 
-	var scanDirs []models.ScanDir
-	if err := viper.UnmarshalKey("scan_dirs", &scanDirs); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal scan_dirs: %w", err)
-	}
-
-	for _, scanDir := range scanDirs {
+	for _, scanDir := range cfg.ScanDirs {
 		if err := processScanDir(scanDir, flagDepth, addEntry); err != nil {
 			return nil, err
 		}
