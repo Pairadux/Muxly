@@ -22,7 +22,7 @@ var (
 		{Path: "~/.dotfiles/dot_config", Depth: nil},
 	}
 	defaultEntryDirs  = []string{"~/Documents", "~/Cloud"}
-	defaultIgnoreDirs = []string{"~/Dev/_practice", "~/Dev/CS-Homework"}
+	defaultIgnoreDirs = []string{"~/Dev/_practice", "~/Dev/_archive"}
 	defaultTmuxBase   = 1
 	defaultDepth      = 1
 	defaultSession    = "Documents"
