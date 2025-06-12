@@ -30,9 +30,21 @@ var (
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "tms [SESSION]",
+	Example: "",
 	Short: "A tool for quickly opening tmux sessions",
 	Long:  "A tool for quickly opening tmux sessions\n\nBased on ThePrimeagen's Tmux-Sessionator script.",
 	Args:  cobra.MaximumNArgs(1),
+	// TODO: figure out if there is a way to support this without it running in init.go
+	// PersistentPreRun: func(cmd *cobra.Command, args []string) {
+	// 	if err := tmux.ValidateTmuxAvailable(); err != nil {
+	// 		fmt.Fprintln(os.Stderr, err.Error())
+	// 		os.Exit(1)
+	// 	}
+	// 	if err := utility.ValidateConfig(&cfg); err != nil {
+	// 		fmt.Fprintln(os.Stderr, err.Error())
+	// 		os.Exit(1)
+	// 	}
+	// },
 	Run: func(cmd *cobra.Command, args []string) {
 		if verbose {
 			fmt.Printf("scan_dirs: %v\n", cfg.ScanDirs)
@@ -197,7 +209,7 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 			return nil
 		}
 
-		// NOTE: try to find a more effecient way to ignore directories
+		// TODO: try to find a more effecient way to ignore directories
 		// Maybe expand scan_dirs to hold relevant ignore_dirs so the ignore_dirs are not searched for in every single scan_dir
 		// Might could also create a seperate ignore_regex to ignore paths based on a regex match
 		ignoreDirs := cfg.IgnoreDirs

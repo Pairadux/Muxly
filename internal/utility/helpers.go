@@ -108,3 +108,10 @@ func ValidateConfig(cfg *models.Config) error {
 	return nil
 }
 
+
+// TODO: create this
+func VerifyExternalUtils() error {
+	//tmux
+	// fzf
+	return nil
+}
