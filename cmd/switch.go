@@ -37,6 +37,7 @@ var switchCmd = &cobra.Command{
 			choiceStr = args[0]
 		}
 		if choiceStr == "" {
+			// FIXME: if empty need to error out or something
 			sessions := tmux.GetSessionsExceptCurrent(currentSession)
 
 			var err error
