@@ -63,6 +63,8 @@ func GetSubDirs(maxDepth int, root string) ([]string, error) {
 			fmt.Fprintf(os.Stderr, "walk error %q: %v\n", path, err)
 			return nil
 		}
+		// NOTE: might make this into a flag or config option
+		// ExcludeRootDir
 		if d.Name() == filepath.Base(root) {
 			return nil
 		}
