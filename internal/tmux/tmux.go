@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 	"slices"
+	"strings"
 
 	"github.com/Pairadux/tms/internal/models"
 
@@ -227,6 +227,14 @@ func buildWindowArgs(isFirst bool, session, windowName, dir, cmd string) []strin
 	}
 
 	return args
+}
+
+func KillSession(target string) error {
+	if err := exec.Command("tmux", "kill-session", "-t", target).Run(); err != nil {
+		return fmt.Errorf("killing session: %w", err)
+	}
+
+	return nil
 }
 
 // ValidateTmuxAvailable checks if the tmux command is available in the system PATH.
