@@ -5,6 +5,7 @@ package cmd
 
 // IMPORTS {{{
 import (
+	"bufio"
 	"fmt"
 	"os"
 
@@ -19,12 +20,18 @@ import (
 var switchCmd = &cobra.Command{
 	Use:   "switch [SESSION]",
 	Short: "Switch to an active session",
-	Long:  `Switch to an active session
+	Long: `Switch to an active session
 
 Displays a fzf picker list of active sessions.
 If no other sessions found, exit.`,
-	Args:  cobra.MaximumNArgs(1),
+	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		currentSession := tmux.GetCurrentTmuxSession()
+
+		if currentSession == "" {
+			fmt.Fprintln(os.Stderr, "Not in Tmux, use 'tms' to get started.")
+			os.Exit(1)
+		}
 		if err := tmux.ValidateTmuxAvailable(); err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
@@ -33,8 +40,6 @@ If no other sessions found, exit.`,
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
-
-		currentSession := tmux.GetCurrentTmuxSession()
 
 		var choiceStr string
 		if len(args) == 1 {
@@ -71,7 +76,6 @@ If no other sessions found, exit.`,
 	},
 }
 
-func init() { 
+func init() {
 	rootCmd.AddCommand(switchCmd)
-} 
-
+}
