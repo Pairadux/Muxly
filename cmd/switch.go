@@ -44,10 +44,9 @@ If no other sessions found, exit.`,
 			sessions := tmux.GetSessionsExceptCurrent(currentSession)
 
 			if len(sessions) == 0 {
-				if err := tmux.CreateDefaultSession(&cfg); err != nil {
-					fmt.Fprintf(os.Stderr, "Failed to create default session: %v\n", err)
-					os.Exit(1)
-				}
+				fmt.Println("No other sessions available. Use 'tms' to start a new session.")
+				fmt.Print("Press Enter to exit...")
+				bufio.NewReader(os.Stdin).ReadBytes('\n')
 				return
 			}
 

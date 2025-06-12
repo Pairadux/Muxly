@@ -98,8 +98,8 @@ var rootCmd = &cobra.Command{
 		}
 
 		selectedPath, exists := entries[choiceStr]
-		if !exists {
-			fmt.Fprintf(os.Stderr, "Selected directory not found: %s\n", choiceStr)
+		if !exists && args[0] == "" {
+			fmt.Fprintf(os.Stderr, "The name must match an existing directory entry: %s\n", choiceStr)
 			os.Exit(1)
 		}
 
