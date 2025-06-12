@@ -12,8 +12,6 @@ import (
 	"strings"
 
 	"github.com/Pairadux/tms/internal/models"
-
-	"github.com/spf13/viper"
 ) // }}}
 
 const DefaultShell = "/bin/bash"
@@ -110,7 +108,7 @@ func SwitchToExistingSession(cfg *models.Config, name string) error {
 
 // CreateAndSwitchSession creates a new tmux session and switches to it.
 // If the session already exists, it just switches to it.
-func CreateAndSwitchSession(cfg *models.Config, name, cwd string) error {
+func CreateAndSwitchSession(cfg *models.Config, name, cwd string, layout models.SessionLayout) error {
 	if err := ValidateTmuxAvailable(); err != nil {
 		return err
 	}
@@ -119,12 +117,7 @@ func CreateAndSwitchSession(cfg *models.Config, name, cwd string) error {
 		return SwitchToExistingSession(cfg, name)
 	}
 
-	var sessionLayout models.SessionLayout
-	if err := viper.UnmarshalKey("session_layout", &sessionLayout); err != nil {
-		return fmt.Errorf("failed to decode session_layout: %w", err)
-	}
-
-	if err := CreateSession(sessionLayout, name, cwd); err != nil {
+	if err := CreateSession(layout, name, cwd); err != nil {
 		return fmt.Errorf("creating session: %w", err)
 	}
 
@@ -244,32 +237,22 @@ func KillSession(target string) error {
 // The session is created in the user's home directory with the configured layout.
 //
 // Returns an error if session creation or switching fails.
-// FIXME
 func CreateDefaultSession(cfg *models.Config) error {
 	if err := ValidateTmuxAvailable(); err != nil {
 		return err
 	}
 
-	// Get fallback session name from config
 	sessionName := cfg.FallbackSession.Name
 	if sessionName == "" {
-		sessionName = "default"
+		sessionName = "Default"
 	}
 
-	// If session already exists, just switch to it
 	if HasTmuxSession(sessionName) {
 		return SwitchToExistingSession(cfg, sessionName)
 	}
 
-	// Use home directory as the working directory for default session
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("failed to get home directory: %w", err)
-	}
-
-	// Create and switch to the default session
-	if err := CreateAndSwitchSession(cfg, sessionName, homeDir); err != nil {
-		return fmt.Errorf("failed to create default session '%s': %w", sessionName, err)
+	if err := CreateAndSwitchSession(cfg, sessionName, cfg.FallbackSession.Path, cfg.FallbackSession.Layout); err != nil {
+		return fmt.Errorf("failed to create and switch to session '%s': %w", sessionName, err)
 	}
 
 	return nil

@@ -40,8 +40,19 @@ If there are no other sessions however, the default sessions configured in the c
 			choiceStr = args[0]
 		}
 		if choiceStr == "" {
-			// FIXME: if empty, need to fallback to default
 			sessions := tmux.GetSessionsExceptCurrent(currentSession)
+
+			if len(sessions) == 0 {
+				if err := tmux.CreateDefaultSession(&cfg); err != nil {
+					fmt.Fprintf(os.Stderr, "Failed to create default session: %v\n", err)
+					os.Exit(1)
+				}
+				if err := tmux.KillSession(currentSession); err != nil {
+					fmt.Fprintf(os.Stderr, "Failed to kill session: %v\n", err)
+					os.Exit(1)
+				}
+				return
+			}
 
 			var err error
 			choiceStr, err = fzf.SelectWithFzf(sessions)
@@ -72,4 +83,3 @@ If there are no other sessions however, the default sessions configured in the c
 func init() {
 	rootCmd.AddCommand(killCmd)
 }
-

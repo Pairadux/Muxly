@@ -41,8 +41,15 @@ If no other sessions found, exit.`,
 			choiceStr = args[0]
 		}
 		if choiceStr == "" {
-			// FIXME: if empty need to error out or something
 			sessions := tmux.GetSessionsExceptCurrent(currentSession)
+
+			if len(sessions) == 0 {
+				if err := tmux.CreateDefaultSession(&cfg); err != nil {
+					fmt.Fprintf(os.Stderr, "Failed to create default session: %v\n", err)
+					os.Exit(1)
+				}
+				return
+			}
 
 			var err error
 			choiceStr, err = fzf.SelectWithFzf(sessions)

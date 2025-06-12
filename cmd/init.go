@@ -25,12 +25,12 @@ var (
 	defaultIgnoreDirs = []string{"~/Dev/_practice", "~/Dev/_archive"}
 	defaultTmuxBase   = 1
 	defaultDepth      = 1
-	defaultSession    = models.Session{
+	fallbackSession   = models.Session{
 		Name: "Default",
 		Path: "~/",
 		Layout: models.SessionLayout{
 			Windows: []models.Window{
-				{Name: "test", Cmd: "test"},
+				{Name: "window", Cmd: ""},
 			},
 		},
 	}
@@ -59,7 +59,7 @@ Otherwise, the current config file is overwritten.`,
 		ignoreDirs := defaultIgnoreDirs
 		tmuxBase := defaultTmuxBase
 		depth := defaultDepth
-		session := defaultSession
+		session := fallbackSession
 		sessionLayout := defaultSessionLayout
 		editor := defaultEditor
 		tmuxSessionPrefix := defaultTmuxSessionPrefix
@@ -133,8 +133,8 @@ func generateConfigYAML(params models.Config) string { // {{{
 	b.WriteString("\n")
 
 	// Fallback session
-	b.WriteString("# Default session name when no project is selected\n")
-	fallbackYAML, _ := yaml.Marshal(map[string]models.Session{"default_session": params.FallbackSession})
+	b.WriteString("# Fallback session for when killing the final session\n")
+	fallbackYAML, _ := yaml.Marshal(map[string]models.Session{"fallback_session": params.FallbackSession})
 	b.WriteString(string(fallbackYAML))
 	b.WriteString("\n")
 
@@ -169,5 +169,4 @@ func generateConfigYAML(params models.Config) string { // {{{
 	b.WriteString("\n")
 
 	return b.String()
-}// }}}
-
+} // }}}
