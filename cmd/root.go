@@ -23,7 +23,7 @@ import (
 var (
 	cfgFileFlag string
 	cfgFilePath string
-	verbose bool
+	verbose     bool
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -41,9 +41,11 @@ var rootCmd = &cobra.Command{
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
+
 		flagDepth, _ := cmd.Flags().GetInt("depth")
 		entries, err := buildDirectoryEntries(flagDepth)
 		cobra.CheckErr(err)
+
 		var choiceStr string
 		if len(args) == 1 {
 			choiceStr = args[0]
@@ -65,6 +67,7 @@ var rootCmd = &cobra.Command{
 				}
 				return strings.Compare(a, b)
 			})
+
 			choiceStr, err = fzf.SelectWithFzf(names)
 			if err != nil {
 				if err.Error() == "user cancelled" {
@@ -77,15 +80,18 @@ var rootCmd = &cobra.Command{
 				os.Exit(0)
 			}
 		}
+
 		sessionName := choiceStr
 		if strings.HasPrefix(choiceStr, "[TMUX] ") {
 			sessionName = strings.TrimPrefix(choiceStr, "[TMUX] ")
 		}
+
 		selectedPath, exists := entries[choiceStr]
 		if !exists {
 			fmt.Fprintf(os.Stderr, "Selected directory not found: %s\n", choiceStr)
 			os.Exit(1)
 		}
+
 		if err := tmux.CreateAndSwitchSession(sessionName, selectedPath); err != nil {
 			fmt.Fprintf(os.Stderr, "failed to switch session: %v\n", err)
 			os.Exit(1)
@@ -112,11 +118,11 @@ func init() { // {{{
 // initConfig reads in config file and ENV variables if set.
 func initConfig() { // {{{
 	if cfgFileFlag != "" {
-		// Use config file from the flag.
 		cfgFilePath = cfgFileFlag
 		viper.SetConfigFile(cfgFilePath)
 	} else {
 		var configDir string
+
 		xdg_config_home := os.Getenv("XDG_CONFIG_HOME")
 		if xdg_config_home != "" {
 			configDir = xdg_config_home
@@ -125,6 +131,7 @@ func initConfig() { // {{{
 			configDir, err = os.UserConfigDir()
 			cobra.CheckErr(err)
 		}
+
 		cfgDir := filepath.Join(configDir, "tms")
 		viper.AddConfigPath(cfgDir)
 		viper.AddConfigPath(".")
@@ -156,6 +163,7 @@ func validateConfig() error {
 	if (len(viper.GetStringSlice("scan_dirs")) == 0) && (len(viper.GetStringSlice("entry_dirs")) == 0) {
 		return fmt.Errorf("no directories configured for scanning")
 	}
+
 	return nil
 }
 
@@ -242,22 +250,23 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 func processScanDir(scanDir models.ScanDir, flagDepth int, addEntry func(string) error) error {
 	defaultDepth := viper.GetInt("default_depth")
 	effectiveDepth := scanDir.GetDepth(flagDepth, defaultDepth)
-	
+
 	resolved, err := utility.ResolvePath(scanDir.Path)
 	if err != nil {
 		return err
 	}
-	
+
 	subDirs, err := utility.GetSubDirs(effectiveDepth, resolved)
 	if err != nil {
 		return err
 	}
-	
+
 	for _, subDir := range subDirs {
 		if err := addEntry(subDir); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -278,5 +287,6 @@ func getEffectiveDepth(scanDepth int, flagDepth int) int {
 	if defaultDepth > 0 {
 		return defaultDepth
 	}
+
 	return 1
 }
