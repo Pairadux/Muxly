@@ -30,13 +30,15 @@ var switchCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		currentSession := tmux.GetCurrentTmuxSession()
+
 		var choiceStr string
 		if len(args) == 1 {
 			choiceStr = args[0]
 		}
 		if choiceStr == "" {
-			// TODO: make it so that the current TMUX session does not appear in the list
-			sessions := tmux.GetTmuxSessionNames()
+			sessions := tmux.GetSessionsExceptCurrent(currentSession)
+
 			var err error
 			choiceStr, err = fzf.SelectWithFzf(sessions)
 			if err != nil {

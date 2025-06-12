@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"slices"
 
 	"github.com/Pairadux/tms/internal/models"
 
@@ -35,6 +36,14 @@ func GetTmuxSessionNames() []string {
 		}
 	}
 
+	return sessions
+}
+
+func GetSessionsExceptCurrent(current string) []string {
+	sessions := GetTmuxSessionNames()
+	if idx := slices.Index(sessions, current); idx >= 0 {
+		sessions = slices.Delete(sessions, idx, idx+1)
+	}
 	return sessions
 }
 
