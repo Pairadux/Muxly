@@ -19,10 +19,10 @@ type ScanDir struct {
 	Depth *int   `mapstructure:"depth,omitempty"`
 }
 
-// WIP
 type Session struct {
-	Name string
-	Layout SessionLayout
+	Name   string        `mapstructure:"name"`
+	Path   string        `mapstructure:"path"`
+	Layout SessionLayout `mapstructure:"layout"`
 }
 
 // GetDepth returns the depth for this scan directory, with fallback logic
@@ -49,11 +49,13 @@ func (s ScanDir) String() string {
 
 // Config represents the full configuration structure
 type Config struct {
-	ScanDirs        []ScanDir     `mapstructure:"scan_dirs"`
-	EntryDirs       []string      `mapstructure:"entry_dirs"`
-	IgnoreDirs      []string      `mapstructure:"ignore_dirs"`
-	FallbackSession string        `mapstructure:"fallback_session"`
-	TmuxBase        int           `mapstructure:"tmux_base"`
-	DefaultDepth    int           `mapstructure:"default_depth"`
-	SessionLayout   SessionLayout `mapstructure:"session_layout"`
+	ScanDirs          []ScanDir     `mapstructure:"scan_dirs"`
+	EntryDirs         []string      `mapstructure:"entry_dirs"`
+	IgnoreDirs        []string      `mapstructure:"ignore_dirs"`
+	FallbackSession   Session       `mapstructure:"fallback_session"`
+	TmuxBase          int           `mapstructure:"tmux_base"`
+	DefaultDepth      int           `mapstructure:"default_depth"`
+	SessionLayout     SessionLayout `mapstructure:"session_layout"`
+	Editor            string        `mapstructure:"editor"`
+	TmuxSessionPrefix string        `mapstructure:"tmux_session_prefix"`
 }

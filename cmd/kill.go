@@ -28,7 +28,7 @@ If there are no other sessions however, the default sessions configured in the c
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
-		if err := utility.ValidateConfig(); err != nil {
+		if err := utility.ValidateConfig(&cfg); err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
@@ -57,7 +57,7 @@ If there are no other sessions however, the default sessions configured in the c
 			}
 		}
 		sessionName := choiceStr
-		if err := tmux.SwitchToExistingSession(sessionName); err != nil {
+		if err := tmux.SwitchToExistingSession(&cfg, sessionName); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to switch session: %v\n", err)
 			os.Exit(1)
 		}

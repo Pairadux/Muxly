@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/Pairadux/tms/internal/models"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 ) // }}}
 
 // Default values - defined once and used everywhere
@@ -25,7 +25,23 @@ var (
 	defaultIgnoreDirs = []string{"~/Dev/_practice", "~/Dev/_archive"}
 	defaultTmuxBase   = 1
 	defaultDepth      = 1
-	defaultSession    = "Documents"
+	defaultSession    = models.Session{
+		Name: "Default",
+		Path: "~/",
+		Layout: models.SessionLayout{
+			Windows: []models.Window{
+				{Name: "test", Cmd: "test"},
+			},
+		},
+	}
+	defaultSessionLayout = models.SessionLayout{
+		Windows: []models.Window{
+			{Name: "edit", Cmd: "nvim"},
+			{Name: "term", Cmd: ""},
+		},
+	}
+	defaultEditor            = "vi"
+	defaultTmuxSessionPrefix = "[TMUX] "
 )
 
 // initCmd represents the init command
@@ -40,27 +56,26 @@ The flags provided are used to overwrite those values in the config file.
 Any flags that are omitted will be assigned the default values shown.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: make an interactive menu for assigning these values
-		scanDirs := getScanDirsOrDefault(cmd, "scan_dirs", defaultScanDirs)
-		entryDirs := getStringArrayOrDefault(cmd, "entry_dirs", defaultEntryDirs)
-		ignoreDirs := getStringArrayOrDefault(cmd, "ignore_dirs", defaultIgnoreDirs)
-		tmuxBase := getIntOrDefault(cmd, "tmux_base", defaultTmuxBase)
-		depth := getIntOrDefault(cmd, "default_depth", defaultDepth)
-		session := getStringOrDefault(cmd, "default_session", defaultSession)
-		sessionLayout := models.SessionLayout{
-			Windows: []models.Window{
-				{Name: "edit", Cmd: "nvim"},
-				{Name: "term", Cmd: ""},
-			},
-		}
+		scanDirs := defaultScanDirs
+		entryDirs := defaultEntryDirs
+		ignoreDirs := defaultIgnoreDirs
+		tmuxBase := defaultTmuxBase
+		depth := defaultDepth
+		session := defaultSession
+		sessionLayout := defaultSessionLayout
+		editor := defaultEditor
+		tmuxSessionPrefix := defaultTmuxSessionPrefix
 
 		configContent := generateConfigYAML(models.Config{
-			ScanDirs:        scanDirs,
-			EntryDirs:       entryDirs,
-			IgnoreDirs:      ignoreDirs,
-			FallbackSession: session,
-			TmuxBase:        tmuxBase,
-			DefaultDepth:    depth,
-			SessionLayout:   sessionLayout,
+			ScanDirs:          scanDirs,
+			EntryDirs:         entryDirs,
+			IgnoreDirs:        ignoreDirs,
+			FallbackSession:   session,
+			TmuxBase:          tmuxBase,
+			DefaultDepth:      depth,
+			SessionLayout:     sessionLayout,
+			Editor:            editor,
+			TmuxSessionPrefix: tmuxSessionPrefix,
 		})
 
 		parent := filepath.Dir(cfgFilePath)
@@ -79,39 +94,33 @@ Any flags that are omitted will be assigned the default values shown.`,
 
 func init() { // {{{
 	configCmd.AddCommand(initCmd)
-	initCmd.Flags().IntP("tmux_base", "b", defaultTmuxBase, "What number your windows start ordering at.")
-	initCmd.Flags().IntP("default_depth", "d", defaultDepth, "Default depth to scan.")
-	initCmd.Flags().StringP("default_session", "D", defaultSession, "The name of the default session to fall back to.")
-	initCmd.Flags().StringArrayP("scan_dirs", "s", scanDirsToStringArray(defaultScanDirs), "A list of paths that should always be scanned.\nConcat with :int for depth.")
-	initCmd.Flags().StringArrayP("entry_dirs", "e", defaultEntryDirs, "A list of paths that are entries themselves.")
-	initCmd.Flags().StringArrayP("ignore_dirs", "i", defaultIgnoreDirs, "A list of paths that should be removed.")
+	// initCmd.Flags().IntP("tmux_base", "b", defaultTmuxBase, "What number your windows start ordering at.")
+	// initCmd.Flags().IntP("default_depth", "d", defaultDepth, "Default depth to scan.")
+	// initCmd.Flags().StringP("default_session", "D", defaultSession, "The name of the default session to fall back to.")
+	// initCmd.Flags().StringArrayP("scan_dirs", "s", scanDirsToStringArray(defaultScanDirs), "A list of paths that should always be scanned.\nConcat with :int for depth.")
+	// initCmd.Flags().StringArrayP("entry_dirs", "e", defaultEntryDirs, "A list of paths that are entries themselves.")
+	// initCmd.Flags().StringArrayP("ignore_dirs", "i", defaultIgnoreDirs, "A list of paths that should be removed.")
 } // }}}
 
-func generateConfigYAML(params models.Config) string {
+func generateConfigYAML(params models.Config) string { // {{{
 	var b strings.Builder
 
 	b.WriteString("# Configuration for Tmux Session Manager\n\n")
 
+	// Scan directories
 	b.WriteString("# Directories to scan for projects\n")
 	b.WriteString("# Each entry can be a simple path or include depth:\n")
 	b.WriteString("#   - path: ~/\n")
 	b.WriteString("#     depth: 3\n")
-	b.WriteString("scan_dirs:\n")
-	for _, dir := range params.ScanDirs {
-		b.WriteString(fmt.Sprintf("  - path: %s\n", dir))
-		if params.DefaultDepth > 0 {
-			b.WriteString(fmt.Sprintf("    depth: %d\n", params.DefaultDepth))
-		}
-	}
+	scanDirsYAML, _ := yaml.Marshal(map[string][]models.ScanDir{"scan_dirs": params.ScanDirs})
+	b.WriteString(string(scanDirsYAML))
 	b.WriteString("\n")
 
 	// Entry directories
 	if len(params.EntryDirs) > 0 {
 		b.WriteString("# Additional entry directories (always included)\n")
-		b.WriteString("entry_dirs:\n")
-		for _, dir := range params.EntryDirs {
-			b.WriteString(fmt.Sprintf("  - %s\n", dir))
-		}
+		entryDirsYAML, _ := yaml.Marshal(map[string][]string{"entry_dirs": params.EntryDirs})
+		b.WriteString(string(entryDirsYAML))
 	} else {
 		b.WriteString("# Additional entry directories (always included)\n")
 		b.WriteString("# entry_dirs:\n")
@@ -121,93 +130,46 @@ func generateConfigYAML(params models.Config) string {
 
 	// Ignore directories
 	b.WriteString("# Directory names to ignore when scanning\n")
-	b.WriteString("ignore_dirs:\n")
-	for _, dir := range params.IgnoreDirs {
-		b.WriteString(fmt.Sprintf("  - %s\n", dir))
-	}
+	ignoreDirsYAML, _ := yaml.Marshal(map[string][]string{"ignore_dirs": params.IgnoreDirs})
+	b.WriteString(string(ignoreDirsYAML))
 	b.WriteString("\n")
 
 	// Fallback session
 	b.WriteString("# Default session name when no project is selected\n")
-	b.WriteString(fmt.Sprintf("fallback_session: %s\n\n", params.FallbackSession))
+	fallbackYAML, _ := yaml.Marshal(map[string]models.Session{"default_session": params.FallbackSession})
+	b.WriteString(string(fallbackYAML))
+	b.WriteString("\n")
 
 	// Tmux base
 	b.WriteString("# Base index for tmux windows (0 or 1)\n")
-	b.WriteString(fmt.Sprintf("tmux_base: %d\n\n", params.TmuxBase))
+	tmuxBaseYAML, _ := yaml.Marshal(map[string]int{"tmux_base": params.TmuxBase})
+	b.WriteString(string(tmuxBaseYAML))
+	b.WriteString("\n")
 
 	// Default depth
 	b.WriteString("# Default scanning depth for directories\n")
-	b.WriteString(fmt.Sprintf("default_depth: %d\n\n", params.DefaultDepth))
+	defaultDepthYAML, _ := yaml.Marshal(map[string]int{"default_depth": params.DefaultDepth})
+	b.WriteString(string(defaultDepthYAML))
+	b.WriteString("\n")
 
 	// Session layout
 	b.WriteString("# Default layout for new tmux sessions\n")
-	b.WriteString("session_layout:\n")
-	b.WriteString("  windows:\n")
-	b.WriteString("    - name: edit\n")
-	b.WriteString("      cmd: nvim\n")
-	b.WriteString("    - name: term\n")
-	b.WriteString("      # cmd: (empty for default shell)\n")
+	sessionLayoutYAML, _ := yaml.Marshal(map[string]models.SessionLayout{"session_layout": params.SessionLayout})
+	b.WriteString(string(sessionLayoutYAML))
+	b.WriteString("\n")
+
+	// Editor
+	b.WriteString("# Default editor editing this config file\n")
+	editorYAML, _ := yaml.Marshal(map[string]string{"editor": params.Editor})
+	b.WriteString(string(editorYAML))
+	b.WriteString("\n")
+
+	// Tmux Session Prefix
+	b.WriteString("# The string that will prefix currently active Tmux sessions when using 'tms'\n")
+	tmuxSessionPrefixYAML, _ := yaml.Marshal(map[string]string{"tmux_session_prefix": params.TmuxSessionPrefix})
+	b.WriteString(string(tmuxSessionPrefixYAML))
+	b.WriteString("\n")
 
 	return b.String()
-}
+}// }}}
 
-// Helper functions to get flag values with defaults
-func getStringArrayOrDefault(cmd *cobra.Command, flag string, defaultVal []string) []string {
-	if val, err := cmd.Flags().GetStringArray(flag); err == nil && len(val) > 0 {
-		return val
-	}
-	return defaultVal
-}
-
-func getStringOrDefault(cmd *cobra.Command, flag string, defaultVal string) string {
-	if val, err := cmd.Flags().GetString(flag); err == nil && val != "" {
-		return val
-	}
-	return defaultVal
-}
-
-func getIntOrDefault(cmd *cobra.Command, flag string, defaultVal int) int {
-	if val, err := cmd.Flags().GetInt(flag); err == nil && cmd.Flags().Changed(flag) {
-		return val
-	}
-	return defaultVal
-}
-
-// Helper functions to get flag values with defaults
-func getScanDirsOrDefault(cmd *cobra.Command, flag string, defaultVal []models.ScanDir) []models.ScanDir {
-	if val, err := cmd.Flags().GetStringArray(flag); err == nil && len(val) > 0 {
-		return parseScanDirs(val)
-	}
-	return defaultVal
-}
-
-// Helper function to convert ScanDir slice to string slice for flag defaults
-func scanDirsToStringArray(scanDirs []models.ScanDir) []string {
-	result := make([]string, len(scanDirs))
-	for i, sd := range scanDirs {
-		if sd.Depth != nil {
-			result[i] = fmt.Sprintf("%s:%d", sd.Path, *sd.Depth)
-		} else {
-			result[i] = sd.Path
-		}
-	}
-	return result
-}
-
-// Helper function to parse string array back to ScanDir slice
-func parseScanDirs(paths []string) []models.ScanDir {
-	result := make([]models.ScanDir, len(paths))
-	for i, path := range paths {
-		parts := strings.Split(path, ":")
-		scanDir := models.ScanDir{Path: parts[0]}
-
-		if len(parts) > 1 {
-			if depth, err := strconv.Atoi(parts[1]); err == nil {
-				scanDir.Depth = &depth
-			}
-		}
-
-		result[i] = scanDir
-	}
-	return result
-}

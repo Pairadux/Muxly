@@ -90,7 +90,7 @@ func GetCurrentTmuxSession() string {
 // SwitchToExistingSession switches to an existing tmux session by name.
 // This function assumes the session already exists and will return an error if it doesn't.
 // It handles both cases of running inside tmux (switch-client) and outside tmux (attach-session).
-func SwitchToExistingSession(name string) error {
+func SwitchToExistingSession(cfg *models.Config, name string) error {
 	if err := ValidateTmuxAvailable(); err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func SwitchToExistingSession(name string) error {
 		return fmt.Errorf("session '%s' does not exist", name)
 	}
 
-	target := getSessionTarget(name)
+	target := getSessionTarget(cfg, name)
 
 	if os.Getenv("TMUX") == "" {
 		return attachToSession(target, name)
@@ -110,13 +110,13 @@ func SwitchToExistingSession(name string) error {
 
 // CreateAndSwitchSession creates a new tmux session and switches to it.
 // If the session already exists, it just switches to it.
-func CreateAndSwitchSession(name, cwd string) error {
+func CreateAndSwitchSession(cfg *models.Config, name, cwd string) error {
 	if err := ValidateTmuxAvailable(); err != nil {
 		return err
 	}
 
 	if HasTmuxSession(name) {
-		return SwitchToExistingSession(name)
+		return SwitchToExistingSession(cfg, name)
 	}
 
 	var sessionLayout models.SessionLayout
@@ -128,13 +128,13 @@ func CreateAndSwitchSession(name, cwd string) error {
 		return fmt.Errorf("creating session: %w", err)
 	}
 
-	return SwitchToExistingSession(name)
+	return SwitchToExistingSession(cfg, name)
 }
 
 // getSessionTarget returns the target string for tmux commands,
 // incorporating the tmux_base configuration for window targeting.
-func getSessionTarget(name string) string {
-	tmuxBase := viper.GetInt("tmux_base")
+func getSessionTarget(cfg *models.Config, name string) string {
+	tmuxBase := cfg.TmuxBase
 	if tmuxBase >= 0 {
 		return fmt.Sprintf("%s:%d", name, tmuxBase)
 	}
@@ -244,20 +244,21 @@ func KillSession(target string) error {
 // The session is created in the user's home directory with the configured layout.
 //
 // Returns an error if session creation or switching fails.
-func CreateDefaultSession() error {
+// FIXME
+func CreateDefaultSession(cfg *models.Config) error {
 	if err := ValidateTmuxAvailable(); err != nil {
 		return err
 	}
 
 	// Get fallback session name from config
-	sessionName := viper.GetString("fallback_session")
+	sessionName := cfg.FallbackSession.Name
 	if sessionName == "" {
 		sessionName = "default"
 	}
 
 	// If session already exists, just switch to it
 	if HasTmuxSession(sessionName) {
-		return SwitchToExistingSession(sessionName)
+		return SwitchToExistingSession(cfg, sessionName)
 	}
 
 	// Use home directory as the working directory for default session
@@ -267,7 +268,7 @@ func CreateDefaultSession() error {
 	}
 
 	// Create and switch to the default session
-	if err := CreateAndSwitchSession(sessionName, homeDir); err != nil {
+	if err := CreateAndSwitchSession(cfg, sessionName, homeDir); err != nil {
 		return fmt.Errorf("failed to create default session '%s': %w", sessionName, err)
 	}
 
@@ -279,14 +280,15 @@ func CreateDefaultSession() error {
 // but want to ensure it exists.
 //
 // Returns the session name and an error if creation fails.
-func GetOrCreateDefaultSession() (string, error) {
-	sessionName := viper.GetString("fallback_session")
+// FIXME
+func GetOrCreateDefaultSession(cfg *models.Config) (string, error) {
+	sessionName := cfg.FallbackSession.Name
 	if sessionName == "" {
 		sessionName = "default"
 	}
 
 	if !HasTmuxSession(sessionName) {
-		if err := CreateDefaultSession(); err != nil {
+		if err := CreateDefaultSession(cfg); err != nil {
 			return "", err
 		}
 	}

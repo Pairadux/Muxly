@@ -11,8 +11,9 @@ import (
 
 	"github.com/Pairadux/tms/internal/utility"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 ) // }}}
+
+const DefaultEditor = "vi"
 
 // editCmd represents the edit command
 var editCmd = &cobra.Command{
@@ -24,18 +25,13 @@ If you pass an optional [editor] it'll be used instead of the default $EDITOR.
 You can also set the default editor in the config file that will always be used instead of $EDITOR.`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := utility.ValidateConfig(); err != nil {
+		if err := utility.ValidateConfig(&cfg); err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
-		editor := os.Getenv("EDITOR")
-		if len(args) > 0 {
-			editor = args[0]
-		} else if cfgEditor := viper.GetString("editor"); cfgEditor != "" {
-			editor = cfgEditor
-		} else {
-			editor = DefaultEditor
-		}
+
+		editor := pickEditor(args)
+
 		editCmd := exec.Command(editor, cfgFilePath)
 		editCmd.Stdin = os.Stdin
 		editCmd.Stdout = os.Stdout
@@ -48,4 +44,19 @@ You can also set the default editor in the config file that will always be used 
 
 func init() {
 	configCmd.AddCommand(editCmd)
+}
+
+func pickEditor(args []string) string {
+	env := os.Getenv("EDITOR")
+
+	switch {
+	case len(args) > 0:
+		return args[0]
+	case cfg.Editor != "":
+		return cfg.Editor
+	case env != "":
+		return env
+	default:
+		return DefaultEditor
+	}
 }

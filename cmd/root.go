@@ -20,12 +20,8 @@ import (
 	"github.com/spf13/viper"
 ) // }}}
 
-const (
-	TmuxSessionPrefix = "[TMUX] "
-	DefaultEditor     = "vi"
-)
-
 var (
+	cfg         models.Config
 	cfgFileFlag string
 	cfgFilePath string
 	verbose     bool
@@ -38,11 +34,21 @@ var rootCmd = &cobra.Command{
 	Long:  "A tool for quickly opening tmux sessions\n\nBased on ThePrimeagen's Tmux-Sessionator script.",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		if verbose {
+			fmt.Printf("scan_dirs: %v\n", cfg.ScanDirs)
+			fmt.Printf("entry_dirs: %v\n", cfg.EntryDirs)
+			fmt.Printf("ignore_dirs: %v\n", cfg.IgnoreDirs)
+			fmt.Printf("fallback_session: %v\n", cfg.FallbackSession)
+			fmt.Printf("tmux_base: %v\n", cfg.TmuxBase)
+			fmt.Printf("default_depth: %v\n", cfg.DefaultDepth)
+			fmt.Printf("session_layout: %v\n", cfg.SessionLayout)
+		}
+
 		if err := tmux.ValidateTmuxAvailable(); err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
-		if err := utility.ValidateConfig(); err != nil {
+		if err := utility.ValidateConfig(&cfg); err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
@@ -62,8 +68,8 @@ var rootCmd = &cobra.Command{
 			}
 
 			slices.SortFunc(names, func(a, b string) int {
-				isTmuxA := strings.HasPrefix(a, TmuxSessionPrefix)
-				isTmuxB := strings.HasPrefix(b, TmuxSessionPrefix)
+				isTmuxA := strings.HasPrefix(a, cfg.TmuxSessionPrefix)
+				isTmuxB := strings.HasPrefix(b, cfg.TmuxSessionPrefix)
 				if isTmuxA && !isTmuxB {
 					return -1
 				}
@@ -87,8 +93,8 @@ var rootCmd = &cobra.Command{
 		}
 
 		sessionName := choiceStr
-		if strings.HasPrefix(choiceStr, TmuxSessionPrefix) {
-			sessionName = strings.TrimPrefix(choiceStr, TmuxSessionPrefix)
+		if strings.HasPrefix(choiceStr, cfg.TmuxSessionPrefix) {
+			sessionName = strings.TrimPrefix(choiceStr, cfg.TmuxSessionPrefix)
 		}
 
 		selectedPath, exists := entries[choiceStr]
@@ -97,7 +103,7 @@ var rootCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if err := tmux.CreateAndSwitchSession(sessionName, selectedPath); err != nil {
+		if err := tmux.CreateAndSwitchSession(&cfg, sessionName, selectedPath); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to switch session: %v\n", err)
 			os.Exit(1)
 		}
@@ -156,11 +162,11 @@ func initConfig() { // {{{
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
 
+	if err := viper.Unmarshal(&cfg); err != nil {
+		// FIXME: try unmarshalling 1 key at a time
+		fmt.Fprintf(os.Stderr, "Issue unmarshalling config file: %v\n", err)
+	}
 } // }}}
-
-
-	return nil
-}
 
 // buildDirectoryEntries creates a map of display names to directory paths by
 // processing scan_dirs and entry_dirs from the configuration. It handles
@@ -187,7 +193,10 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 			return nil
 		}
 
-		ignoreDirs := viper.GetStringSlice("ignore_dirs")
+		// NOTE: try to find a more effecient way to ignore directories
+		// Maybe expand scan_dirs to hold relevant ignore_dirs so the ignore_dirs are not searched for in every single scan_dir
+		// Might could also create a seperate ignore_regex to ignore paths based on a regex match
+		ignoreDirs := cfg.IgnoreDirs
 		for _, ignoreDir := range ignoreDirs {
 			ignoredResolved, err := utility.ResolvePath(ignoreDir)
 			if err != nil {
@@ -203,7 +212,7 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 
 		displayName := name
 		if existingSessions[name] {
-			displayName = TmuxSessionPrefix + name
+			displayName = cfg.TmuxSessionPrefix + name
 		}
 
 		entries[displayName] = resolved
@@ -221,7 +230,7 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 		}
 	}
 
-	for _, entryDir := range viper.GetStringSlice("entry_dirs") {
+	for _, entryDir := range cfg.EntryDirs {
 		if err := addEntry(entryDir); err != nil {
 			return nil, err
 		}
@@ -231,7 +240,7 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 		if sessionName == currentSession {
 			continue
 		}
-		displayName := TmuxSessionPrefix + sessionName
+		displayName := cfg.TmuxSessionPrefix + sessionName
 		if _, exists := entries[displayName]; !exists {
 			entries[displayName] = sessionName
 		}
@@ -243,7 +252,7 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 // processScanDir processes a ScanDir struct, using the struct's depth
 // and the existing depth priority logic from the ScanDir.GetDepth method.
 func processScanDir(scanDir models.ScanDir, flagDepth int, addEntry func(string) error) error {
-	defaultDepth := viper.GetInt("default_depth")
+	defaultDepth := cfg.DefaultDepth
 	effectiveDepth := scanDir.GetDepth(flagDepth, defaultDepth)
 
 	resolved, err := utility.ResolvePath(scanDir.Path)
