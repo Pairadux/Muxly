@@ -13,7 +13,7 @@ import (
 	"github.com/Pairadux/tms/internal/utility"
 
 	"github.com/spf13/cobra"
-) // ) // }}}
+) // }}}
 
 // killCmd represents the kill command
 var killCmd = &cobra.Command{
@@ -24,6 +24,12 @@ var killCmd = &cobra.Command{
 A picker list of alternative sessions will be displayed to switch the current session.
 If there are no other sessions however, the default sessions configured in the config file will be used.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		currentSession := tmux.GetCurrentTmuxSession()
+
+		if currentSession == "" {
+			fmt.Fprintln(os.Stderr, "Not in Tmux, use 'tms' to get started.")
+			os.Exit(1)
+		}
 		if err := tmux.ValidateTmuxAvailable(); err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
@@ -32,8 +38,6 @@ If there are no other sessions however, the default sessions configured in the c
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
-
-		currentSession := tmux.GetCurrentTmuxSession()
 
 		var choiceStr string
 		if len(args) == 1 {
