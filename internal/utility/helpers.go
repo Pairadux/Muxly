@@ -87,11 +87,34 @@ func ValidateConfig(cfg *models.Config) error {
 	if viper.ConfigFileUsed() == "" {
 		return fmt.Errorf("no config file found\nRun 'tms config init' to create one, or use --config to specify a path")
 	}
-	if (len(cfg.ScanDirs) == 0) && (len(cfg.EntryDirs) == 0) {
+
+	if len(cfg.ScanDirs) == 0 && len(cfg.EntryDirs) == 0 {
 		return fmt.Errorf("no directories configured for scanning")
 	}
 
+	if len(cfg.SessionLayout.Windows) == 0 {
+		return fmt.Errorf("session_layout must have at least one window")
+	}
+
 	return nil
+}
+
+func WarnOnConfigIssues(cfg *models.Config) {
+	if cfg.Editor == "" {
+		fmt.Fprintln(os.Stderr, "Warning: editor not set, defaulting to 'vi'")
+	}
+
+	if cfg.FallbackSession.Name == "" {
+		fmt.Fprintln(os.Stderr, "fallback_session.name is missing, defaulting to 'Default'")
+	}
+
+	if cfg.FallbackSession.Path == "" {
+		fmt.Fprintln(os.Stderr, "fallback_session.path is missing, defaulting to '~/'")
+	}
+
+	if len(cfg.FallbackSession.Layout.Windows) == 0 {
+		fmt.Fprintln(os.Stderr, "fallback_session.layout.windows is empty, using default layout")
+	}
 }
 
 func VerifyExternalUtils() error {
