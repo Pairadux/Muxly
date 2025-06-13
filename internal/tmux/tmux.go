@@ -19,10 +19,6 @@ const DefaultShell = "/bin/bash"
 // GetTmuxSessionNames returns a slice of all active tmux session names.
 // Returns an empty slice if tmux is not available or if there's an error.
 func GetTmuxSessionNames() []string {
-	if err := ValidateTmuxAvailable(); err != nil {
-		return nil
-	}
-
 	cmd := exec.Command("tmux", "list-sessions", "-F", "#{session_name}")
 	output, err := cmd.Output()
 	if err != nil {
@@ -49,10 +45,6 @@ func GetSessionsExceptCurrent(current string) []string {
 
 // HasTmuxSession checks if a tmux session with the given name exists.
 func HasTmuxSession(name string) bool {
-	if err := ValidateTmuxAvailable(); err != nil {
-		return false
-	}
-
 	return exec.Command("tmux", "has-session", "-t", name).Run() == nil
 }
 
@@ -89,10 +81,6 @@ func GetCurrentTmuxSession() string {
 // This function assumes the session already exists and will return an error if it doesn't.
 // It handles both cases of running inside tmux (switch-client) and outside tmux (attach-session).
 func SwitchToExistingSession(cfg *models.Config, name string) error {
-	if err := ValidateTmuxAvailable(); err != nil {
-		return err
-	}
-
 	if !HasTmuxSession(name) {
 		return fmt.Errorf("session '%s' does not exist", name)
 	}
@@ -109,10 +97,6 @@ func SwitchToExistingSession(cfg *models.Config, name string) error {
 // CreateAndSwitchSession creates a new tmux session and switches to it.
 // If the session already exists, it just switches to it.
 func CreateAndSwitchSession(cfg *models.Config, name, cwd string, layout models.SessionLayout) error {
-	if err := ValidateTmuxAvailable(); err != nil {
-		return err
-	}
-
 	if HasTmuxSession(name) {
 		return SwitchToExistingSession(cfg, name)
 	}
@@ -238,10 +222,6 @@ func KillSession(target string) error {
 //
 // Returns an error if session creation or switching fails.
 func CreateDefaultSession(cfg *models.Config) error {
-	if err := ValidateTmuxAvailable(); err != nil {
-		return err
-	}
-
 	sessionName := cfg.FallbackSession.Name
 	if sessionName == "" {
 		sessionName = "Default"
@@ -263,7 +243,6 @@ func CreateDefaultSession(cfg *models.Config) error {
 // but want to ensure it exists.
 //
 // Returns the session name and an error if creation fails.
-// FIXME
 func GetOrCreateDefaultSession(cfg *models.Config) (string, error) {
 	sessionName := cfg.FallbackSession.Name
 	if sessionName == "" {
@@ -277,15 +256,4 @@ func GetOrCreateDefaultSession(cfg *models.Config) (string, error) {
 	}
 
 	return sessionName, nil
-}
-
-// ValidateTmuxAvailable checks if the tmux command is available in the system PATH.
-//
-// Returns an error if tmux is not found.
-func ValidateTmuxAvailable() error {
-	if _, err := exec.LookPath("tmux"); err != nil {
-		return fmt.Errorf("tmux not found in PATH: %w", err)
-	}
-
-	return nil
 }

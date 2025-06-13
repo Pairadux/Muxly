@@ -9,13 +9,14 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/Pairadux/tms/internal/models"
 	"github.com/charlievieth/fastwalk"
-	"github.com/spf13/viper"
 	"github.com/mitchellh/go-homedir"
+	"github.com/spf13/viper"
 ) // }}}
 
 // ResolvePath takes an “unknown” path pattern and returns an absolute path.
@@ -23,7 +24,6 @@ import (
 //   - Absolute (/…):               returned as-is
 //   - Home (~ or ~/…):             expanded via os.UserHomeDir()
 //   - Explicit relative (./, ../): error
-//   - Implicit (foo/bar):          treated as ~/foo/bar
 func ResolvePath(p string) (string, error) {
 	if filepath.IsAbs(p) {
 		return p, nil
@@ -94,9 +94,19 @@ func ValidateConfig(cfg *models.Config) error {
 	return nil
 }
 
-// TODO: create this
 func VerifyExternalUtils() error {
-	// tmux
-	// fzf
+	var missing []string
+
+	if _, err := exec.LookPath("tmux"); err != nil {
+		missing = append(missing, "tmux")
+	}
+	if _, err := exec.LookPath("fzf"); err != nil {
+		missing = append(missing, "fzf")
+	}
+
+	if len(missing) > 0 {
+		return fmt.Errorf("missing required tools: %s", strings.Join(missing, ", "))
+	}
+
 	return nil
 }

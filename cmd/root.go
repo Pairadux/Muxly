@@ -29,22 +29,17 @@ var (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "tms [SESSION]",
+	Use:     "tms [SESSION]",
 	Example: "",
-	Short: "A tool for quickly opening tmux sessions",
-	Long:  "A tool for quickly opening tmux sessions\n\nBased on ThePrimeagen's Tmux-Sessionator script.",
-	Args:  cobra.MaximumNArgs(1),
-	// TODO: figure out if there is a way to support this without it running in init.go
-	// PersistentPreRun: func(cmd *cobra.Command, args []string) {
-	// 	if err := tmux.ValidateTmuxAvailable(); err != nil {
-	// 		fmt.Fprintln(os.Stderr, err.Error())
-	// 		os.Exit(1)
-	// 	}
-	// 	if err := utility.ValidateConfig(&cfg); err != nil {
-	// 		fmt.Fprintln(os.Stderr, err.Error())
-	// 		os.Exit(1)
-	// 	}
-	// },
+	Short:   "A tool for quickly opening tmux sessions",
+	Long:    "A tool for quickly opening tmux sessions\n\nBased on ThePrimeagen's Tmux-Sessionator script.",
+	Args:    cobra.MaximumNArgs(1),
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		if err := utility.VerifyExternalUtils(); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if verbose {
 			fmt.Printf("scan_dirs: %v\n", cfg.ScanDirs)
@@ -56,10 +51,6 @@ var rootCmd = &cobra.Command{
 			fmt.Printf("session_layout: %v\n", cfg.SessionLayout)
 		}
 
-		if err := tmux.ValidateTmuxAvailable(); err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
-		}
 		if err := utility.ValidateConfig(&cfg); err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
@@ -234,7 +225,6 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 		entries[displayName] = resolved
 		return nil
 	}
-
 
 	// TODO: try to make scandir traversal more effecient
 	// Maybe make it resolve paths concurrently
