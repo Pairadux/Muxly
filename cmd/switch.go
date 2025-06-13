@@ -24,12 +24,11 @@ var switchCmd = &cobra.Command{
 Displays a fzf picker list of active sessions.
 If no other sessions found, exit.`,
 	Args: cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		currentSession := tmux.GetCurrentTmuxSession()
 
 		if currentSession == "" {
-			fmt.Fprintln(os.Stderr, "Not in Tmux, use 'tms' to get started.")
-			os.Exit(1)
+			return fmt.Errorf("Not in Tmux, use 'tms' to get started.")
 		}
 
 		var choiceStr string
@@ -43,27 +42,29 @@ If no other sessions found, exit.`,
 				fmt.Println("No other sessions available. Use 'tms' to start a new session.")
 				fmt.Print("Press Enter to exit...")
 				bufio.NewReader(os.Stdin).ReadBytes('\n')
-				return
+
+				return nil
 			}
 
 			var err error
 			choiceStr, err = fzf.SelectWithFzf(sessions)
 			if err != nil {
 				if err.Error() == "user cancelled" {
-					os.Exit(0)
+					return nil
 				}
 				cobra.CheckErr(err)
 			}
 
 			if choiceStr == "" {
-				os.Exit(0)
+				return nil
 			}
 		}
 		sessionName := choiceStr
 		if err := tmux.SwitchToExistingSession(&cfg, sessionName); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to switch session: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("Failed to switch session: %w", err)
 		}
+		
+		return nil
 	},
 }
 

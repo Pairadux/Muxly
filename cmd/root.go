@@ -7,6 +7,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -39,12 +40,13 @@ var rootCmd = &cobra.Command{
 			return nil
 		}
 
-		if err := utility.VerifyExternalUtils(); err != nil {
+		if err := verifyExternalUtils(); err != nil {
 			return err
 		}
-		if err := validateConfig(&cfg); err != nil {
+		if err := validateConfig(); err != nil {
 			return err
 		}
+		warnOnConfigIssues()
 
 		return nil
 	}, // }}}
@@ -62,7 +64,7 @@ var rootCmd = &cobra.Command{
 		}
 		return nil
 	}, // }}}
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		if verbose {
 			fmt.Printf("scan_dirs: %v\n", cfg.ScanDirs)
 			fmt.Printf("entry_dirs: %v\n", cfg.EntryDirs)
@@ -102,13 +104,13 @@ var rootCmd = &cobra.Command{
 			choiceStr, err = fzf.SelectWithFzf(names)
 			if err != nil {
 				if err.Error() == "user cancelled" {
-					os.Exit(0)
+					return nil
 				}
 				cobra.CheckErr(err)
 			}
 
 			if choiceStr == "" {
-				os.Exit(0)
+				return nil
 			}
 		}
 
@@ -119,17 +121,17 @@ var rootCmd = &cobra.Command{
 
 		selectedPath, exists := entries[choiceStr]
 		if !exists && args[0] == "" {
-			fmt.Fprintf(os.Stderr, "The name must match an existing directory entry: %s\n", choiceStr)
-			os.Exit(1)
+			return fmt.Errorf("The name must match an existing directory entry: %s", choiceStr)
 		}
 
 		// TODO: this is a bit involved, but I want to retrieve a session layout from a .tms file in the directory of the session to be created, if present
 		// This would enable dynamic session layouts based on user preference/setup
 
 		if err := tmux.CreateAndSwitchSession(&cfg, sessionName, selectedPath, cfg.SessionLayout); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to switch session: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("Failed to switch session: %w", err)
 		}
+
+		return nil
 	},
 }
 
@@ -307,7 +309,7 @@ func isConfigCommand(cmd *cobra.Command) bool {
 // It checks for the presence of a config file and verifies that at least one
 // directory is configured for scanning (either scan_dirs or entry_dirs).
 // Returns an error with helpful instructions if validation fails.
-func validateConfig(cfg *models.Config) error {
+func validateConfig() error {
 	if viper.ConfigFileUsed() == "" {
 		return fmt.Errorf("no config file found\nRun 'tms config init' to create one, or use --config to specify a path\n")
 	}
@@ -318,6 +320,41 @@ func validateConfig(cfg *models.Config) error {
 
 	if len(cfg.SessionLayout.Windows) == 0 {
 		return fmt.Errorf("session_layout must have at least one window")
+	}
+
+	return nil
+}
+
+func warnOnConfigIssues() {
+	if cfg.Editor == "" {
+		fmt.Fprintln(os.Stderr, "Warning: editor not set, defaulting to 'vi'")
+	}
+
+	if cfg.FallbackSession.Name == "" {
+		fmt.Fprintln(os.Stderr, "fallback_session.name is missing, defaulting to 'Default'")
+	}
+
+	if cfg.FallbackSession.Path == "" {
+		fmt.Fprintln(os.Stderr, "fallback_session.path is missing, defaulting to '~/'")
+	}
+
+	if len(cfg.FallbackSession.Layout.Windows) == 0 {
+		fmt.Fprintln(os.Stderr, "fallback_session.layout.windows is empty, using default layout")
+	}
+}
+
+func verifyExternalUtils() error {
+	var missing []string
+
+	if _, err := exec.LookPath("tmux"); err != nil {
+		missing = append(missing, "tmux")
+	}
+	if _, err := exec.LookPath("fzf"); err != nil {
+		missing = append(missing, "fzf")
+	}
+
+	if len(missing) > 0 {
+		return fmt.Errorf("missing required tools: %s", strings.Join(missing, ", "))
 	}
 
 	return nil

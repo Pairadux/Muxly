@@ -9,14 +9,11 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
-	"github.com/Pairadux/tms/internal/models"
 	"github.com/charlievieth/fastwalk"
 	"github.com/mitchellh/go-homedir"
-	"github.com/spf13/viper"
 ) // }}}
 
 // ResolvePath takes an “unknown” path pattern and returns an absolute path.
@@ -78,37 +75,3 @@ func GetSubDirs(maxDepth int, root string) ([]string, error) {
 	return dirs, nil
 }
 
-func WarnOnConfigIssues(cfg *models.Config) {
-	if cfg.Editor == "" {
-		fmt.Fprintln(os.Stderr, "Warning: editor not set, defaulting to 'vi'")
-	}
-
-	if cfg.FallbackSession.Name == "" {
-		fmt.Fprintln(os.Stderr, "fallback_session.name is missing, defaulting to 'Default'")
-	}
-
-	if cfg.FallbackSession.Path == "" {
-		fmt.Fprintln(os.Stderr, "fallback_session.path is missing, defaulting to '~/'")
-	}
-
-	if len(cfg.FallbackSession.Layout.Windows) == 0 {
-		fmt.Fprintln(os.Stderr, "fallback_session.layout.windows is empty, using default layout")
-	}
-}
-
-func VerifyExternalUtils() error {
-	var missing []string
-
-	if _, err := exec.LookPath("tmux"); err != nil {
-		missing = append(missing, "tmux")
-	}
-	if _, err := exec.LookPath("fzf"); err != nil {
-		missing = append(missing, "fzf")
-	}
-
-	if len(missing) > 0 {
-		return fmt.Errorf("missing required tools: %s", strings.Join(missing, ", "))
-	}
-
-	return nil
-}

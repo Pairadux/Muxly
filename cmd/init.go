@@ -52,7 +52,7 @@ var initCmd = &cobra.Command{
 
 Creates a config file at the specified location (default location if no argument passed) if no config file exists.
 Otherwise, the current config file is overwritten.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		// TODO: make an interactive menu for assigning these values
 		scanDirs := defaultScanDirs
 		entryDirs := defaultEntryDirs
@@ -80,13 +80,14 @@ Otherwise, the current config file is overwritten.`,
 		_ = os.MkdirAll(parent, 0o755)
 
 		if err := os.WriteFile(cfgFilePath, []byte(configContent), 0o644); err != nil {
-			fmt.Fprintln(os.Stderr, "cannot write config:", err)
-			os.Exit(1)
+			return fmt.Errorf("cannot write config: %w", err)
 		}
 
 		if verbose {
 			fmt.Println("Wrote config to", cfgFilePath)
 		}
+
+		return nil
 	},
 }
 

@@ -6,7 +6,6 @@ package cmd
 // IMPORTS {{{
 import (
 	"fmt"
-	"os"
 
 	"github.com/Pairadux/tms/internal/fzf"
 	"github.com/Pairadux/tms/internal/tmux"
@@ -22,12 +21,11 @@ var killCmd = &cobra.Command{
 
 A picker list of alternative sessions will be displayed to switch the current session.
 If there are no other sessions however, the default sessions configured in the config file will be used.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		currentSession := tmux.GetCurrentTmuxSession()
 
 		if currentSession == "" {
-			fmt.Fprintln(os.Stderr, "Not in Tmux, use 'tms' to get started.")
-			os.Exit(1)
+			return fmt.Errorf("Not in Tmux, use 'tms' to get started.")
 		}
 
 		var choiceStr string
@@ -39,39 +37,38 @@ If there are no other sessions however, the default sessions configured in the c
 
 			if len(sessions) == 0 {
 				if err := tmux.CreateAndSwitchToFallbackSession(&cfg); err != nil {
-					fmt.Fprintf(os.Stderr, "Failed to create default session: %v\n", err)
-					os.Exit(1)
+					return fmt.Errorf("Failed to create default session: %w", err)
 				}
 				if err := tmux.KillSession(currentSession); err != nil {
-					fmt.Fprintf(os.Stderr, "Failed to kill session: %v\n", err)
-					os.Exit(1)
+					return fmt.Errorf("Failed to kill session: %w", err)
 				}
-				return
+
+				return nil
 			}
 
 			var err error
 			choiceStr, err = fzf.SelectWithFzf(sessions)
 			if err != nil {
 				if err.Error() == "user cancelled" {
-					os.Exit(0)
+					return nil
 				}
 				cobra.CheckErr(err)
 			}
 
 			if choiceStr == "" {
-				os.Exit(0)
+				return nil
 			}
 		}
 		sessionName := choiceStr
 		if err := tmux.SwitchToExistingSession(&cfg, sessionName); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to switch session: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("Failed to switch session: %w", err)
 		}
 
 		if err := tmux.KillSession(currentSession); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to kill session: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("Failed to kill session: %w", err)
 		}
+
+		return nil
 	},
 }
 
