@@ -42,7 +42,7 @@ var rootCmd = &cobra.Command{
 		if err := utility.VerifyExternalUtils(); err != nil {
 			return err
 		}
-		if err := utility.ValidateConfig(&cfg); err != nil {
+		if err := validateConfig(&cfg); err != nil {
 			return err
 		}
 
@@ -301,4 +301,24 @@ func isConfigCommand(cmd *cobra.Command) bool {
 		}
 	}
 	return false
+}
+
+// validateConfig ensures that the application configuration is valid and complete.
+// It checks for the presence of a config file and verifies that at least one
+// directory is configured for scanning (either scan_dirs or entry_dirs).
+// Returns an error with helpful instructions if validation fails.
+func validateConfig(cfg *models.Config) error {
+	if viper.ConfigFileUsed() == "" {
+		return fmt.Errorf("no config file found\nRun 'tms config init' to create one, or use --config to specify a path\n")
+	}
+
+	if len(cfg.ScanDirs) == 0 && len(cfg.EntryDirs) == 0 {
+		return fmt.Errorf("no directories configured for scanning")
+	}
+
+	if len(cfg.SessionLayout.Windows) == 0 {
+		return fmt.Errorf("session_layout must have at least one window")
+	}
+
+	return nil
 }
