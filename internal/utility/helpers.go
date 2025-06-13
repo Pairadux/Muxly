@@ -15,6 +15,7 @@ import (
 	"github.com/Pairadux/tms/internal/models"
 	"github.com/charlievieth/fastwalk"
 	"github.com/spf13/viper"
+	"github.com/mitchellh/go-homedir"
 ) // }}}
 
 // ResolvePath takes an “unknown” path pattern and returns an absolute path.
@@ -28,27 +29,12 @@ func ResolvePath(p string) (string, error) {
 		return p, nil
 	}
 	if strings.HasPrefix(p, "~") {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return "", err
-		}
-		switch {
-		case p == "~":
-			return home, nil
-		case strings.HasPrefix(p, "~/"):
-			return filepath.Join(home, p[2:]), nil
-		default:
-			return "", errors.New("invalid home-path syntax")
-		}
+		return homedir.Expand(p)
 	}
 	if strings.HasPrefix(p, "./") || strings.HasPrefix(p, "../") || p == "." || p == ".." {
 		return "", errors.New("relative paths not allowed: " + p)
 	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(home, p), nil
+	return "", errors.New("path type not supported: '" + p + "'")
 }
 
 // GetSubDirs returns all subdirectories within the specified root directory,
@@ -108,10 +94,9 @@ func ValidateConfig(cfg *models.Config) error {
 	return nil
 }
 
-
 // TODO: create this
 func VerifyExternalUtils() error {
-	//tmux
+	// tmux
 	// fzf
 	return nil
 }
