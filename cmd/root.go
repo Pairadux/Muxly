@@ -34,8 +34,8 @@ var rootCmd = &cobra.Command{
 	Short:   "A tool for quickly opening tmux sessions",
 	Long:    "A tool for quickly opening tmux sessions\n\nBased on ThePrimeagen's Tmux-Sessionator script.",
 	Args:    cobra.MaximumNArgs(1),
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if isConfigOrInitCommand(cmd) {
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error { // {{{
+		if isConfigCommand(cmd) {
 			return nil
 		}
 
@@ -47,7 +47,7 @@ var rootCmd = &cobra.Command{
 		}
 
 		return nil
-	},
+	}, // }}}
 	Run: func(cmd *cobra.Command, args []string) {
 		if verbose {
 			fmt.Printf("scan_dirs: %v\n", cfg.ScanDirs)
@@ -276,9 +276,13 @@ func processScanDir(scanDir models.ScanDir, flagDepth int, addEntry func(string)
 	return nil
 }
 
-func isConfigOrInitCommand(cmd *cobra.Command) bool {
+// isConfigCommand checks if the given command or any of its parent commands
+// is "config". This is used to skip config validation for commands like
+// "tms config init" or "tms config edit", which are intended to manage or
+// create the config file.
+func isConfigCommand(cmd *cobra.Command) bool {
 	for c := cmd; c != nil; c = c.Parent() {
-		if c.Name() == "init" || c.Name() == "config" {
+		if c.Name() == "config" {
 			return true
 		}
 	}
