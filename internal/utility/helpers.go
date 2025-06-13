@@ -83,7 +83,6 @@ func GetSubDirs(maxDepth int, root string) ([]string, error) {
 // directory is configured for scanning (either scan_dirs or entry_dirs).
 // Returns an error with helpful instructions if validation fails.
 func ValidateConfig(cfg *models.Config) error {
-	// FIXME: make this check the values of the setup config struct to ensure compliance
 	if viper.ConfigFileUsed() == "" {
 		return fmt.Errorf("no config file found\nRun 'tms config init' to create one, or use --config to specify a path")
 	}

@@ -25,11 +25,6 @@ If you pass an optional [editor] it'll be used instead of the default $EDITOR.
 You can also set the default editor in the config file that will always be used instead of $EDITOR.`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := utility.ValidateConfig(&cfg); err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
-		}
-
 		editor := pickEditor(args)
 
 		editCmd := exec.Command(editor, cfgFilePath)

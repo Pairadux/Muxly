@@ -34,11 +34,19 @@ var rootCmd = &cobra.Command{
 	Short:   "A tool for quickly opening tmux sessions",
 	Long:    "A tool for quickly opening tmux sessions\n\nBased on ThePrimeagen's Tmux-Sessionator script.",
 	Args:    cobra.MaximumNArgs(1),
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		if err := utility.VerifyExternalUtils(); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		if isConfigOrInitCommand(cmd) {
+			return nil
 		}
+
+		if err := utility.VerifyExternalUtils(); err != nil {
+			return err
+		}
+		if err := utility.ValidateConfig(&cfg); err != nil {
+			return err
+		}
+
+		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if verbose {
@@ -49,11 +57,6 @@ var rootCmd = &cobra.Command{
 			fmt.Printf("tmux_base: %v\n", cfg.TmuxBase)
 			fmt.Printf("default_depth: %v\n", cfg.DefaultDepth)
 			fmt.Printf("session_layout: %v\n", cfg.SessionLayout)
-		}
-
-		if err := utility.ValidateConfig(&cfg); err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
 		}
 
 		flagDepth, _ := cmd.Flags().GetInt("depth")
@@ -271,4 +274,13 @@ func processScanDir(scanDir models.ScanDir, flagDepth int, addEntry func(string)
 	}
 
 	return nil
+}
+
+func isConfigOrInitCommand(cmd *cobra.Command) bool {
+	for c := cmd; c != nil; c = c.Parent() {
+		if c.Name() == "init" || c.Name() == "config" {
+			return true
+		}
+	}
+	return false
 }

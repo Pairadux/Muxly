@@ -32,10 +32,6 @@ If no other sessions found, exit.`,
 			fmt.Fprintln(os.Stderr, "Not in Tmux, use 'tms' to get started.")
 			os.Exit(1)
 		}
-		if err := utility.ValidateConfig(&cfg); err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
-		}
 
 		var choiceStr string
 		if len(args) == 1 {
