@@ -10,7 +10,6 @@ import (
 
 	"github.com/Pairadux/tms/internal/fzf"
 	"github.com/Pairadux/tms/internal/tmux"
-	"github.com/Pairadux/tms/internal/utility"
 
 	"github.com/spf13/cobra"
 ) // }}}
