@@ -48,6 +48,20 @@ var rootCmd = &cobra.Command{
 
 		return nil
 	}, // }}}
+	PreRunE: func(cmd *cobra.Command, args []string) error { // {{{
+		if len(args) == 1 {
+			// IDEA: Maybe prompt the user and run the command for them
+			switch {
+			case args[0] == "init":
+				return fmt.Errorf("unknown command %q for %q. Did you mean:\n  tms config init?\n", args[0], cmd.Name())
+			case args[0] == "edit":
+				return fmt.Errorf("unknown command %q for %q. Did you mean:\n  tms config edit?\n", args[0], cmd.Name())
+			default:
+				return nil
+			}
+		}
+		return nil
+	}, // }}}
 	Run: func(cmd *cobra.Command, args []string) {
 		if verbose {
 			fmt.Printf("scan_dirs: %v\n", cfg.ScanDirs)
