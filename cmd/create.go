@@ -18,6 +18,7 @@ var createCmd = &cobra.Command{
 
 An interactive prompt for creating a session.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		// TODO: implement this command
 		fmt.Println("create called")
 	},
 }

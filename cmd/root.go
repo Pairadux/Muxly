@@ -235,6 +235,9 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 		return nil
 	}
 
+
+	// TODO: try to make scandir traversal more effecient
+	// Maybe make it resolve paths concurrently
 	for _, scanDir := range cfg.ScanDirs {
 		if err := processScanDir(scanDir, flagDepth, addEntry); err != nil {
 			return nil, err
