@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/Pairadux/tms/internal/models"
+	"github.com/mitchellh/go-homedir"
 ) // }}}
 
 const DefaultShell = "/bin/bash"
@@ -216,12 +217,12 @@ func KillSession(target string) error {
 	return nil
 }
 
-// CreateDefaultSession creates and switches to the configured fallback session.
+// CreateAndSwitchToFallbackSession creates and switches to the configured fallback session.
 // If no fallback session is configured, it uses "default" as the session name.
 // The session is created in the user's home directory with the configured layout.
 //
 // Returns an error if session creation or switching fails.
-func CreateDefaultSession(cfg *models.Config) error {
+func CreateAndSwitchToFallbackSession(cfg *models.Config) error {
 	sessionName := cfg.FallbackSession.Name
 	if sessionName == "" {
 		sessionName = "Default"
@@ -231,29 +232,24 @@ func CreateDefaultSession(cfg *models.Config) error {
 		return SwitchToExistingSession(cfg, sessionName)
 	}
 
-	if err := CreateAndSwitchSession(cfg, sessionName, cfg.FallbackSession.Path, cfg.FallbackSession.Layout); err != nil {
+	sessionPath := cfg.FallbackSession.Path
+	if sessionPath == "" {
+		var err error
+		sessionPath, err = homedir.Dir()
+		if err != nil {
+			return fmt.Errorf("failed to get homedir: %w", err)
+		}
+	}
+
+	sessionLayout := cfg.FallbackSession.Layout
+	if len(sessionLayout.Windows) == 0 {
+		sessionLayout = cfg.SessionLayout
+	}
+
+	if err := CreateAndSwitchSession(cfg, sessionName, sessionPath, sessionLayout); err != nil {
 		return fmt.Errorf("failed to create and switch to session '%s': %w", sessionName, err)
 	}
 
 	return nil
 }
 
-// GetOrCreateDefaultSession returns the name of the configured fallback session,
-// creating it if it doesn't exist. This is useful when you need the session name
-// but want to ensure it exists.
-//
-// Returns the session name and an error if creation fails.
-func GetOrCreateDefaultSession(cfg *models.Config) (string, error) {
-	sessionName := cfg.FallbackSession.Name
-	if sessionName == "" {
-		sessionName = "default"
-	}
-
-	if !HasTmuxSession(sessionName) {
-		if err := CreateDefaultSession(cfg); err != nil {
-			return "", err
-		}
-	}
-
-	return sessionName, nil
-}

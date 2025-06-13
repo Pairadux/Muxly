@@ -43,7 +43,7 @@ If there are no other sessions however, the default sessions configured in the c
 			sessions := tmux.GetSessionsExceptCurrent(currentSession)
 
 			if len(sessions) == 0 {
-				if err := tmux.CreateDefaultSession(&cfg); err != nil {
+				if err := tmux.CreateAndSwitchToFallbackSession(&cfg); err != nil {
 					fmt.Fprintf(os.Stderr, "Failed to create default session: %v\n", err)
 					os.Exit(1)
 				}
