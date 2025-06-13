@@ -189,32 +189,27 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 	existingSessions := tmux.GetTmuxSessionSet()
 	currentSession := tmux.GetCurrentTmuxSession()
 
+	ignoreSet := make(map[string]struct{})
+	for _, dir := range cfg.IgnoreDirs {
+		resolved, err := utility.ResolvePath(dir)
+		if err == nil {
+			ignoreSet[resolved] = struct{}{}
+		}
+	}
+
 	addEntry := func(path string) error {
 		resolved, err := utility.ResolvePath(path)
 		if err != nil {
 			return err
 		}
 
-		name := filepath.Base(resolved)
-		if name == currentSession {
+		if _, ignored := ignoreSet[resolved]; ignored {
 			return nil
 		}
 
-		// TODO: try to find a more effecient way to ignore directories
-		// Maybe expand scan_dirs to hold relevant ignore_dirs so the ignore_dirs are not searched for in every single scan_dir
-		// Might could also create a seperate ignore_regex to ignore paths based on a regex match
-		ignoreDirs := cfg.IgnoreDirs
-		for _, ignoreDir := range ignoreDirs {
-			ignoredResolved, err := utility.ResolvePath(ignoreDir)
-			if err != nil {
-				if name == ignoreDir {
-					return nil
-				}
-				continue
-			}
-			if resolved == ignoredResolved {
-				return nil
-			}
+		name := filepath.Base(resolved)
+		if name == currentSession {
+			return nil
 		}
 
 		displayName := name
