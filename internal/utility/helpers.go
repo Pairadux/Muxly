@@ -51,7 +51,7 @@ func GetSubDirs(maxDepth int, root string) ([]string, error) {
 			fmt.Fprintf(os.Stderr, "Walk error %q: %v\n", path, err)
 			return nil
 		}
-		// NOTE: might make this into a flag or config option
+		// IDEA: might make this into a flag or config option
 		// ExcludeRootDir
 		if d.Name() == filepath.Base(root) {
 			return nil
@@ -84,7 +84,7 @@ func GetSubDirs(maxDepth int, root string) ([]string, error) {
 // Returns an error with helpful instructions if validation fails.
 func ValidateConfig(cfg *models.Config) error {
 	if viper.ConfigFileUsed() == "" {
-		return fmt.Errorf("no config file found\nRun 'tms config init' to create one, or use --config to specify a path")
+		return fmt.Errorf("no config file found\nRun 'tms config init' to create one, or use --config to specify a path\n")
 	}
 
 	if len(cfg.ScanDirs) == 0 && len(cfg.EntryDirs) == 0 {
