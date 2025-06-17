@@ -25,6 +25,7 @@ If there are no other sessions however, the default sessions configured in the c
 		currentSession := tmux.GetCurrentTmuxSession()
 
 		if currentSession == "" {
+			// IDEA: consider prompting the user to kill the running tmux session if one is available
 			return fmt.Errorf("Not in Tmux, use 'tms' to get started.")
 		}
 
@@ -36,6 +37,8 @@ If there are no other sessions however, the default sessions configured in the c
 			sessions := tmux.GetSessionsExceptCurrent(currentSession)
 
 			if len(sessions) == 0 {
+				// IDEA: maybe rather than just immediately dropping back to fallback, prompt user to fallback
+				// If "no" then kill server
 				if err := tmux.CreateAndSwitchToFallbackSession(&cfg); err != nil {
 					return fmt.Errorf("Failed to create default session: %w", err)
 				}
