@@ -6,8 +6,12 @@ package cmd
 // IMPORTS {{{
 import (
 	"fmt"
+	"os"
 
 	"github.com/Pairadux/tms/internal/forms"
+	"github.com/Pairadux/tms/internal/models"
+	"github.com/Pairadux/tms/internal/tmux"
+	"github.com/mitchellh/go-homedir"
 
 	"github.com/spf13/cobra"
 ) // }}}
@@ -19,22 +23,90 @@ var createCmd = &cobra.Command{
 	Long: `Create a session
 
 An interactive prompt for creating a session.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: implement this command
-		fmt.Println("create called")
-		var burger string
-		var name string
-		var instructions string
-		var toppings []string
-		var sauceLevel int
-		var discount bool
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// Needed for a session:
+		// Session Name
+		// Session Path
+		// Session Layout
+		//
+		// Prompts:
+		// if Use Default:
+		// Proceed with default session creation
+		// else:
+		// Enter Session Name
+		// Verify the name isn't already in use
+		// Path
+		// Use home?
+		// Use CWD?
+		// Enter Path
+		// Layout
+		// Use default layout?
+		// Enter window 1 name
+		// Enter window 1 cmd
+		// Repeat for however many windows
+		// Present user with a finalized session and ask for confifrmation before creating and entering session
 
-		forms.CreateForm(&burger, &name, &instructions, &toppings, &sauceLevel, &discount).Run()
+		var (
+			useDefault    bool
+			confirmCreate bool
+			sessionName   string
+			pathOption    string
+			customPath    string
+			windowsStr    string
+			session       models.Session
+		)
 
-		fmt.Printf("burger: %s, name %s, instructions %s, toppings %s, sauceLevel %d, discount %v\n", burger, name, instructions, toppings, sauceLevel, discount)
+		forms.CreateForm(&useDefault, &confirmCreate, &sessionName, &pathOption, &customPath, &windowsStr)
+
+		if useDefault {
+			if err := tmux.CreateAndSwitchToFallbackSession(&cfg); err != nil {
+				return fmt.Errorf("Failed to create default session: %w", err)
+			}
+		} else {
+			if confirmCreate {
+				var (
+					path string
+					err  error
+				)
+				switch pathOption {
+				case "Home":
+					path, err = homedir.Dir()
+				case "CWD":
+					path, err = os.Getwd()
+				case "Custom":
+					path = customPath
+				default:
+					return fmt.Errorf("invalid path option %q", pathOption)
+				}
+
+				if err != nil {
+					return fmt.Errorf("failed to resolve path: %w", err)
+				}
+
+				layout := parseWindows(windowsStr)
+
+				session = models.Session{
+					Name:   sessionName,
+					Path:   path,
+					Layout: layout,
+				}
+			} else {
+				return nil
+			}
+		}
+
+		fmt.Printf("useDefault: %v, sessionName: %s, pathOption %s, customPath %s, windowsStr %s, confirmCreate %v, session %v\n", useDefault, sessionName, pathOption, customPath, windowsStr, confirmCreate, session)
+
+		return nil
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(createCmd)
+}
+
+// Accepts a comma delimmited input string where each value is a name:cmd pair
+// Parses each name:cmd pair into windows for the session layout
+func parseWindows(input string) models.SessionLayout {
+	return models.SessionLayout{}
 }
