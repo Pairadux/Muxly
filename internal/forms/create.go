@@ -28,9 +28,9 @@ func CreateForm(useDefault, confirmCreate *bool, sessionName, pathOption, custom
 		return *useDefault
 	})
 
-	if useDefault {
-		// do something
-	}
+	// if useDefault {
+	// 	// do something
+	// }
 
 	third := huh.NewGroup(
 		huh.NewConfirm().

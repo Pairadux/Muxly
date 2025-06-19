@@ -42,6 +42,8 @@ var (
 	}
 	defaultEditor            = "vi"
 	defaultTmuxSessionPrefix = "[TMUX] "
+	// TODO: add config option for "use-absolute-path"
+	// This would change the entries from using the basename to using the resolved absolute path in the fzf selector
 )
 
 // initCmd represents the init command

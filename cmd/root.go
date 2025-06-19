@@ -227,6 +227,8 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 			return nil
 		}
 
+		// NOTE: might need to "give up" on not showing current path in fzf selector
+		// as this makes handling duplicates very annoying
 		name := filepath.Base(resolved)
 		if name == currentSession {
 			return nil
