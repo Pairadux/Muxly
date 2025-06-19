@@ -5,7 +5,10 @@ package cmd
 
 // IMPORTS {{{
 import (
+	"bufio"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/Pairadux/Tmux-Sessionizer/internal/fzf"
 	"github.com/Pairadux/Tmux-Sessionizer/internal/tmux"
@@ -25,8 +28,18 @@ If there are no other sessions however, the default sessions configured in the c
 		currentSession := tmux.GetCurrentTmuxSession()
 
 		if currentSession == "" {
-			// IDEA: consider prompting the user to kill the running tmux session if one is available
-			return fmt.Errorf("Not in Tmux, use 'tms' to get started.")
+			fmt.Print("Kill the tmux server? (y/N): ")
+			input, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+			answer := strings.ToLower(strings.TrimSpace(input))
+			if answer != "y" && answer != "yes" {
+				fmt.Println("Aborting. No changes made.")
+				return nil
+			}
+			if err := tmux.KillServer(); err != nil {
+				return fmt.Errorf("failed to kill tmux server: %w", err)
+			}
+			fmt.Println("tmux server killed.")
+			return nil
 		}
 
 		var choiceStr string

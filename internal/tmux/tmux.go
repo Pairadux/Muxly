@@ -217,6 +217,14 @@ func KillSession(target string) error {
 	return nil
 }
 
+func KillServer() error {
+	if err := exec.Command("tmux", "kill-server").Run(); err != nil {
+		return fmt.Errorf("killing server: %w", err)
+	}
+
+	return nil
+}
+
 // CreateAndSwitchToFallbackSession creates and switches to the configured fallback session.
 // If no fallback session is configured, it uses "default" as the session name.
 // The session is created in the user's home directory with the configured layout.
