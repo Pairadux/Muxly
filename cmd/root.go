@@ -115,6 +115,7 @@ var rootCmd = &cobra.Command{
 		}
 
 		sessionName := choiceStr
+		// TODO: simplify to cutprefix
 		if strings.HasPrefix(choiceStr, cfg.TmuxSessionPrefix) {
 			sessionName = strings.TrimPrefix(choiceStr, cfg.TmuxSessionPrefix)
 		}
