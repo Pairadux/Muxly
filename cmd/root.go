@@ -114,11 +114,7 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
-		sessionName := choiceStr
-		// TODO: simplify to cutprefix
-		if strings.HasPrefix(choiceStr, cfg.TmuxSessionPrefix) {
-			sessionName = strings.TrimPrefix(choiceStr, cfg.TmuxSessionPrefix)
-		}
+		sessionName, _ := strings.CutPrefix(choiceStr, cfg.TmuxSessionPrefix)
 
 		selectedPath, exists := entries[choiceStr]
 		if !exists && args[0] == "" {
@@ -310,6 +306,7 @@ func isConfigCommand(cmd *cobra.Command) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
