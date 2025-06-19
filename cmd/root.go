@@ -216,7 +216,7 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 		}
 	}
 
-	addEntry := func(path string) error {
+	addEntry := func(path, prefix string) error {
 		resolved, err := utility.ResolvePath(path)
 		if err != nil {
 			return err
@@ -232,6 +232,10 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 		}
 
 		displayName := name
+		if prefix != "" {
+			displayName = prefix + "/" + name
+		}
+
 		if existingSessions[name] {
 			displayName = cfg.TmuxSessionPrefix + name
 		}
@@ -243,13 +247,14 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 	// TODO: try to make scandir traversal more effecient
 	// Maybe make it resolve paths concurrently
 	for _, scanDir := range cfg.ScanDirs {
-		if err := processScanDir(scanDir, flagDepth, addEntry); err != nil {
+		prefix := scanDir.Alias
+		if err := processScanDir(scanDir, flagDepth, prefix, addEntry); err != nil {
 			return nil, err
 		}
 	}
 
 	for _, entryDir := range cfg.EntryDirs {
-		if err := addEntry(entryDir); err != nil {
+		if err := addEntry(entryDir, ""); err != nil {
 			return nil, err
 		}
 	}
@@ -269,7 +274,7 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 
 // processScanDir processes a ScanDir struct, using the struct's depth
 // and the existing depth priority logic from the ScanDir.GetDepth method.
-func processScanDir(scanDir models.ScanDir, flagDepth int, addEntry func(string) error) error {
+func processScanDir(scanDir models.ScanDir, flagDepth int, prefix string, addEntry func(string, string) error) error {
 	defaultDepth := cfg.DefaultDepth
 	effectiveDepth := scanDir.GetDepth(flagDepth, defaultDepth)
 
@@ -284,7 +289,7 @@ func processScanDir(scanDir models.ScanDir, flagDepth int, addEntry func(string)
 	}
 
 	for _, subDir := range subDirs {
-		if err := addEntry(subDir); err != nil {
+		if err := addEntry(subDir, prefix); err != nil {
 			return err
 		}
 	}

@@ -18,8 +18,8 @@ import (
 // Default values - defined once and used everywhere
 var (
 	defaultScanDirs = []models.ScanDir{
-		{Path: "~/Dev", Depth: nil},
-		{Path: "~/.dotfiles/dot_config", Depth: nil},
+		{Path: "~/Dev", Depth: nil, Alias: ""},
+		{Path: "~/.dotfiles/dot_config", Depth: nil, Alias: ""},
 	}
 	defaultEntryDirs  = []string{"~/Documents", "~/Cloud"}
 	defaultIgnoreDirs = []string{"~/Dev/_practice", "~/Dev/_archive"}

@@ -17,6 +17,7 @@ type SessionLayout struct {
 type ScanDir struct {
 	Path  string `mapstructure:"path"`
 	Depth *int   `mapstructure:"depth,omitempty"`
+	Alias string `mapstructure:"alias,omitempty"`
 }
 
 type Session struct {
@@ -41,10 +42,14 @@ func (s ScanDir) GetDepth(flagDepth, defaultDepth int) int {
 
 // String returns the string representation
 func (s ScanDir) String() string {
+	result := s.Path
 	if s.Depth != nil {
-		return fmt.Sprintf("%s:%d", s.Path, *s.Depth)
+		result = fmt.Sprintf("%s:%d", s.Path, *s.Depth)
 	}
-	return s.Path
+	if s.Alias != "" {
+		result = fmt.Sprintf("%s (alias: %s)", result, s.Alias)
+	}
+	return result
 }
 
 // Config represents the full configuration structure
