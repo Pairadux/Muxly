@@ -1,1 +1,1 @@
-# tms
+# Tmux-Sessionizer

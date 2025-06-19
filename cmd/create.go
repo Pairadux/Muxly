@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Pairadux/tms/internal/forms"
-	"github.com/Pairadux/tms/internal/models"
-	"github.com/Pairadux/tms/internal/tmux"
+	"github.com/Pairadux/Tmux-Sessionizer/internal/forms"
+	"github.com/Pairadux/Tmux-Sessionizer/internal/models"
+	"github.com/Pairadux/Tmux-Sessionizer/internal/tmux"
 	"github.com/mitchellh/go-homedir"
 
 	"github.com/spf13/cobra"

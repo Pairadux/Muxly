@@ -11,7 +11,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Pairadux/tms/internal/models"
+	"github.com/Pairadux/Tmux-Sessionizer/internal/models"
 	"github.com/mitchellh/go-homedir"
 ) // }}}
 

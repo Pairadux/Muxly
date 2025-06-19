@@ -1,4 +1,4 @@
-module github.com/Pairadux/tms
+module github.com/Pairadux/Tmux-Sessionizer
 
 go 1.24.3
 

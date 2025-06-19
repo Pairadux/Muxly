@@ -3,7 +3,7 @@
 
 package main
 
-import "github.com/Pairadux/tms/cmd"
+import "github.com/Pairadux/Tmux-Sessionizer/cmd"
 
 func main() {
 	cmd.Execute()

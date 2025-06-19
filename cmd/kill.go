@@ -7,8 +7,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/Pairadux/tms/internal/fzf"
-	"github.com/Pairadux/tms/internal/tmux"
+	"github.com/Pairadux/Tmux-Sessionizer/internal/fzf"
+	"github.com/Pairadux/Tmux-Sessionizer/internal/tmux"
 
 	"github.com/spf13/cobra"
 ) // }}}

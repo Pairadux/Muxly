@@ -12,10 +12,10 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Pairadux/tms/internal/fzf"
-	"github.com/Pairadux/tms/internal/models"
-	"github.com/Pairadux/tms/internal/tmux"
-	"github.com/Pairadux/tms/internal/utility"
+	"github.com/Pairadux/Tmux-Sessionizer/internal/fzf"
+	"github.com/Pairadux/Tmux-Sessionizer/internal/models"
+	"github.com/Pairadux/Tmux-Sessionizer/internal/tmux"
+	"github.com/Pairadux/Tmux-Sessionizer/internal/utility"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

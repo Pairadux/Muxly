@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Pairadux/tms/internal/models"
+	"github.com/Pairadux/Tmux-Sessionizer/internal/models"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 ) // }}}
