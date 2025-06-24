@@ -95,8 +95,10 @@ An interactive prompt for creating a session.`,
 			}
 		}
 
+		// TODO: Remove debug print statement before production
 		fmt.Printf("useDefault: %v, sessionName: %s, pathOption %s, customPath %s, windowsStr %s, confirmCreate %v, session %v\n", useDefault, sessionName, pathOption, customPath, windowsStr, confirmCreate, session)
 
+		// TODO: Actually create and switch to the session instead of just printing debug info
 		return nil
 	},
 }
@@ -108,5 +110,6 @@ func init() {
 // Accepts a comma delimmited input string where each value is a name:cmd pair
 // Parses each name:cmd pair into windows for the session layout
 func parseWindows(input string) models.SessionLayout {
+	// TODO: Implement parseWindows function - currently returns empty layout
 	return models.SessionLayout{}
 }

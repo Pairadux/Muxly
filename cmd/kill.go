@@ -35,6 +35,7 @@ If there are no other sessions however, the default sessions configured in the c
 				fmt.Println("Aborting. No changes made.")
 				return nil
 			}
+			// REFACTOR: Consider using a confirmation dialog library for better UX
 			if err := tmux.KillServer(); err != nil {
 				return fmt.Errorf("failed to kill tmux server: %w", err)
 			}

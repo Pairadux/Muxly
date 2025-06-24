@@ -41,6 +41,7 @@ func ResolvePath(p string) (string, error) {
 // Walk errors for individual paths are printed to stderr but do not stop
 // the traversal or cause the function to return an error.
 func GetSubDirs(maxDepth int, root string) ([]string, error) {
+	// PERF: Channel buffer size of 100 may be too small for large directory trees, consider making it configurable
 	dirChan := make(chan string, 100)
 	cfg := &fastwalk.Config{MaxDepth: maxDepth}
 	walkFn := func(path string, d fs.DirEntry, err error) error {
@@ -58,6 +59,7 @@ func GetSubDirs(maxDepth int, root string) ([]string, error) {
 		}
 		return nil
 	}
+	// PERF: Pre-allocate dirs slice with estimated capacity to reduce allocations
 	var dirs []string
 	done := make(chan struct{})
 	go func() {

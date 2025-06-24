@@ -84,6 +84,7 @@ var rootCmd = &cobra.Command{
 			choiceStr = args[0]
 		}
 		if choiceStr == "" {
+			// PERF: Pre-allocate slice with exact capacity to avoid reallocations during append
 			names := make([]string, 0, len(entries))
 			for name := range entries {
 				names = append(names, name)
@@ -201,10 +202,12 @@ func initConfig() { // {{{
 // Returns a map where keys are display names and values are resolved paths
 // or session names for existing tmux sessions.
 func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
+	// REFACTOR: This function is too long and complex, consider breaking into smaller functions
 	entries := make(map[string]string)
 	existingSessions := tmux.GetTmuxSessionSet()
 	currentSession := tmux.GetCurrentTmuxSession()
 
+	// PERF: Pre-allocate map capacity if IgnoreDirs count is known to be large
 	ignoreSet := make(map[string]struct{})
 	for _, dir := range cfg.IgnoreDirs {
 		resolved, err := utility.ResolvePath(dir)
@@ -218,6 +221,7 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 		path   string
 		prefix string
 	}
+	// PERF: Consider pre-allocating slices based on estimated directory count
 	var allPaths []pathInfo
 	pathsByBaseName := make(map[string][]pathInfo)
 

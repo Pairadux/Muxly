@@ -26,6 +26,7 @@ func GetTmuxSessionNames() []string {
 		return nil
 	}
 
+	// PERF: Pre-allocate sessions slice with estimated capacity based on typical session count
 	var sessions []string
 	for line := range strings.SplitSeq(strings.TrimSpace(string(output)), "\n") {
 		if line != "" {
@@ -52,8 +53,9 @@ func HasTmuxSession(name string) bool {
 // GetTmuxSessionSet returns a set (map[string]bool) of active session names
 // for efficient membership testing when you need to check many sessions.
 func GetTmuxSessionSet() map[string]bool {
-	sessions := make(map[string]bool)
 	names := GetTmuxSessionNames()
+	// PERF: Pre-allocate map with exact capacity to avoid rehashing
+	sessions := make(map[string]bool, len(names))
 	for _, name := range names {
 		sessions[name] = true
 	}
@@ -169,6 +171,7 @@ func CreateSession(sessionLayout models.SessionLayout, session, dir string) erro
 		return fmt.Errorf("no windows defined in session layout")
 	}
 
+	// REFACTOR: Consider using a single tmux command with multiple operations for better performance
 	w0 := sessionLayout.Windows[0]
 	args := buildWindowArgs(true, session, w0.Name, dir, w0.Cmd)
 	if err := exec.Command("tmux", args...).Run(); err != nil {
