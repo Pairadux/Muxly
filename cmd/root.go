@@ -213,7 +213,15 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 		}
 	}
 
-	addEntry := func(path, prefix string) error {
+	// Collect all valid paths with their metadata
+	type pathInfo struct {
+		path   string
+		prefix string
+	}
+	var allPaths []pathInfo
+	pathsByBaseName := make(map[string][]pathInfo)
+
+	addPath := func(path, prefix string) error {
 		resolved, err := utility.ResolvePath(path)
 		if err != nil {
 			return err
@@ -223,49 +231,70 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 			return nil
 		}
 
-		// NOTE: might need to "give up" on not showing current path in fzf selector
-		// as this makes handling duplicates very annoying
 		name := filepath.Base(resolved)
 		if name == currentSession {
 			return nil
 		}
 
-		displayName := name
-		if prefix != "" {
-			displayName = prefix + "/" + name
-		}
-
-		if existingSessions[name] {
-			displayName = cfg.TmuxSessionPrefix + name
-		}
-
-		entries[displayName] = resolved
+		info := pathInfo{path: resolved, prefix: prefix}
+		allPaths = append(allPaths, info)
+		pathsByBaseName[name] = append(pathsByBaseName[name], info)
 		return nil
 	}
 
-	// TODO: try to make scandir traversal more effecient
-	// Maybe make it resolve paths concurrently
+	// Collect all paths first
 	for _, scanDir := range cfg.ScanDirs {
 		prefix := scanDir.Alias
-		if err := processScanDir(scanDir, flagDepth, prefix, addEntry); err != nil {
+		if err := processScanDir(scanDir, flagDepth, prefix, addPath); err != nil {
 			return nil, err
 		}
 	}
 
 	for _, entryDir := range cfg.EntryDirs {
-		if err := addEntry(entryDir, ""); err != nil {
+		if err := addPath(entryDir, ""); err != nil {
 			return nil, err
 		}
 	}
 
+	// Now create unique display names
+	for _, info := range allPaths {
+		name := filepath.Base(info.path)
+		pathsWithSameName := pathsByBaseName[name]
+
+		var displayName string
+		if len(pathsWithSameName) > 1 {
+			// Handle duplicates by adding parent directory
+			parent := filepath.Base(filepath.Dir(info.path))
+			displayName = name + " (" + parent + ")"
+		} else {
+			displayName = name
+		}
+
+		if info.prefix != "" {
+			displayName = info.prefix + "/" + displayName
+		}
+
+		// Skip if this display name matches current session
+		if displayName == currentSession {
+			continue
+		}
+		
+		// Skip if this display name has an active tmux session (avoid duplicates)
+		if existingSessions[displayName] {
+			continue
+		}
+
+		entries[displayName] = info.path
+	}
+
+	// Add existing tmux sessions
 	for sessionName := range existingSessions {
 		if sessionName == currentSession {
 			continue
 		}
+
 		displayName := cfg.TmuxSessionPrefix + sessionName
-		if _, exists := entries[displayName]; !exists {
-			entries[displayName] = sessionName
-		}
+		entries[displayName] = sessionName
 	}
 
 	return entries, nil

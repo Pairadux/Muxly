@@ -44,6 +44,8 @@ var (
 	defaultTmuxSessionPrefix = "[TMUX] "
 	// TODO: add config option for "use-absolute-path"
 	// This would change the entries from using the basename to using the resolved absolute path in the fzf selector
+	// TODO: add a config option to remove current session from list of options 
+	// Might would help with the duplicate problem, especially in conjuction with absolute path config option
 )
 
 // initCmd represents the init command
