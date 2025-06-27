@@ -37,6 +37,10 @@ func GetTmuxSessionNames() []string {
 	return sessions
 }
 
+// GetSessionsExceptCurrent returns all tmux session names except the specified current session.
+//
+// This is useful for getting a list of sessions that can be switched to,
+// excluding the session the user is currently in.
 func GetSessionsExceptCurrent(current string) []string {
 	sessions := GetTmuxSessionNames()
 	if idx := slices.Index(sessions, current); idx >= 0 {
@@ -212,6 +216,9 @@ func buildWindowArgs(isFirst bool, session, windowName, dir, cmd string) []strin
 	return args
 }
 
+// KillSession terminates the specified tmux session.
+//
+// Returns an error if the session doesn't exist or if the kill operation fails.
 func KillSession(target string) error {
 	if err := exec.Command("tmux", "kill-session", "-t", target).Run(); err != nil {
 		return fmt.Errorf("killing session: %w", err)
@@ -220,6 +227,10 @@ func KillSession(target string) error {
 	return nil
 }
 
+// KillServer terminates the entire tmux server and all sessions.
+//
+// This is a destructive operation that will close all tmux sessions.
+// Returns an error if the kill operation fails.
 func KillServer() error {
 	if err := exec.Command("tmux", "kill-server").Run(); err != nil {
 		return fmt.Errorf("killing server: %w", err)

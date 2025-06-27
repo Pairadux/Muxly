@@ -107,8 +107,11 @@ func init() {
 	rootCmd.AddCommand(createCmd)
 }
 
-// Accepts a comma delimmited input string where each value is a name:cmd pair
-// Parses each name:cmd pair into windows for the session layout
+// parseWindows parses a comma-delimited input string where each value is a name:cmd pair.
+//
+// It converts each name:cmd pair into Window structs for the session layout.
+// If no colon is found in a part, the entire part is treated as the window name with no command.
+// Returns a SessionLayout with at least one window, defaulting to "main" if input is empty.
 func parseWindows(input string) models.SessionLayout {
 	// TODO: Implement parseWindows function - currently returns empty layout
 	return models.SessionLayout{}

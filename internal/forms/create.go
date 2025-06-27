@@ -9,6 +9,11 @@ import (
 	"github.com/charmbracelet/huh"
 )
 
+// CreateForm creates and returns an interactive form for session creation.
+//
+// The form collects user input for creating a new tmux session, including
+// whether to use default settings, session name, path options, and window configuration.
+// All parameters are pointers that will be populated with user selections.
 func CreateForm(useDefault, confirmCreate *bool, sessionName, pathOption, customPath, windowStr *string) *huh.Form {
 	first := huh.NewGroup(
 		huh.NewConfirm().
