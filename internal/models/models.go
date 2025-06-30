@@ -52,6 +52,12 @@ func (s ScanDir) String() string {
 	return result
 }
 
+// PathInfo holds metadata for a directory path including any alias prefix
+type PathInfo struct {
+	Path   string
+	Prefix string
+}
+
 // Config represents the full configuration structure
 type Config struct {
 	ScanDirs          []ScanDir     `mapstructure:"scan_dirs"`

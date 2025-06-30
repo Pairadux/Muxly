@@ -28,6 +28,7 @@ var (
 	verbose     bool
 )
 
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:     "tms [SESSION]",
@@ -53,10 +54,10 @@ var rootCmd = &cobra.Command{
 	PreRunE: func(cmd *cobra.Command, args []string) error { // {{{
 		if len(args) == 1 {
 			// IDEA: Maybe prompt the user and run the command for them
-			switch {
-			case args[0] == "init":
+			switch args[0] {
+			case "init":
 				return fmt.Errorf("unknown command %q for %q. Did you mean:\n  tms config init?\n", args[0], cmd.Name())
-			case args[0] == "edit":
+			case "edit":
 				return fmt.Errorf("unknown command %q for %q. Did you mean:\n  tms config edit?\n", args[0], cmd.Name())
 			default:
 				return nil
@@ -217,18 +218,17 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 	}
 
 	// Collect all valid paths with their metadata
-	type pathInfo struct {
-		path   string
-		prefix string
-	}
 	// PERF: Consider pre-allocating slices based on estimated directory count
-	var allPaths []pathInfo
-	pathsByBaseName := make(map[string][]pathInfo)
+	var allPaths []models.PathInfo
+	pathsByBaseName := make(map[string][]models.PathInfo)
 
 	addPath := func(path, prefix string) error {
 		resolved, err := utility.ResolvePath(path)
 		if err != nil {
-			return err
+			if verbose {
+				fmt.Fprintf(os.Stderr, "Warning: failed to resolve path %s: %v\n", path, err)
+			}
+			return nil
 		}
 
 		if _, ignored := ignoreSet[resolved]; ignored {
@@ -240,7 +240,7 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 			return nil
 		}
 
-		info := pathInfo{path: resolved, prefix: prefix}
+		info := models.PathInfo{Path: resolved, Prefix: prefix}
 		allPaths = append(allPaths, info)
 		pathsByBaseName[name] = append(pathsByBaseName[name], info)
 		return nil
@@ -260,35 +260,16 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 		}
 	}
 
-	// Now create unique display names
+	// Create unique display names for all paths
 	for _, info := range allPaths {
-		name := filepath.Base(info.path)
-		pathsWithSameName := pathsByBaseName[name]
+		displayName := createDisplayName(info, pathsByBaseName)
 
-		var displayName string
-		if len(pathsWithSameName) > 1 {
-			// Handle duplicates by adding parent directory
-			parent := filepath.Base(filepath.Dir(info.path))
-			displayName = name + " (" + parent + ")"
-		} else {
-			displayName = name
-		}
-
-		if info.prefix != "" {
-			displayName = info.prefix + "/" + displayName
-		}
-
-		// Skip if this display name matches current session
-		if displayName == currentSession {
-			continue
-		}
-		
-		// Skip if this display name has an active tmux session (avoid duplicates)
-		if existingSessions[displayName] {
+		// Filter out current session and existing sessions
+		if shouldSkipEntry(displayName, currentSession, existingSessions) {
 			continue
 		}
 
-		entries[displayName] = info.path
+		entries[displayName] = info.Path
 	}
 
 	// Add existing tmux sessions
@@ -312,12 +293,18 @@ func processScanDir(scanDir models.ScanDir, flagDepth int, prefix string, addEnt
 
 	resolved, err := utility.ResolvePath(scanDir.Path)
 	if err != nil {
-		return err
+		if verbose {
+			fmt.Fprintf(os.Stderr, "Warning: failed to resolve scan directory %s: %v\n", scanDir.Path, err)
+		}
+		return nil
 	}
 
 	subDirs, err := utility.GetSubDirs(effectiveDepth, resolved)
 	if err != nil {
-		return err
+		if verbose {
+			fmt.Fprintf(os.Stderr, "Warning: failed to scan directory %s: %v\n", resolved, err)
+		}
+		return nil
 	}
 
 	for _, subDir := range subDirs {
@@ -327,6 +314,34 @@ func processScanDir(scanDir models.ScanDir, flagDepth int, prefix string, addEnt
 	}
 
 	return nil
+}
+
+// createDisplayName generates a unique display name for a path, handling duplicates
+// by adding parent directory names when multiple paths have the same base name.
+func createDisplayName(info models.PathInfo, pathsByBaseName map[string][]models.PathInfo) string {
+	name := filepath.Base(info.Path)
+	pathsWithSameName := pathsByBaseName[name]
+
+	var displayName string
+	if len(pathsWithSameName) > 1 {
+		// Handle duplicates by adding parent directory
+		parent := filepath.Base(filepath.Dir(info.Path))
+		displayName = name + " (" + parent + ")"
+	} else {
+		displayName = name
+	}
+
+	if info.Prefix != "" {
+		displayName = info.Prefix + "/" + displayName
+	}
+
+	return displayName
+}
+
+// shouldSkipEntry determines if an entry should be skipped based on current session
+// and existing tmux sessions to avoid duplicates.
+func shouldSkipEntry(displayName, currentSession string, existingSessions map[string]bool) bool {
+	return displayName == currentSession || existingSessions[displayName]
 }
 
 // isConfigCommand checks if the given command or any of its parent commands
