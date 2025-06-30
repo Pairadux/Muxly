@@ -118,7 +118,7 @@ var rootCmd = &cobra.Command{
 		sessionName, _ := strings.CutPrefix(choiceStr, cfg.TmuxSessionPrefix)
 
 		selectedPath, exists := entries[choiceStr]
-		if !exists && args[0] == "" {
+		if !exists && len(args) == 0 {
 			return fmt.Errorf("The name must match an existing directory entry: %s", choiceStr)
 		}
 
