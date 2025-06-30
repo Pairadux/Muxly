@@ -274,4 +274,3 @@ func CreateAndSwitchToFallbackSession(cfg *models.Config) error {
 
 	return nil
 }
-

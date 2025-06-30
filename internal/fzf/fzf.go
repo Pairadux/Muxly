@@ -9,7 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-)// }}}
+) // }}}
 
 // SelectWithFzf presents a list of options to the user via the fzf fuzzy finder
 // and returns the selected option. The options are passed as stdin to the fzf

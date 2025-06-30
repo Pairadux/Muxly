@@ -64,7 +64,7 @@ If no other sessions found, exit.`,
 		if err := tmux.SwitchToExistingSession(&cfg, sessionName); err != nil {
 			return fmt.Errorf("Failed to switch session: %w", err)
 		}
-		
+
 		return nil
 	},
 }
