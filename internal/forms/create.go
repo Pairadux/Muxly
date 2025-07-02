@@ -44,5 +44,10 @@ func CreateForm(useDefault, confirmCreate *bool, sessionName, pathOption, custom
 		return *pathOption != "Custom"
 	})
 
-	return huh.NewForm(first, second, third).WithTheme(huh.ThemeBase())
+	last := huh.NewGroup(
+		huh.NewConfirm().
+			Title("Create this session?"),
+	)
+
+	return huh.NewForm(first, second, third, last).WithTheme(huh.ThemeBase())
 }
