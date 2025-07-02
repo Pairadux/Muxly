@@ -68,17 +68,28 @@ Otherwise, the current config file is overwritten.`,
 		editor := defaultEditor
 		tmuxSessionPrefix := defaultTmuxSessionPrefix
 
-		configContent := generateConfigYAML(models.Config{
-			ScanDirs:          scanDirs,
-			EntryDirs:         entryDirs,
-			IgnoreDirs:        ignoreDirs,
-			FallbackSession:   session,
-			TmuxBase:          tmuxBase,
-			DefaultDepth:      depth,
-			SessionLayout:     sessionLayout,
-			Editor:            editor,
-			TmuxSessionPrefix: tmuxSessionPrefix,
-		})
+		var configContent string
+
+		useDefaults, err := cmd.Flags().GetBool("Defaults")
+		if err != nil {
+			return fmt.Errorf("failed to get Defaults flag: %w", err)
+		}
+
+		if useDefaults {
+			configContent = generateConfigYAML(models.Config{
+				ScanDirs:          scanDirs,
+				EntryDirs:         entryDirs,
+				IgnoreDirs:        ignoreDirs,
+				FallbackSession:   session,
+				TmuxBase:          tmuxBase,
+				DefaultDepth:      depth,
+				SessionLayout:     sessionLayout,
+				Editor:            editor,
+				TmuxSessionPrefix: tmuxSessionPrefix,
+			})
+		}
+
+		// IDEA: before finalizing the changes, maybe diff the current file or show the config options setup and validate that they are correct
 
 		parent := filepath.Dir(cfgFilePath)
 		_ = os.MkdirAll(parent, 0o755)
@@ -103,6 +114,7 @@ func init() { // {{{
 	// initCmd.Flags().StringArrayP("scan_dirs", "s", scanDirsToStringArray(defaultScanDirs), "A list of paths that should always be scanned.\nConcat with :int for depth.")
 	// initCmd.Flags().StringArrayP("entry_dirs", "e", defaultEntryDirs, "A list of paths that are entries themselves.")
 	// initCmd.Flags().StringArrayP("ignore_dirs", "i", defaultIgnoreDirs, "A list of paths that should be removed.")
+	initCmd.Flags().BoolP("Defaults", "D", true /* FIXME: change to false once interactive prompt is completed */, "Accept all defaults. (No interactive prompt)")
 } // }}}
 
 func generateConfigYAML(params models.Config) string { // {{{
