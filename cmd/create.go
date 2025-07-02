@@ -56,7 +56,10 @@ An interactive prompt for creating a session.`,
 			session       models.Session
 		)
 
-		forms.CreateForm(&useDefault, &confirmCreate, &sessionName, &pathOption, &customPath, &windowsStr)
+		form := forms.CreateForm(&useDefault, &confirmCreate, &sessionName, &pathOption, &customPath, &windowsStr)
+		if err := form.Run(); err != nil {
+			return fmt.Errorf("form error: %w", err)
+		}
 
 		if useDefault {
 			if err := tmux.CreateAndSwitchToFallbackSession(&cfg); err != nil {
