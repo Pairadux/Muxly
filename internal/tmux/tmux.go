@@ -103,16 +103,16 @@ func SwitchToExistingSession(cfg *models.Config, name string) error {
 
 // CreateAndSwitchSession creates a new tmux session and switches to it.
 // If the session already exists, it just switches to it.
-func CreateAndSwitchSession(cfg *models.Config, name, cwd string, layout models.SessionLayout) error {
-	if HasTmuxSession(name) {
-		return SwitchToExistingSession(cfg, name)
+func CreateAndSwitchSession(cfg *models.Config, session models.Session) error {
+	if HasTmuxSession(session.Name) {
+		return SwitchToExistingSession(cfg, session.Name)
 	}
 
-	if err := CreateSession(layout, name, cwd); err != nil {
+	if err := CreateSession(session); err != nil {
 		return fmt.Errorf("creating session: %w", err)
 	}
 
-	return SwitchToExistingSession(cfg, name)
+	return SwitchToExistingSession(cfg, session.Name)
 }
 
 // getSessionTarget returns the target string for tmux commands,
@@ -163,27 +163,26 @@ func switchClientToSession(target, fallbackName string) error {
 	return nil
 }
 
-// CreateSession creates a new tmux session with the specified name and working
-// directory, using the provided session layout configuration. The session layout
-// must contain at least one window definition.
+// CreateSession creates a new tmux session using the provided session configuration.
+// The session layout must contain at least one window definition.
 //
 // The first window is created with the new-session command, and subsequent
 // windows are added using new-window. Each window can optionally specify a
 // command to run upon creation.
-func CreateSession(sessionLayout models.SessionLayout, session, dir string) error {
-	if len(sessionLayout.Windows) == 0 {
+func CreateSession(session models.Session) error {
+	if len(session.Layout.Windows) == 0 {
 		return fmt.Errorf("no windows defined in session layout")
 	}
 
 	// REFACTOR: Consider using a single tmux command with multiple operations for better performance
-	w0 := sessionLayout.Windows[0]
-	args := buildWindowArgs(true, session, w0.Name, dir, w0.Cmd)
+	w0 := session.Layout.Windows[0]
+	args := buildWindowArgs(true, session.Name, w0.Name, session.Path, w0.Cmd)
 	if err := exec.Command("tmux", args...).Run(); err != nil {
 		return err
 	}
 
-	for _, w := range sessionLayout.Windows[1:] {
-		args := buildWindowArgs(false, session, w.Name, dir, w.Cmd)
+	for _, w := range session.Layout.Windows[1:] {
+		args := buildWindowArgs(false, session.Name, w.Name, session.Path, w.Cmd)
 		if err := exec.Command("tmux", args...).Run(); err != nil {
 			return err
 		}
@@ -196,12 +195,12 @@ func CreateSession(sessionLayout models.SessionLayout, session, dir string) erro
 //
 // For the first window it uses new-session, for subsequent windows it uses new-window.
 // If cmd is provided, it wraps it with shell execution to keep the window open.
-func buildWindowArgs(isFirst bool, session, windowName, dir, cmd string) []string {
+func buildWindowArgs(isFirst bool, sessionName, windowName, dir, cmd string) []string {
 	var args []string
 	if isFirst {
-		args = []string{"new-session", "-ds", session, "-n", windowName, "-c", dir}
+		args = []string{"new-session", "-ds", sessionName, "-n", windowName, "-c", dir}
 	} else {
-		args = []string{"new-window", "-t", session, "-n", windowName, "-c", dir}
+		args = []string{"new-window", "-t", sessionName, "-n", windowName, "-c", dir}
 	}
 
 	if cmd != "" {
@@ -268,7 +267,13 @@ func CreateAndSwitchToFallbackSession(cfg *models.Config) error {
 		sessionLayout = cfg.SessionLayout
 	}
 
-	if err := CreateAndSwitchSession(cfg, sessionName, sessionPath, sessionLayout); err != nil {
+	session := models.Session{
+		Name:   sessionName,
+		Path:   sessionPath,
+		Layout: sessionLayout,
+	}
+
+	if err := CreateAndSwitchSession(cfg, session); err != nil {
 		return fmt.Errorf("failed to create and switch to session '%s': %w", sessionName, err)
 	}
 

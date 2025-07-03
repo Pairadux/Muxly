@@ -126,7 +126,13 @@ var rootCmd = &cobra.Command{
 		// IDEA: this is a bit involved, but I want to retrieve a session layout from a .tms file in the directory of the session to be created, if present
 		// This would enable dynamic session layouts based on user preference/setup
 
-		if err := tmux.CreateAndSwitchSession(&cfg, sessionName, selectedPath, cfg.SessionLayout); err != nil {
+		session := models.Session{
+			Name:   sessionName,
+			Path:   selectedPath,
+			Layout: cfg.SessionLayout,
+		}
+
+		if err := tmux.CreateAndSwitchSession(&cfg, session); err != nil {
 			return fmt.Errorf("Failed to switch session: %w", err)
 		}
 
