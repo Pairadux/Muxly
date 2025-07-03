@@ -6,12 +6,9 @@ package cmd
 // IMPORTS {{{
 import (
 	"fmt"
-	"os"
 
 	"github.com/Pairadux/Tmux-Sessionizer/internal/forms"
-	"github.com/Pairadux/Tmux-Sessionizer/internal/models"
 	"github.com/Pairadux/Tmux-Sessionizer/internal/tmux"
-	"github.com/mitchellh/go-homedir"
 
 	"github.com/spf13/cobra"
 ) // }}}
@@ -46,6 +43,7 @@ An interactive prompt for creating a session.`,
 		// Repeat for however many windows
 		// Present user with a finalized session and ask for confifrmation before creating and entering session
 
+		// FIXME
 		var (
 			useDefault    bool
 			confirmCreate bool
@@ -53,7 +51,6 @@ An interactive prompt for creating a session.`,
 			pathOption    string
 			customPath    string
 			windowsStr    string
-			session       models.Session
 		)
 
 		form := forms.CreateForm(&useDefault, &confirmCreate, &sessionName, &pathOption, &customPath, &windowsStr)
@@ -67,41 +64,14 @@ An interactive prompt for creating a session.`,
 			}
 		} else {
 			if confirmCreate {
-				var (
-					path string
-					err  error
-				)
-				switch pathOption {
-				case "Home":
-					path, err = homedir.Dir()
-				case "CWD":
-					path, err = os.Getwd()
-				case "Custom":
-					path = customPath
-				default:
-					return fmt.Errorf("invalid path option %q", pathOption)
-				}
-
-				if err != nil {
-					return fmt.Errorf("failed to resolve path: %w", err)
-				}
-
-				layout := parseWindows(windowsStr)
-
-				session = models.Session{
-					Name:   sessionName,
-					Path:   path,
-					Layout: layout,
+				if err := tmux.CreateSessionFromInput(&cfg, sessionName, pathOption, customPath, windowsStr); err != nil {
+					return fmt.Errorf("failed to create session: %w", err)
 				}
 			} else {
 				return nil
 			}
 		}
 
-		// TODO: Remove debug print statement before production
-		fmt.Printf("useDefault: %v, sessionName: %s, pathOption %s, customPath %s, windowsStr %s, confirmCreate %v, session %v\n", useDefault, sessionName, pathOption, customPath, windowsStr, confirmCreate, session)
-
-		// TODO: Actually create and switch to the session instead of just printing debug info
 		return nil
 	},
 }
@@ -110,12 +80,3 @@ func init() {
 	rootCmd.AddCommand(createCmd)
 }
 
-// parseWindows parses a comma-delimited input string where each value is a name:cmd pair.
-//
-// It converts each name:cmd pair into Window structs for the session layout.
-// If no colon is found in a part, the entire part is treated as the window name with no command.
-// Returns a SessionLayout with at least one window, defaulting to "main" if input is empty.
-func parseWindows(input string) models.SessionLayout {
-	// TODO: Implement parseWindows function - currently returns empty layout
-	return models.SessionLayout{}
-}
