@@ -123,6 +123,7 @@ func generateConfigYAML(params models.Config) string { // {{{
 	b.WriteString("# Configuration for Tmux Session Manager\n\n")
 
 	// Scan directories
+	// TODO: add additional comments to explain this section, namely, add an "ok" vs "not ok" example section
 	b.WriteString("# Directories to scan for projects\n")
 	b.WriteString("# Each entry can be a simple path or include depth:\n")
 	b.WriteString("#   - path: ~/\n")

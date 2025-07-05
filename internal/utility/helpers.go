@@ -22,6 +22,7 @@ import (
 //   - Home (~ or ~/…):             expanded via os.UserHomeDir()
 //   - Explicit relative (./, ../): error
 func ResolvePath(p string) (string, error) {
+	// IDEA: I would like to accept Base paths (Documents for ~/Documents) and ENV variables
 	if filepath.IsAbs(p) {
 		return p, nil
 	}
