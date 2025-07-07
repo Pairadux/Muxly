@@ -79,4 +79,3 @@ An interactive prompt for creating a session.`,
 func init() {
 	rootCmd.AddCommand(createCmd)
 }
-
