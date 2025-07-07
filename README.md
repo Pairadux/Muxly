@@ -164,3 +164,7 @@ tms my-project
 ## Warning
 
 This program is in a highly unstable state. The API and commands are subject to change before final release. The overall functionality of the program should be stable, unless otherwise stated though.
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=Pairadux/Tmux-Sessionizer&type=Date)](https://www.star-history.com/#Pairadux/Tmux-Sessionizer&Date)
