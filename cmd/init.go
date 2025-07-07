@@ -44,6 +44,9 @@ var (
 	defaultTmuxSessionPrefix = "[TMUX] "
 	// TODO: add config option for "use-absolute-path"
 	// This would change the entries from using the basename to using the resolved absolute path in the fzf selector
+	// TODO: add config option for "use-home-based-path"
+	// Similar to use-absolute-path but shows paths from ~/ rather than /
+	// Would need to prioritize one over the other if both are enabled and detail which takes priority
 	// TODO: add a config option to remove current session from list of options
 	// Might would help with the duplicate problem, especially in conjuction with absolute path config option
 )

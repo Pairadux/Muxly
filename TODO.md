@@ -42,7 +42,7 @@
 
 ### 6. Better Error Messages & UX
 
-- [ ] Standardize error message formatting
+- [x] Standardize error message formatting
 - [ ] Add graceful handling of interrupted operations
 - [ ] Replace basic stdin confirmations with proper UI components
 - [ ] Improve user feedback for long-running operations
@@ -58,7 +58,7 @@
 
 ### 8. Code Quality Improvements
 
-- [ ] Refactor large complex functions (e.g., `buildDirectoryEntries`)
+- [x] Refactor large complex functions (e.g., `buildDirectoryEntries`)
 - [ ] Address REFACTOR comments in codebase
 - [ ] Extract hardcoded values to configuration
 - [ ] Improve code organization and modularity
