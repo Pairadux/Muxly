@@ -6,6 +6,7 @@ package cmd
 // IMPORTS {{{
 import (
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,7 +28,6 @@ var (
 	cfgFilePath string
 	verbose     bool
 )
-
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -211,12 +211,20 @@ func initConfig() { // {{{
 // Returns a map where keys are display names and values are resolved paths
 // or session names for existing tmux sessions.
 func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
-	// REFACTOR: This function is too long and complex, consider breaking into smaller functions
-	entries := make(map[string]string)
 	existingSessions := tmux.GetTmuxSessionSet()
 	currentSession := tmux.GetCurrentTmuxSession()
 
-	// PERF: Pre-allocate map capacity if IgnoreDirs count is known to be large
+	ignoreSet := buildIgnoreSet()
+	allPaths := collectAllPaths(flagDepth, ignoreSet, currentSession)
+
+	entries := make(map[string]string)
+	addDirectoryEntries(entries, allPaths, currentSession, existingSessions)
+	addTmuxSessionEntries(entries, existingSessions, currentSession)
+
+	return entries, nil
+}
+
+func buildIgnoreSet() map[string]struct{} {
 	ignoreSet := make(map[string]struct{})
 	for _, dir := range cfg.IgnoreDirs {
 		resolved, err := utility.ResolvePath(dir)
@@ -224,63 +232,56 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 			ignoreSet[resolved] = struct{}{}
 		}
 	}
+	return ignoreSet
+}
 
-	// Collect all valid paths with their metadata
-	// PERF: Consider pre-allocating slices based on estimated directory count
+func collectAllPaths(flagDepth int, ignoreSet map[string]struct{}, currentSession string) []models.PathInfo {
 	var allPaths []models.PathInfo
-	pathsByBaseName := make(map[string][]models.PathInfo)
 
 	addPath := func(path, prefix string) error {
-		resolved, err := utility.ResolvePath(path)
-		if err != nil {
-			if verbose {
-				fmt.Fprintf(os.Stderr, "Warning: failed to resolve path %s: %v\n", path, err)
-			}
+		if _, ignored := ignoreSet[path]; ignored {
 			return nil
 		}
 
-		if _, ignored := ignoreSet[resolved]; ignored {
-			return nil
-		}
-
-		name := filepath.Base(resolved)
+		name := filepath.Base(path)
 		if name == currentSession {
 			return nil
 		}
 
-		info := models.PathInfo{Path: resolved, Prefix: prefix}
+		info := models.PathInfo{Path: path, Prefix: prefix}
 		allPaths = append(allPaths, info)
-		pathsByBaseName[name] = append(pathsByBaseName[name], info)
 		return nil
 	}
 
-	// Collect all paths first
 	for _, scanDir := range cfg.ScanDirs {
 		prefix := scanDir.Alias
 		if err := processScanDir(scanDir, flagDepth, prefix, addPath); err != nil {
-			return nil, err
+			continue
 		}
 	}
 
 	for _, entryDir := range cfg.EntryDirs {
-		if err := addPath(entryDir, ""); err != nil {
-			return nil, err
-		}
+		addPath(entryDir, "")
 	}
 
-	// Create unique display names for all paths
-	for _, info := range allPaths {
-		displayName := createDisplayName(info, pathsByBaseName)
+	return allPaths
+}
 
-		// Filter out current session and existing sessions
+func addDirectoryEntries(entries map[string]string, allPaths []models.PathInfo, currentSession string, existingSessions map[string]bool) {
+	displayNames := deduplicateDisplayNames(allPaths)
+
+	for _, info := range allPaths {
+		displayName := displayNames[info.Path]
+
 		if shouldSkipEntry(displayName, currentSession, existingSessions) {
 			continue
 		}
 
 		entries[displayName] = info.Path
 	}
+}
 
-	// Add existing tmux sessions
+func addTmuxSessionEntries(entries map[string]string, existingSessions map[string]bool, currentSession string) {
 	for sessionName := range existingSessions {
 		if sessionName == currentSession {
 			continue
@@ -289,8 +290,6 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 		displayName := cfg.TmuxSessionPrefix + sessionName
 		entries[displayName] = sessionName
 	}
-
-	return entries, nil
 }
 
 // processScanDir processes a ScanDir struct, using the struct's depth
@@ -299,6 +298,7 @@ func processScanDir(scanDir models.ScanDir, flagDepth int, prefix string, addEnt
 	defaultDepth := cfg.DefaultDepth
 	effectiveDepth := scanDir.GetDepth(flagDepth, defaultDepth)
 
+	// get absolute path
 	resolved, err := utility.ResolvePath(scanDir.Path)
 	if err != nil {
 		if verbose {
@@ -307,6 +307,7 @@ func processScanDir(scanDir models.ScanDir, flagDepth int, prefix string, addEnt
 		return nil
 	}
 
+	// get subdirs
 	subDirs, err := utility.GetSubDirs(effectiveDepth, resolved)
 	if err != nil {
 		if verbose {
@@ -315,6 +316,7 @@ func processScanDir(scanDir models.ScanDir, flagDepth int, prefix string, addEnt
 		return nil
 	}
 
+	// add subdirs
 	for _, subDir := range subDirs {
 		if err := addEntry(subDir, prefix); err != nil {
 			return err
@@ -324,26 +326,106 @@ func processScanDir(scanDir models.ScanDir, flagDepth int, prefix string, addEnt
 	return nil
 }
 
-// createDisplayName generates a unique display name for a path, handling duplicates
-// by adding parent directory names when multiple paths have the same base name.
-func createDisplayName(info models.PathInfo, pathsByBaseName map[string][]models.PathInfo) string {
-	name := filepath.Base(info.Path)
-	pathsWithSameName := pathsByBaseName[name]
-
-	var displayName string
-	if len(pathsWithSameName) > 1 {
-		// Handle duplicates by adding parent directory
-		parent := filepath.Base(filepath.Dir(info.Path))
-		displayName = name + " (" + parent + ")"
-	} else {
-		displayName = name
+// deduplicateDisplayNames finds the minimum suffix needed to ensure no duplicates
+// using hash-based grouping for efficient conflict resolution.
+func deduplicateDisplayNames(allPaths []models.PathInfo) map[string]string {
+	if len(allPaths) == 0 {
+		return make(map[string]string)
 	}
 
-	if info.Prefix != "" {
-		displayName = info.Prefix + "/" + displayName
+	// Group paths by basename
+	groups := make(map[string][]models.PathInfo)
+	for _, info := range allPaths {
+		basename := filepath.Base(info.Path)
+		groups[basename] = append(groups[basename], info)
 	}
 
-	return displayName
+	result := make(map[string]string)
+
+	// Process each group
+	for _, group := range groups {
+		if len(group) == 1 {
+			// No duplicates, use basename
+			info := group[0]
+			displayName := filepath.Base(info.Path)
+			if info.Prefix != "" {
+				displayName = info.Prefix + "/" + displayName
+			}
+			result[info.Path] = displayName
+		} else {
+			// Resolve conflicts by finding minimum distinguishing suffix
+			resolved := resolveConflicts(group)
+			maps.Copy(result, resolved)
+		}
+	}
+
+	return result
+}
+
+// resolveConflicts finds the minimum suffix depth needed to make all paths unique
+func resolveConflicts(paths []models.PathInfo) map[string]string {
+	const maxDepth = 10 // Reasonable limit to prevent infinite loops
+
+	for depth := 1; depth <= maxDepth; depth++ {
+		suffixes := make(map[string]models.PathInfo)
+		conflicts := false
+
+		for _, info := range paths {
+			suffix := getPathSuffix(info.Path, depth)
+			if existing, exists := suffixes[suffix]; exists {
+				// Check if it's actually the same path (shouldn't happen but safety check)
+				if existing.Path != info.Path {
+					conflicts = true
+					break
+				}
+			}
+			suffixes[suffix] = info
+		}
+
+		if !conflicts {
+			// All unique at this depth
+			result := make(map[string]string)
+			for suffix, info := range suffixes {
+				displayName := suffix
+				if info.Prefix != "" {
+					displayName = info.Prefix + "/" + displayName
+				}
+				result[info.Path] = displayName
+			}
+			return result
+		}
+	}
+
+	// Fallback: use full path if conflict cant be resolved
+	result := make(map[string]string)
+	for _, info := range paths {
+		displayName := info.Path
+		if info.Prefix != "" {
+			displayName = info.Prefix + "/" + displayName
+		}
+		result[info.Path] = displayName
+	}
+	return result
+}
+
+// getPathSuffix returns the last N components of a path
+func getPathSuffix(path string, depth int) string {
+	components := strings.Split(filepath.Clean(path), string(filepath.Separator))
+
+	// Remove empty components (can happen with leading/trailing separators)
+	var cleanComponents []string
+	for _, comp := range components {
+		if comp != "" {
+			cleanComponents = append(cleanComponents, comp)
+		}
+	}
+
+	if depth >= len(cleanComponents) {
+		return strings.Join(cleanComponents, string(filepath.Separator))
+	}
+
+	start := len(cleanComponents) - depth
+	return strings.Join(cleanComponents[start:], string(filepath.Separator))
 }
 
 // shouldSkipEntry determines if an entry should be skipped based on current session
