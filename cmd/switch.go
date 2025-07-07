@@ -53,7 +53,7 @@ If no other sessions found, exit.`,
 				if err.Error() == "user cancelled" {
 					return nil
 				}
-				cobra.CheckErr(err)
+				return fmt.Errorf("selecting with fzf failed: %w", err)
 			}
 
 			if choiceStr == "" {

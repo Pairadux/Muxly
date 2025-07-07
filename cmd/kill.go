@@ -69,7 +69,7 @@ If there are no other sessions however, the default sessions configured in the c
 				if err.Error() == "user cancelled" {
 					return nil
 				}
-				cobra.CheckErr(err)
+				return fmt.Errorf("selecting with fzf failed: %w", err)
 			}
 
 			if choiceStr == "" {

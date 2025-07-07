@@ -78,7 +78,9 @@ var rootCmd = &cobra.Command{
 
 		flagDepth, _ := cmd.Flags().GetInt("depth")
 		entries, err := buildDirectoryEntries(flagDepth)
-		cobra.CheckErr(err)
+		if err != nil {
+			return fmt.Errorf("failed to build directory entries: %w", err)
+		}
 
 		var choiceStr string
 		if len(args) == 1 {
@@ -108,7 +110,7 @@ var rootCmd = &cobra.Command{
 				if err.Error() == "user cancelled" {
 					return nil
 				}
-				cobra.CheckErr(err)
+				return fmt.Errorf("selecting with fzf failed: %w", err)
 			}
 
 			if choiceStr == "" {
@@ -120,7 +122,7 @@ var rootCmd = &cobra.Command{
 
 		selectedPath, exists := entries[choiceStr]
 		if !exists && len(args) == 0 {
-			return fmt.Errorf("The name must match an existing directory entry: %s", choiceStr)
+			return fmt.Errorf("the name must match an existing directory entry: %s", choiceStr)
 		}
 
 		// IDEA: this is a bit involved, but I want to retrieve a session layout from a .tms file in the directory of the session to be created, if present
@@ -170,7 +172,7 @@ func initConfig() { // {{{
 		} else {
 			var err error
 			configDir, err = os.UserConfigDir()
-			cobra.CheckErr(err)
+			fmt.Fprintf(os.Stderr, "UserConfigDir cannot be found: %v\n", err)
 		}
 
 		cfgDir := filepath.Join(configDir, "tms")
