@@ -50,6 +50,8 @@ If there are no other sessions however, the default sessions configured in the c
 		if choiceStr == "" {
 			sessions := tmux.GetSessionsExceptCurrent(currentSession)
 
+			// IDEA: add config option to allow users to create new session rather than dropping back to existing one on kill
+			// might even just make this the default behavior...
 			if len(sessions) == 0 {
 				// IDEA: maybe rather than just immediately dropping back to fallback, prompt user to fallback
 				// If "no" then kill server
