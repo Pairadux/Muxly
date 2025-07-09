@@ -5,9 +5,7 @@ package cmd
 
 // IMPORTS {{{
 import (
-	"bufio"
 	"fmt"
-	"os"
 
 	"github.com/Pairadux/Tmux-Sessionizer/internal/fzf"
 	"github.com/Pairadux/Tmux-Sessionizer/internal/tmux"
@@ -40,10 +38,6 @@ If no other sessions found, exit.`,
 
 			if len(sessions) == 0 {
 				fmt.Println("No other sessions available. Use 'tms' to start a new session.")
-				fmt.Print("Press Enter to exit...")
-				// REFACTOR: Consider using a more user-friendly way to pause execution
-				bufio.NewReader(os.Stdin).ReadBytes('\n')
-
 				return nil
 			}
 
