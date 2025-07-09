@@ -5,7 +5,6 @@ package utility
 
 // IMPORTS {{{
 import (
-	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -30,9 +29,9 @@ func ResolvePath(p string) (string, error) {
 		return homedir.Expand(p)
 	}
 	if strings.HasPrefix(p, "./") || strings.HasPrefix(p, "../") || p == "." || p == ".." {
-		return "", errors.New("relative paths not allowed: " + p)
+		return homedir.Dir()
 	}
-	return "", errors.New("path type not supported: '" + p + "'")
+	return homedir.Dir()
 }
 
 // GetSubDirs returns all subdirectories within the specified root directory,
