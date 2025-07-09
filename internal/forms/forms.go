@@ -5,9 +5,13 @@ package forms
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
+	"github.com/Pairadux/Tmux-Sessionizer/internal/utility"
+
 	"github.com/charmbracelet/huh"
+	"github.com/mitchellh/go-homedir"
 )
 
 // CreateForm creates and returns an interactive form for session creation.
@@ -15,14 +19,19 @@ import (
 // The form collects user input for creating a new tmux session, including
 // whether to use default settings, session name, path options, and window configuration.
 // All parameters are pointers that will be populated with user selections.
-func CreateForm(useDefault, confirmCreate *bool, sessionName, pathOption, customPath, windowStr *string) *huh.Form {
-	first := huh.NewGroup(
-		huh.NewConfirm().
-			Title("Use Default Session?").
-			Value(useDefault),
+func CreateForm(useFallback, confirmCreate *bool, sessionName, path, windowStr *string) *huh.Form {
+	var (
+		pathOption string
+		customPath string
 	)
 
-	second := huh.NewGroup(
+	useFallbackGroup := huh.NewGroup(
+		huh.NewConfirm().
+			Title("Use Default Session?").
+			Value(useFallback),
+	)
+
+	basicInfoGroup := huh.NewGroup(
 		huh.NewInput().
 			Inline(true).
 			Title("New Session Title").
@@ -30,33 +39,73 @@ func CreateForm(useDefault, confirmCreate *bool, sessionName, pathOption, custom
 		huh.NewSelect[string]().
 			Title("Base path").
 			Options(huh.NewOptions("Home", "CWD", "Custom")...).
-			Value(pathOption),
+			Value(&pathOption),
 	).WithHideFunc(func() bool {
-		return *useDefault
+		return *useFallback
 	})
 
-	third := huh.NewGroup(
+	customPathGroup := huh.NewGroup(
 		huh.NewInput().
 			Title("Custom Path").
-			Value(customPath),
+			Value(&customPath).
+			Validate(func(s string) error {
+				_, err := utility.ResolvePath(s)
+				return err
+			}),
 	).WithHideFunc(func() bool {
-		return *pathOption != "Custom"
+		return pathOption != "Custom"
 	})
 
-	var b strings.Builder
-	b.WriteString(fmt.Sprintf("Session Name: %s\n", *sessionName))
-	b.WriteString(fmt.Sprintf("Path Option: %s\n", *pathOption))
-	if *pathOption == "Custom" {
-		b.WriteString(fmt.Sprintf("Custom Path: %s\n", *customPath))
-	}
-	b.WriteString(fmt.Sprintf("Windows: %s", *windowStr))
+	sessionLayoutGroup := huh.NewGroup(
+		// one window per line
+		huh.NewText().
+			Title("Session Layout").
+			Description("One window per line in the following format: name:cmd\nleave cmd empty for no cmd").
+			Value(windowStr),
+	)
 
-	last := huh.NewGroup(
+	confirmGroup := huh.NewGroup(
 		huh.NewConfirm().
 			Title("Create this session?").
-			Description(b.String()).
+			DescriptionFunc(func() string {
+				if *useFallback {
+					return "Default Session"
+				}
+
+				var b strings.Builder
+
+				b.WriteString(fmt.Sprintf("Session Name: %s\n", *sessionName))
+
+				var err error
+				*path, err = resolvePathOption(pathOption, customPath)
+				if err != nil {
+					*path = "[Error: " + err.Error() + "]"
+				}
+				b.WriteString(fmt.Sprintf("Path: %s\n", *path))
+
+				b.WriteString(fmt.Sprintf("Windows:\n\t%s", *windowStr))
+				return b.String()
+			}, []any{sessionName, pathOption, customPath}).
 			Value(confirmCreate),
 	)
 
-	return huh.NewForm(first, second, third, last).WithTheme(huh.ThemeBase())
+	return huh.NewForm(
+		useFallbackGroup,
+		basicInfoGroup,
+		customPathGroup,
+		sessionLayoutGroup,
+		confirmGroup,
+	)/*.WithTheme(huh.ThemeBase())*/
+}
+
+func resolvePathOption(pathOption, customPath string) (string, error) {
+	switch pathOption {
+	case "Home":
+		return homedir.Dir()
+	case "CWD":
+		return os.Getwd()
+	case "Custom":
+		return utility.ResolvePath(customPath)
+	}
+	return "", fmt.Errorf("not sure what happened")
 }

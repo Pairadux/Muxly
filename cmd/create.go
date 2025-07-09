@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/Pairadux/Tmux-Sessionizer/internal/forms"
+	"github.com/Pairadux/Tmux-Sessionizer/internal/models"
 	"github.com/Pairadux/Tmux-Sessionizer/internal/tmux"
 
 	"github.com/spf13/cobra"
@@ -43,33 +44,41 @@ An interactive prompt for creating a session.`,
 		// Repeat for however many windows
 		// Present user with a finalized session and ask for confifrmation before creating and entering session
 
-		// FIXME
+		// FORM VARS
 		var (
-			useDefault    bool
+			useFallback   bool
 			confirmCreate bool
 			sessionName   string
-			pathOption    string
-			customPath    string
+			path          string
 			windowsStr    string
 		)
 
-		form := forms.CreateForm(&useDefault, &confirmCreate, &sessionName, &pathOption, &customPath, &windowsStr)
+		form := forms.CreateForm(&useFallback, &confirmCreate, &sessionName, &path, &windowsStr)
 		if err := form.Run(); err != nil {
 			return fmt.Errorf("form error: %w", err)
 		}
 
-		if useDefault {
-			if err := tmux.CreateAndSwitchToFallbackSession(&cfg); err != nil {
-				return fmt.Errorf("Failed to create default session: %w", err)
-			}
-		} else {
-			if confirmCreate {
-				if err := tmux.CreateSessionFromInput(&cfg, sessionName, pathOption, customPath, windowsStr); err != nil {
-					return fmt.Errorf("failed to create session: %w", err)
+		// layout := parseWindows(windowsStr)
+		layout := cfg.SessionLayout
+
+		session := models.Session{
+			Name:   sessionName,
+			Path:   path,
+			Layout: layout,
+		}
+
+		if confirmCreate {
+			if useFallback {
+				if err := tmux.CreateAndSwitchToFallbackSession(&cfg); err != nil {
+					return fmt.Errorf("Failed to create default session: %w", err)
 				}
 			} else {
-				return nil
+				if err := tmux.CreateAndSwitchSession(&cfg, session); err != nil {
+					return fmt.Errorf("failed to create session: %w", err)
+				}
 			}
+		} else {
+			return nil
 		}
 
 		return nil
@@ -78,4 +87,14 @@ An interactive prompt for creating a session.`,
 
 func init() {
 	rootCmd.AddCommand(createCmd)
+}
+
+// parseWindows parses a comma-delimited input string where each value is a name:cmd pair.
+//
+// It converts each name:cmd pair into Window structs for the session layout.
+// If no colon is found in a part, the entire part is treated as the window name with no command.
+// Returns a SessionLayout with at least one window, defaulting to "main" if input is empty.
+func parseWindows(input string) models.SessionLayout {
+	// TODO: Implement parseWindows function - currently returns empty layout
+	return models.SessionLayout{}
 }

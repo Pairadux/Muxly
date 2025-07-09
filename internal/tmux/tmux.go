@@ -238,51 +238,6 @@ func KillServer() error {
 	return nil
 }
 
-// CreateSessionFromInput creates a session from user input parameters and creates the tmux session.
-// It handles path resolution based on pathOption (Home/CWD/Custom) and parses
-// the windowsStr to create the session layout.
-func CreateSessionFromInput(cfg *models.Config, sessionName, pathOption, customPath, windowsStr string) error {
-	var (
-		path string
-		err  error
-	)
-
-	switch pathOption {
-	case "Home":
-		path, err = homedir.Dir()
-	case "CWD":
-		path, err = os.Getwd()
-	case "Custom":
-		path = customPath
-	default:
-		return fmt.Errorf("invalid path option %q", pathOption)
-	}
-
-	if err != nil {
-		return fmt.Errorf("failed to resolve path: %w", err)
-	}
-
-	layout := parseWindows(windowsStr)
-
-	session := models.Session{
-		Name:   sessionName,
-		Path:   path,
-		Layout: layout,
-	}
-
-	return CreateAndSwitchSession(cfg, session)
-}
-
-// parseWindows parses a comma-delimited input string where each value is a name:cmd pair.
-//
-// It converts each name:cmd pair into Window structs for the session layout.
-// If no colon is found in a part, the entire part is treated as the window name with no command.
-// Returns a SessionLayout with at least one window, defaulting to "main" if input is empty.
-func parseWindows(input string) models.SessionLayout {
-	// TODO: Implement parseWindows function - currently returns empty layout
-	return models.SessionLayout{}
-}
-
 // CreateAndSwitchToFallbackSession creates and switches to the configured fallback session.
 // If no fallback session is configured, it uses "default" as the session name.
 // The session is created in the user's home directory with the configured layout.
