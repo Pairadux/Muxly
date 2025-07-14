@@ -5,6 +5,9 @@ package models
 
 import "fmt"
 
+// StringSet represents a set of strings using a map with empty struct values for memory efficiency
+type StringSet map[string]struct{}
+
 type Window struct {
 	Name string `mapstructure:"name"`
 	Cmd  string `mapstructure:"cmd,omitempty"`
