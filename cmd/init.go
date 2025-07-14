@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Pairadux/Tmux-Sessionizer/internal/constants"
 	"github.com/Pairadux/Tmux-Sessionizer/internal/models"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -95,9 +96,9 @@ Otherwise, the current config file is overwritten.`,
 		// IDEA: before finalizing the changes, maybe diff the current file or show the config options setup and validate that they are correct
 
 		parent := filepath.Dir(cfgFilePath)
-		_ = os.MkdirAll(parent, 0o755)
+		_ = os.MkdirAll(parent, constants.DirectoryPermissions)
 
-		if err := os.WriteFile(cfgFilePath, []byte(configContent), 0o644); err != nil {
+		if err := os.WriteFile(cfgFilePath, []byte(configContent), constants.FilePermissions); err != nil {
 			return fmt.Errorf("cannot write config: %w", err)
 		}
 

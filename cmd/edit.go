@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/Pairadux/Tmux-Sessionizer/internal/constants"
 	"github.com/spf13/cobra"
 ) // }}}
 
@@ -41,7 +42,7 @@ func init() {
 }
 
 func pickEditor(args []string) string {
-	env := os.Getenv("EDITOR")
+	env := os.Getenv(constants.EnvEditor)
 
 	switch {
 	case len(args) > 0:

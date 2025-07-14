@@ -11,6 +11,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Pairadux/Tmux-Sessionizer/internal/constants"
+
 	"github.com/Pairadux/Tmux-Sessionizer/internal/models"
 	"github.com/mitchellh/go-homedir"
 ) // }}}
@@ -71,7 +73,7 @@ func GetTmuxSessionSet() map[string]bool {
 // Returns an empty string if not running inside tmux or if there's
 // an error retrieving the session name.
 func GetCurrentTmuxSession() string {
-	if os.Getenv("TMUX") == "" {
+	if os.Getenv(constants.EnvTmux) == "" {
 		return ""
 	}
 
@@ -94,7 +96,7 @@ func SwitchToExistingSession(cfg *models.Config, name string) error {
 
 	target := getSessionTarget(cfg, name)
 
-	if os.Getenv("TMUX") == "" {
+	if os.Getenv(constants.EnvTmux) == "" {
 		return attachToSession(target, name)
 	} else {
 		return switchClientToSession(target, name)
@@ -204,7 +206,7 @@ func buildWindowArgs(isFirst bool, sessionName, windowName, dir, cmd string) []s
 	}
 
 	if cmd != "" {
-		shell := os.Getenv("SHELL")
+		shell := os.Getenv(constants.EnvShell)
 		if shell == "" {
 			shell = DefaultShell
 		}

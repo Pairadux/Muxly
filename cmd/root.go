@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Pairadux/Tmux-Sessionizer/internal/constants"
 	"github.com/Pairadux/Tmux-Sessionizer/internal/fzf"
 	"github.com/Pairadux/Tmux-Sessionizer/internal/models"
 	"github.com/Pairadux/Tmux-Sessionizer/internal/tmux"
@@ -166,7 +167,7 @@ func initConfig() { // {{{
 	} else {
 		var configDir string
 
-		xdg_config_home := os.Getenv("XDG_CONFIG_HOME")
+		xdg_config_home := os.Getenv(constants.EnvXdgConfigHome)
 		if xdg_config_home != "" {
 			configDir = xdg_config_home
 		} else {
@@ -224,8 +225,8 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 	return entries, nil
 }
 
-func buildIgnoreSet() map[string]struct{} {
-	ignoreSet := make(map[string]struct{})
+func buildIgnoreSet() models.StringSet {
+	ignoreSet := make(models.StringSet)
 	for _, dir := range cfg.IgnoreDirs {
 		resolved, err := utility.ResolvePath(dir)
 		if err == nil {
@@ -235,7 +236,7 @@ func buildIgnoreSet() map[string]struct{} {
 	return ignoreSet
 }
 
-func collectAllPaths(flagDepth int, ignoreSet map[string]struct{}, currentSession string) []models.PathInfo {
+func collectAllPaths(flagDepth int, ignoreSet models.StringSet, currentSession string) []models.PathInfo {
 	var allPaths []models.PathInfo
 
 	addPath := func(path, prefix string) error {

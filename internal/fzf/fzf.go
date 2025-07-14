@@ -9,6 +9,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/Pairadux/Tmux-Sessionizer/internal/constants"
 ) // }}}
 
 // SelectWithFzf presents a list of options to the user via the fzf fuzzy finder
@@ -25,8 +27,8 @@ func SelectWithFzf(options []string) (string, error) {
 	choice, err := fzf.Output()
 	if err != nil {
 		// Exit gracefully if user quits
-		if exitError, ok := err.(*exec.ExitError); ok && exitError.ExitCode() == 130 {
-			return "", fmt.Errorf("user cancelled")
+		if exitError, ok := err.(*exec.ExitError); ok && exitError.ExitCode() == constants.FzfUserCancelExitCode {
+			return "", fmt.Errorf(constants.UserCancelledMsg)
 		}
 		return "", err
 	}
