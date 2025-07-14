@@ -96,5 +96,15 @@ func init() {
 // Returns a SessionLayout with at least one window, defaulting to "main" if input is empty.
 func parseWindows(input string) models.SessionLayout {
 	// TODO: Implement parseWindows function - currently returns empty layout
+	//
+	// Delimit on :
+	// trim output
+	// ensure no special characters in name/cmd besides `-`
+	// if no : found or : found and no second word
+	// // use first word as window title and no cmd
+	// if both found
+	// // use first word as window title and second word as cmd
+
+	fmt.Print(input)
 	return models.SessionLayout{}
 }

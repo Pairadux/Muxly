@@ -95,7 +95,7 @@ func CreateForm(useFallback, confirmCreate *bool, sessionName, path, windowStr *
 		customPathGroup,
 		sessionLayoutGroup,
 		confirmGroup,
-	)/*.WithTheme(huh.ThemeBase())*/
+	) /*.WithTheme(huh.ThemeBase())*/
 }
 
 func resolvePathOption(pathOption, customPath string) (string, error) {
