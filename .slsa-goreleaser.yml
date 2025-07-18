@@ -1,0 +1,22 @@
+version: 1
+
+goos:
+  - linux
+  - windows
+  - darwin
+
+goarch:
+  - amd64
+  - arm64
+
+binary: tmux-sessionizer
+
+flags:
+  - "-trimpath"
+  - "-tags=netgo"
+
+ldflags:
+  - "-s -w"
+
+env:
+  - "CGO_ENABLED=0"
