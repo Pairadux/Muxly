@@ -2,9 +2,22 @@ version: 1
 
 goos:
   - linux
+  - windows
   - darwin
 
 goarch:
   - amd64
+  - arm64
 
-binary: tmux-sessionizer
+binary: tmux-sessionizer-{{ .Os }}-{{ .Arch }}
+
+flags:
+  - "-trimpath"
+  - "-tags=netgo"
+
+ldflags:
+  - "-s -w"
+  - "-X main.version={{ .Env.VERSION }}"
+
+env:
+  - "CGO_ENABLED=0"
