@@ -32,6 +32,21 @@ Tmux Sessionizer is a highly configurable Tmux Session Manager based on ThePrime
 - `tmux` - Terminal multiplexer
 - `fzf` - Fuzzy finder for interactive selection
 
+### Download Pre-built Binary (Recommended)
+
+```bash
+# Download and install the latest release
+wget -c https://github.com/Pairadux/Tmux-Sessionizer/releases/latest/download/Tmux-Sessionizer_Linux_x86_64.tar.gz -O - | tar xz
+sudo chmod +x Tmux-Sessionizer
+sudo mv Tmux-Sessionizer /usr/local/bin/
+```
+
+For other platforms, download the appropriate binary from the [releases page](https://github.com/Pairadux/Tmux-Sessionizer/releases).
+
+### Package Managers
+
+AUR and Homebrew packages are planned for the 1.0.0 stable release.
+
 ### Build from Source
 
 ```bash
