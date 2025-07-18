@@ -47,6 +47,8 @@ func CreateForm(useFallback, confirmCreate *bool, sessionName, path, windowStr *
 	customPathGroup := huh.NewGroup(
 		huh.NewInput().
 			Title("Custom Path").
+			Description("Use ~ for home directory, or absolute/relative paths").
+			Placeholder("~/Documents/projects").
 			Value(&customPath).
 			Validate(func(s string) error {
 				_, err := utility.ResolvePath(s)
@@ -83,7 +85,16 @@ func CreateForm(useFallback, confirmCreate *bool, sessionName, path, windowStr *
 				}
 				b.WriteString(fmt.Sprintf("Path: %s\n", *path))
 
-				b.WriteString(fmt.Sprintf("Windows:\n\t%s", *windowStr))
+				if *windowStr != "" {
+					b.WriteString("Windows:\n")
+					for _, line := range strings.Split(*windowStr, "\n") {
+						if strings.TrimSpace(line) != "" {
+							b.WriteString(fmt.Sprintf("\t%s\n", strings.TrimSpace(line)))
+						}
+					}
+				} else {
+					b.WriteString("Windows: [Using default layout]\n")
+				}
 				return b.String()
 			}, []any{sessionName, pathOption, customPath}).
 			Value(confirmCreate),

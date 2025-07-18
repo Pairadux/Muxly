@@ -16,13 +16,20 @@ import (
 	"github.com/mitchellh/go-homedir"
 ) // }}}
 
-// ResolvePath takes an “unknown” path pattern and returns an absolute path.
+// ResolvePath takes an "unknown" path pattern and returns an absolute path.
 //
 //   - Absolute (/…):               returned as-is
 //   - Home (~ or ~/…):             expanded via os.UserHomeDir()
 //   - Explicit relative (./, ../): error
+//
+// Automatically removes unnecessary escape sequences (like \  for spaces)
+// since Go's exec.Command handles spaces properly without escaping.
 func ResolvePath(p string) (string, error) {
 	// IDEA: I would like to accept Base paths (Documents for ~/Documents) and ENV variables
+	
+	// Remove unnecessary escape sequences that users might add
+	p = strings.ReplaceAll(p, "\\ ", " ")
+	
 	if filepath.IsAbs(p) {
 		return p, nil
 	}

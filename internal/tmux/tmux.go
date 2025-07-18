@@ -297,8 +297,22 @@ func CreateSessionFromForm(cfg models.Config) error {
 		return fmt.Errorf("form error: %w", err)
 	}
 
-	// layout := parseWindows(windowsStr)
-	layout := cfg.SessionLayout
+	if !confirmCreate {
+		return nil
+	}
+
+	if useFallback {
+		return CreateAndSwitchToFallbackSession(&cfg)
+	}
+
+	if HasTmuxSession(sessionName) {
+		return fmt.Errorf("session '%s' already exists", sessionName)
+	}
+
+	layout := parseWindows(windowsStr)
+	if len(layout.Windows) == 0 {
+		layout = cfg.SessionLayout
+	}
 
 	session := models.Session{
 		Name:   sessionName,
@@ -306,37 +320,45 @@ func CreateSessionFromForm(cfg models.Config) error {
 		Layout: layout,
 	}
 
-	if confirmCreate {
-		if useFallback {
-			if err := CreateAndSwitchToFallbackSession(&cfg); err != nil {
-				return fmt.Errorf("Failed to create default session: %w", err)
-			}
-		} else {
-			if err := CreateAndSwitchSession(&cfg, session); err != nil {
-				return fmt.Errorf("failed to create session: %w", err)
-			}
-		}
-	}
-
-	return nil
+	return CreateAndSwitchSession(&cfg, session)
 }
 
-// parseWindows parses a comma-delimited input string where each value is a name:cmd pair.
+// parseWindows parses a newline-delimited input string where each line is a name:cmd pair.
 //
 // It converts each name:cmd pair into Window structs for the session layout.
-// If no colon is found in a part, the entire part is treated as the window name with no command.
-// Returns a SessionLayout with at least one window, defaulting to "main" if input is empty.
+// If no colon is found in a line, the entire line is treated as the window name with no command.
+// Returns a SessionLayout with parsed windows, or empty layout if input is empty.
 func parseWindows(input string) models.SessionLayout {
-	// TODO: Implement parseWindows function - currently returns empty layout
-	//
-	// Delimit on :
-	// trim output
-	// ensure no special characters in name/cmd besides `-`
-	// if no : found or : found and no second word
-	// // use first word as window title and no cmd
-	// if both found
-	// // use first word as window title and second word as cmd
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return models.SessionLayout{}
+	}
 
-	fmt.Print(input)
-	return models.SessionLayout{}
+	var windows []models.Window
+	lines := strings.Split(input, "\n")
+	
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		parts := strings.SplitN(line, ":", 2)
+		name := strings.TrimSpace(parts[0])
+		if name == "" {
+			continue
+		}
+
+		var cmd string
+		if len(parts) > 1 {
+			cmd = strings.TrimSpace(parts[1])
+		}
+
+		windows = append(windows, models.Window{
+			Name: name,
+			Cmd:  cmd,
+		})
+	}
+
+	return models.SessionLayout{Windows: windows}
 }
