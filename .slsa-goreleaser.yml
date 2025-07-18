@@ -1,23 +1,15 @@
 version: 1
-
-goos:
-  - linux
-  - windows
-  - darwin
-
-goarch:
-  - amd64
-  - arm64
-
-binary: tmux-sessionizer-{{ .Os }}-{{ .Arch }}
+env:
+  - GO111MODULE=on
+  # https://stackoverflow.com/a/62821358/19407
+  - CGO_ENABLED=0
 
 flags:
-  - "-trimpath"
-  - "-tags=netgo"
+  - -trimpath
+  - -tags=netgo
 
+goos: linux
+goarch: amd64
+binary: scorecard-{{ .Os }}-{{ .Arch }}
 ldflags:
-  - "-s -w"
-  - "-X main.version={{ .Env.VERSION }}"
-
-env:
-  - "CGO_ENABLED=0"
+  - -s {{ .Env.VERSION_LDFLAGS }}
