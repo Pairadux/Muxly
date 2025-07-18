@@ -1,6 +1,6 @@
 module github.com/Pairadux/Tmux-Sessionizer
 
-go 1.24.3
+go 1.22
 
 require (
 	github.com/charlievieth/fastwalk v1.0.11

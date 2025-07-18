@@ -9,7 +9,7 @@ goarch:
   - amd64
   - arm64
 
-binary: tmux-sessionizer
+binary: tmux-sessionizer-{{ .Os }}-{{ .Arch }}
 
 flags:
   - "-trimpath"
