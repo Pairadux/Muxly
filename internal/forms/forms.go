@@ -64,7 +64,9 @@ func CreateForm(useFallback, confirmCreate *bool, sessionName, path, windowStr *
 			Title("Session Layout").
 			Description("One window per line in the following format: name:cmd\nleave cmd empty for no cmd").
 			Value(windowStr),
-	)
+	).WithHideFunc(func() bool {
+		return *useFallback
+	})
 
 	confirmGroup := huh.NewGroup(
 		huh.NewConfirm().
