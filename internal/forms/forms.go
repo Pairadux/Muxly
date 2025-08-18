@@ -65,7 +65,8 @@ func CreateForm(useFallback, confirmCreate *bool, sessionName, path, windowStr *
 		huh.NewText().
 			Title("Session Layout").
 			Description("One window per line in the following format: name:cmd\nleave cmd empty for no cmd").
-			Value(windowStr),
+			Value(windowStr).
+			ShowLineNumbers(true),
 	).WithHideFunc(func() bool {
 		return *useFallback
 	})
