@@ -20,6 +20,7 @@ import (
 // whether to use default settings, session name, path options, and window configuration.
 // All parameters are pointers that will be populated with user selections.
 func CreateForm(useFallback, confirmCreate *bool, sessionName, path, windowStr *string) *huh.Form {
+	// TODO: create custom keymaps for this and other forms
 	var (
 		pathOption string
 		customPath string
@@ -60,8 +61,6 @@ func CreateForm(useFallback, confirmCreate *bool, sessionName, path, windowStr *
 
 	sessionLayoutGroup := huh.NewGroup(
 		// one window per line
-		// FIXME: need to make the description show the defaults if nothing is input here
-		// Might do a check to make sure that it has values so that the user HAS to input something
 		huh.NewText().
 			Title("Session Layout").
 			Description("One window per line in the following format: name:cmd\nleave cmd empty for no cmd").
@@ -82,7 +81,7 @@ func CreateForm(useFallback, confirmCreate *bool, sessionName, path, windowStr *
 				var b strings.Builder
 
 				b.WriteString(fmt.Sprintf("Session Name: %s\n", *sessionName))
-				
+
 				// TODO: need to show default values when fallback selected or nothing input in layout fields
 
 				var err error
