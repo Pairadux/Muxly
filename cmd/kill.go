@@ -5,11 +5,9 @@ package cmd
 
 // IMPORTS {{{
 import (
-	"bufio"
 	"fmt"
-	"os"
-	"strings"
 
+	"github.com/Pairadux/Tmux-Sessionizer/internal/forms"
 	"github.com/Pairadux/Tmux-Sessionizer/internal/fzf"
 	"github.com/Pairadux/Tmux-Sessionizer/internal/tmux"
 
@@ -28,14 +26,18 @@ If there are no other sessions however, the default sessions configured in the c
 		currentSession := tmux.GetCurrentTmuxSession()
 
 		if currentSession == "" {
-			fmt.Print("Kill the tmux server? (y/N): ")
-			input, _ := bufio.NewReader(os.Stdin).ReadString('\n')
-			answer := strings.ToLower(strings.TrimSpace(input))
-			if answer != "y" && answer != "yes" {
+			var killServer bool
+			form := forms.ConfirmationForm("Kill tmux server?", "This will terminate all tmux sessions.", &killServer)
+			
+			if err := form.Run(); err != nil {
+				return fmt.Errorf("failed to run confirmation form: %w", err)
+			}
+			
+			if !killServer {
 				fmt.Println("Aborting. No changes made.")
 				return nil
 			}
-			// REFACTOR: Consider using a confirmation dialog library for better UX
+			
 			if err := tmux.KillServer(); err != nil {
 				return fmt.Errorf("failed to kill tmux server: %w", err)
 			}
@@ -53,13 +55,25 @@ If there are no other sessions however, the default sessions configured in the c
 			// IDEA: add config option to allow users to create new session rather than dropping back to existing one on kill
 			// might even just make this the default behavior...
 			if len(sessions) == 0 {
-				// IDEA: maybe rather than just immediately dropping back to fallback, prompt user to fallback
-				// If "no" then kill server
-				if err := tmux.CreateAndSwitchToFallbackSession(&cfg); err != nil {
-					return fmt.Errorf("Failed to create default session: %w", err)
+				var createFallback bool
+				form := forms.ConfirmationForm("Create default session?", "No other sessions available. Create default session or kill server?", &createFallback)
+				
+				if err := form.Run(); err != nil {
+					return fmt.Errorf("failed to run confirmation form: %w", err)
 				}
-				if err := tmux.KillSession(currentSession); err != nil {
-					return fmt.Errorf("Failed to kill session: %w", err)
+				
+				if createFallback {
+					if err := tmux.CreateAndSwitchToFallbackSession(&cfg); err != nil {
+						return fmt.Errorf("Failed to create default session: %w", err)
+					}
+					if err := tmux.KillSession(currentSession); err != nil {
+						return fmt.Errorf("Failed to kill session: %w", err)
+					}
+				} else {
+					if err := tmux.KillServer(); err != nil {
+						return fmt.Errorf("failed to kill tmux server: %w", err)
+					}
+					fmt.Println("tmux server killed.")
 				}
 
 				return nil

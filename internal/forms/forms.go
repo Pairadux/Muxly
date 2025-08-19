@@ -115,6 +115,18 @@ func CreateForm(useFallback, confirmCreate *bool, sessionName, path, windowStr *
 	) /*.WithTheme(huh.ThemeBase())*/
 }
 
+// ConfirmationForm creates a simple yes/no confirmation form
+func ConfirmationForm(title, description string, confirm *bool) *huh.Form {
+	return huh.NewForm(
+		huh.NewGroup(
+			huh.NewConfirm().
+				Title(title).
+				Description(description).
+				Value(confirm),
+		),
+	)
+}
+
 func resolvePathOption(pathOption, customPath string) (string, error) {
 	switch pathOption {
 	case "Home":
