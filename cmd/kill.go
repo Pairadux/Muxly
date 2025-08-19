@@ -56,7 +56,7 @@ If there are no other sessions however, the default sessions configured in the c
 			// might even just make this the default behavior...
 			if len(sessions) == 0 {
 				var createFallback bool
-				form := forms.ConfirmationForm("Create default session?", "No other sessions available. Create default session or kill server?", &createFallback)
+				form := forms.ConfirmationForm("Create default session?", "Declining will kill the tmux server.", &createFallback)
 				
 				if err := form.Run(); err != nil {
 					return fmt.Errorf("failed to run confirmation form: %w", err)
