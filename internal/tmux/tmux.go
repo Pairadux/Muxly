@@ -131,6 +131,11 @@ func getSessionTarget(cfg *models.Config, name string) string {
 
 // attachToSession attaches to a session when not currently in tmux
 func attachToSession(target, fallbackName string) error {
+	// Check if server is running before attempting to attach
+	if !IsTmuxServerRunning() {
+		os.Exit(0) // Exit gracefully if no server
+	}
+
 	cmd := exec.Command("tmux", "attach-session", "-t", target)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -143,13 +148,27 @@ func attachToSession(target, fallbackName string) error {
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			cmd.Stdin = os.Stdin
-			return cmd.Run()
+			err := cmd.Run()
+			if err == nil {
+				os.Exit(0) // Exit successfully after attaching
+			}
+			// If attach failed and server is not running, exit gracefully
+			if !IsTmuxServerRunning() {
+				os.Exit(0)
+			}
+			return err
 		}
 
+		// If attach failed and server is not running, exit gracefully  
+		if !IsTmuxServerRunning() {
+			os.Exit(0)
+		}
 		return fmt.Errorf("attaching to session: %w", err)
 	}
 
-	return nil
+	// Exit successfully after attaching to the session
+	os.Exit(0)
+	return nil // This line is never reached but required for compilation
 }
 
 // switchClientToSession switches to a session when already in tmux
