@@ -104,6 +104,12 @@ func SwitchToExistingSession(cfg *models.Config, name string) error {
 	}
 }
 
+// IsTmuxServerRunning checks if a tmux server is currently running
+func IsTmuxServerRunning() bool {
+	cmd := exec.Command("tmux", "list-sessions")
+	return cmd.Run() == nil
+}
+
 // CreateAndSwitchSession creates a new tmux session and switches to it.
 // If the session already exists, it just switches to it.
 func CreateAndSwitchSession(cfg *models.Config, session models.Session) error {
