@@ -262,7 +262,14 @@ func collectAllPaths(flagDepth int, ignoreSet models.StringSet, currentSession s
 	}
 
 	for _, entryDir := range cfg.EntryDirs {
-		addPath(entryDir, "")
+		resolved, err := utility.ResolvePath(entryDir)
+		if err != nil {
+			if verbose {
+				fmt.Fprintf(os.Stderr, "Warning: failed to resolve entry directory %s: %v\n", entryDir, err)
+			}
+			continue
+		}
+		addPath(resolved, "")
 	}
 
 	return allPaths
@@ -349,6 +356,7 @@ func deduplicateDisplayNames(allPaths []models.PathInfo) map[string]string {
 			// No duplicates, use basename
 			info := group[0]
 			displayName := filepath.Base(info.Path)
+			// FIXME: move duplicate info.prefix logic to a function
 			if info.Prefix != "" {
 				displayName = info.Prefix + "/" + displayName
 			}
