@@ -36,7 +36,7 @@ archives:
       - goos: windows
         formats: [zip]
 
-brews:
+homebrew_casks:
   - name: tmux-sessionizer
     repository:
       owner: Pairadux
@@ -45,6 +45,13 @@ brews:
     description: "A lightweight CLI for handling TMUX sessions with ease"
     homepage: "https://github.com/Pairadux/Tmux-Sessionizer"
     license: "MIT"
+    # If your binary isn't signed/notarized, add this to prevent macOS quarantine issues:
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/tmux-sessionizer"]
+          end
 
 changelog:
   sort: asc
