@@ -36,6 +36,16 @@ archives:
       - goos: windows
         formats: [zip]
 
+brews:
+  - name: tmux-sessionizer
+    repository:
+      owner: Pairadux
+      name: homebrew-tmux-sessionizer
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    description: "A lightweight CLI for handling TMUX sessions with ease"
+    homepage: "https://github.com/Pairadux/Tmux-Sessionizer"
+    license: "MIT"
+
 changelog:
   sort: asc
   filters:
