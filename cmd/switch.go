@@ -7,8 +7,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/Pairadux/Tmux-Sessionizer/internal/fzf"
-	"github.com/Pairadux/Tmux-Sessionizer/internal/tmux"
+	"github.com/Pairadux/muxly/internal/fzf"
+	"github.com/Pairadux/muxly/internal/tmux"
 
 	"github.com/spf13/cobra"
 ) // }}}
@@ -26,7 +26,7 @@ If no other sessions found, exit.`,
 		currentSession := tmux.GetCurrentTmuxSession()
 
 		if currentSession == "" {
-			return fmt.Errorf("Not in Tmux, use 'tms' to get started.")
+			return fmt.Errorf("Not in Tmux, use 'muxly' to get started.")
 		}
 
 		var choiceStr string
@@ -37,7 +37,7 @@ If no other sessions found, exit.`,
 			sessions := tmux.GetSessionsExceptCurrent(currentSession)
 
 			if len(sessions) == 0 {
-				fmt.Println("No other sessions available. Use 'tms' to start a new session.")
+				fmt.Println("No other sessions available. Use 'muxly' to start a new session.")
 				return nil
 			}
 

@@ -2,7 +2,7 @@
 
 ## Critical Blockers (Must Fix Before 1.0.0)
 
-### 1. Complete `tms create` Command
+### 1. Complete `muxly create` Command
 
 - [ ] Fix placeholder implementation in `cmd/create.go:98-102`
 - [ ] Implement actual session creation logic instead of debug prints
@@ -65,7 +65,7 @@
 
 ### 9. Advanced Features
 
-- [ ] Support for `.tms` files in project directories (`root.go:126`)
+- [ ] Support for `.muxly` files in project directories (`root.go:126`)
 - [ ] Add absolute path display option for fzf selector
 - [ ] Option to remove current session from selection list
 - [ ] Additional configuration options and customization

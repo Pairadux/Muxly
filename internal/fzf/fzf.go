@@ -10,7 +10,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/Pairadux/Tmux-Sessionizer/internal/constants"
+	"github.com/Pairadux/muxly/internal/constants"
 ) // }}}
 
 // SelectWithFzf presents a list of options to the user via the fzf fuzzy finder

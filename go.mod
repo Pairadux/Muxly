@@ -1,4 +1,4 @@
-module github.com/Pairadux/Tmux-Sessionizer
+module github.com/Pairadux/muxly
 
 go 1.23.0
 

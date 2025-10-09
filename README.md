@@ -1,10 +1,10 @@
-# Tmux-Sessionizer (tms)
+# muxly
 
 A lightweight CLI for handling TMUX sessions with ease!
 
 ## What is this?
 
-Tmux Sessionizer is a highly configurable Tmux Session Manager based on ThePrimeagen's tmux-sessionizer script. It provides an intuitive interface for creating, managing, and switching between tmux sessions with pre-defined layouts and intelligent directory scanning.
+muxly is a highly configurable Tmux Session Manager based on ThePrimeagen's tmux-sessionizer script. It provides an intuitive interface for creating, managing, and switching between tmux sessions with pre-defined layouts and intelligent directory scanning.
 
 ## Features
 
@@ -18,12 +18,12 @@ Tmux Sessionizer is a highly configurable Tmux Session Manager based on ThePrime
 
 ### Available Commands
 
-- `tms` - Interactive session selector with fzf
-- `tms create` - Interactive TUI for creating new sessions  
-- `tms switch` - Switch between active tmux sessions
-- `tms kill` - Kill current session and switch to another
-- `tms config init` - Create initial configuration file
-- `tms config edit` - Edit configuration file
+- `muxly` - Interactive session selector with fzf
+- `muxly create` - Interactive TUI for creating new sessions
+- `muxly switch` - Switch between active tmux sessions
+- `muxly kill` - Kill current session and switch to another
+- `muxly config init` - Create initial configuration file
+- `muxly config edit` - Edit configuration file
 
 ## Installation
 
@@ -36,12 +36,12 @@ Tmux Sessionizer is a highly configurable Tmux Session Manager based on ThePrime
 
 ```bash
 # Download and install the latest release
-wget -c https://github.com/Pairadux/Tmux-Sessionizer/releases/latest/download/Tmux-Sessionizer_Linux_x86_64.tar.gz -O - | tar xz
-sudo chmod +x Tmux-Sessionizer
-sudo mv Tmux-Sessionizer /usr/local/bin/
+wget -c https://github.com/Pairadux/muxly/releases/latest/download/muxly_Linux_x86_64.tar.gz -O - | tar xz
+sudo chmod +x muxly
+sudo mv muxly /usr/local/bin/
 ```
 
-For other platforms, download the appropriate binary from the [releases page](https://github.com/Pairadux/Tmux-Sessionizer/releases).
+For other platforms, download the appropriate binary from the [releases page](https://github.com/Pairadux/muxly/releases).
 
 ### Package Managers
 
@@ -50,32 +50,23 @@ AUR and Homebrew packages are planned for the 1.0.0 stable release.
 ### Build from Source
 
 ```bash
-git clone https://github.com/Pairadux/Tmux-Sessionizer.git
-cd Tmux-Sessionizer
+git clone https://github.com/Pairadux/muxly.git
+cd muxly
 go install
 ```
 
-The binary will be installed as `Tmux-Sessionizer` in your `$GOPATH/bin` directory.
+The binary will be installed as `muxly` in your `$GOPATH/bin` directory.
 
-### Recommended Alias
-
-For convenience, it's recommended to create an alias for the binary:
-
-```bash
-# Add to your shell configuration (.bashrc, .zshrc, etc.)
-alias tms='Tmux-Sessionizer'
-```
-
-All examples in this README use `tms` for brevity, but you can substitute `Tmux-Sessionizer` if you prefer not to use the alias.
+All examples in this README use `muxly` as the command name.
 
 ## Configuration
 
-Configuration is stored in `$XDG_CONFIG_HOME/tms/config.yaml` (typically `~/.config/tms/config.yaml`).
+Configuration is stored in `$XDG_CONFIG_HOME/muxly/config.yaml` (typically `~/.config/muxly/config.yaml`).
 
 ### Initialize Configuration
 
 ```bash
-tms config init
+muxly config init
 ```
 
 ### Configuration Options
@@ -147,33 +138,33 @@ Sessions can have custom layouts defined in the fallback session or applied glob
 
 ```bash
 # Launch interactive session selector
-tms
+muxly
 
-# Create a new session interactively  
-tms create
+# Create a new session interactively
+muxly create
 
 # Switch between active sessions
-tms switch
+muxly switch
 
 # Kill current session and switch to another
-tms kill
+muxly kill
 ```
 
 ### Configuration Management
 
 ```bash
 # Create initial config
-tms config init
+muxly config init
 
 # Edit config file
-tms config edit
+muxly config edit
 ```
 
 ### Direct Session Creation
 
 ```bash
 # Create/switch to session by name
-tms my-project
+muxly my-project
 ```
 
 ## Warning
@@ -182,4 +173,4 @@ This program is in a highly unstable state. The API and commands are subject to 
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Pairadux/Tmux-Sessionizer&type=Date)](https://www.star-history.com/#Pairadux/Tmux-Sessionizer&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=Pairadux/muxly&type=Date)](https://www.star-history.com/#Pairadux/muxly&Date)

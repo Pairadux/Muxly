@@ -5,7 +5,7 @@ package cmd
 
 // IMPORTS {{{
 import (
-	"github.com/Pairadux/Tmux-Sessionizer/internal/tmux"
+	"github.com/Pairadux/muxly/internal/tmux"
 
 	"github.com/spf13/cobra"
 ) // }}}

@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Pairadux/Tmux-Sessionizer/internal/constants"
-	"github.com/Pairadux/Tmux-Sessionizer/internal/models"
+	"github.com/Pairadux/muxly/internal/constants"
+	"github.com/Pairadux/muxly/internal/models"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 ) // }}}
@@ -124,7 +124,7 @@ func init() { // {{{
 func generateConfigYAML(params models.Config) string { // {{{
 	var b strings.Builder
 
-	b.WriteString("# Configuration for Tmux Session Manager\n\n")
+	b.WriteString("# Configuration for muxly\n\n")
 
 	// Scan directories
 	// TODO: add additional comments to explain this section, namely, add an "ok" vs "not ok" example section
@@ -185,7 +185,7 @@ func generateConfigYAML(params models.Config) string { // {{{
 	b.WriteString("\n")
 
 	// Tmux Session Prefix
-	b.WriteString("# The string that will prefix currently active Tmux sessions when using 'tms'\n")
+	b.WriteString("# The string that will prefix currently active Tmux sessions when using 'muxly'\n")
 	tmuxSessionPrefixYAML, _ := yaml.Marshal(map[string]string{"tmux_session_prefix": params.TmuxSessionPrefix})
 	b.WriteString(string(tmuxSessionPrefixYAML))
 	b.WriteString("\n")

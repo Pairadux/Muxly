@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Pairadux/Tmux-Sessionizer/internal/constants"
+	"github.com/Pairadux/muxly/internal/constants"
 	"github.com/charlievieth/fastwalk"
 	"github.com/mitchellh/go-homedir"
 ) // }}}

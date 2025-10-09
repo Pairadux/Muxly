@@ -9,7 +9,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/Pairadux/Tmux-Sessionizer/internal/constants"
+	"github.com/Pairadux/muxly/internal/constants"
 	"github.com/spf13/cobra"
 ) // }}}
 

@@ -37,31 +37,31 @@ archives:
         formats: [zip]
 
 homebrew_casks:
-  - name: tmux-sessionizer
+  - name: muxly
     repository:
       owner: Pairadux
-      name: homebrew-tmux-sessionizer
+      name: homebrew-muxly
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     description: "A lightweight CLI for handling TMUX sessions with ease"
-    homepage: "https://github.com/Pairadux/Tmux-Sessionizer"
+    homepage: "https://github.com/Pairadux/muxly"
     license: "MIT"
     # If your binary isn't signed/notarized, add this to prevent macOS quarantine issues:
     hooks:
       post:
         install: |
           if OS.mac?
-            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/tmux-sessionizer"]
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/muxly"]
           end
 
 aurs:
-  - name: tmux-sessionizer-bin
-    homepage: "https://github.com/Pairadux/Tmux-Sessionizer"
+  - name: muxly-bin
+    homepage: "https://github.com/Pairadux/muxly"
     description: "A lightweight CLI for handling TMUX sessions with ease"
     maintainers:
       - "Pairadux"
     license: "MIT"
     private_key: "{{ .Env.AUR_SSH_PRIVATE_KEY }}"
-    git_url: "ssh://aur@aur.archlinux.org/tmux-sessionizer-bin.git"
+    git_url: "ssh://aur@aur.archlinux.org/muxly-bin.git"
 
 changelog:
   sort: asc

@@ -13,11 +13,11 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Pairadux/Tmux-Sessionizer/internal/constants"
-	"github.com/Pairadux/Tmux-Sessionizer/internal/fzf"
-	"github.com/Pairadux/Tmux-Sessionizer/internal/models"
-	"github.com/Pairadux/Tmux-Sessionizer/internal/tmux"
-	"github.com/Pairadux/Tmux-Sessionizer/internal/utility"
+	"github.com/Pairadux/muxly/internal/constants"
+	"github.com/Pairadux/muxly/internal/fzf"
+	"github.com/Pairadux/muxly/internal/models"
+	"github.com/Pairadux/muxly/internal/tmux"
+	"github.com/Pairadux/muxly/internal/utility"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -32,10 +32,10 @@ var (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:     "tms [SESSION]",
+	Use:     "muxly [SESSION]",
 	Example: "",
 	Short:   "A tool for quickly opening tmux sessions",
-	Long:    "A tool for quickly opening tmux sessions\n\nBased on ThePrimeagen's Tmux-Sessionator script.",
+	Long:    "A tool for quickly opening tmux sessions\n\nBased on ThePrimeagen's tmux-sessionizer script.",
 	Args:    cobra.MaximumNArgs(1),
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error { // {{{
 		if isConfigCommand(cmd) {
@@ -57,9 +57,9 @@ var rootCmd = &cobra.Command{
 			// IDEA: Maybe prompt the user and run the command for them
 			switch args[0] {
 			case "init":
-				return fmt.Errorf("unknown command %q for %q. Did you mean:\n  tms config init?\n", args[0], cmd.Name())
+				return fmt.Errorf("unknown command %q for %q. Did you mean:\n  muxly config init?\n", args[0], cmd.Name())
 			case "edit":
-				return fmt.Errorf("unknown command %q for %q. Did you mean:\n  tms config edit?\n", args[0], cmd.Name())
+				return fmt.Errorf("unknown command %q for %q. Did you mean:\n  muxly config edit?\n", args[0], cmd.Name())
 			default:
 				return nil
 			}
@@ -126,7 +126,7 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("the name must match an existing directory entry: %s", choiceStr)
 		}
 
-		// IDEA: this is a bit involved, but I want to retrieve a session layout from a .tms file in the directory of the session to be created, if present
+		// IDEA: this is a bit involved, but I want to retrieve a session layout from a .muxly file in the directory of the session to be created, if present
 		// This would enable dynamic session layouts based on user preference/setup
 
 		session := models.Session{
@@ -154,7 +154,7 @@ func Execute() { // {{{
 
 func init() { // {{{
 	cobra.OnInitialize(initConfig)
-	rootCmd.PersistentFlags().StringVar(&cfgFileFlag, "config", "", "config file (default $XDG_CONFIG_HOME/tms/config.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFileFlag, "config", "", "config file (default $XDG_CONFIG_HOME/muxly/config.yaml)")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
 	rootCmd.Flags().IntP("depth", "d", 0, "Maximum traversal depth")
 } // }}}
@@ -176,7 +176,7 @@ func initConfig() { // {{{
 			fmt.Fprintf(os.Stderr, "UserConfigDir cannot be found: %v\n", err)
 		}
 
-		cfgDir := filepath.Join(configDir, "tms")
+		cfgDir := filepath.Join(configDir, "muxly")
 		viper.AddConfigPath(cfgDir)
 		viper.AddConfigPath(".")
 		viper.SetConfigType("yaml")
@@ -445,7 +445,7 @@ func shouldSkipEntry(displayName, currentSession string, existingSessions map[st
 
 // isConfigCommand checks if the given command or any of its parent commands
 // is "config". This is used to skip config validation for commands like
-// "tms config init" or "tms config edit", which are intended to manage or
+// "muxly config init" or "muxly config edit", which are intended to manage or
 // create the config file.
 func isConfigCommand(cmd *cobra.Command) bool {
 	for c := cmd; c != nil; c = c.Parent() {
@@ -463,7 +463,7 @@ func isConfigCommand(cmd *cobra.Command) bool {
 // Returns an error with helpful instructions if validation fails.
 func validateConfig() error {
 	if viper.ConfigFileUsed() == "" {
-		return fmt.Errorf("no config file found\nRun 'tms config init' to create one, or use --config to specify a path\n")
+		return fmt.Errorf("no config file found\nRun 'muxly config init' to create one, or use --config to specify a path\n")
 	}
 
 	if len(cfg.ScanDirs) == 0 && len(cfg.EntryDirs) == 0 {

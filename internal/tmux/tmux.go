@@ -11,10 +11,10 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Pairadux/Tmux-Sessionizer/internal/constants"
-	"github.com/Pairadux/Tmux-Sessionizer/internal/forms"
+	"github.com/Pairadux/muxly/internal/constants"
+	"github.com/Pairadux/muxly/internal/forms"
 
-	"github.com/Pairadux/Tmux-Sessionizer/internal/models"
+	"github.com/Pairadux/muxly/internal/models"
 	"github.com/mitchellh/go-homedir"
 ) // }}}
 

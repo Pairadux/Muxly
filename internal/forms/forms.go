@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Pairadux/Tmux-Sessionizer/internal/utility"
+	"github.com/Pairadux/muxly/internal/utility"
 
 	"github.com/charmbracelet/huh"
 	"github.com/mitchellh/go-homedir"

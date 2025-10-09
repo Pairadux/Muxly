@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Build and Run
 - `go install` - Build the binary
-- `go run main.go` - Run directly with go 
-- `Tmux-Sessionizer` - Run the built binary
+- `go run main.go` - Run directly with go
+- `muxly` - Run the built binary
 
 ### Development Commands
 - `go mod tidy` - Clean up dependencies
@@ -16,12 +16,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `go test ./...` - Run tests (if any exist)
 
 ### Common Usage
-- `Tmux-Sessionizer` - Interactive session selector with fzf
-- `Tmux-Sessionizer config init` - Create initial config file
-- `Tmux-Sessionizer config edit` - Edit config file
-- `Tmux-Sessionizer create` - Interactive TUI for creating sessions
-- `Tmux-Sessionizer switch` - Switch between active sessions  
-- `Tmux-Sessionizer kill` - Kill current session and switch to another
+- `muxly` - Interactive session selector with fzf
+- `muxly config init` - Create initial config file
+- `muxly config edit` - Edit config file
+- `muxly create` - Interactive TUI for creating sessions
+- `muxly switch` - Switch between active sessions
+- `muxly kill` - Kill current session and switch to another
 
 ## Architecture
 
@@ -48,7 +48,7 @@ This is a Go CLI application using the Cobra framework for command structure. Th
 ### Key Architecture Patterns
 
 **Configuration System**
-- YAML-based config at `$XDG_CONFIG_HOME/tms/config.yaml`
+- YAML-based config at `$XDG_CONFIG_HOME/muxly/config.yaml`
 - Supports `scan_dirs` (with depth control) and `entry_dirs`
 - Session layouts with windows and commands
 - Fallback session configuration
