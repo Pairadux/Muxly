@@ -103,7 +103,7 @@ var rootCmd = &cobra.Command{
 				if !isTmuxA && isTmuxB {
 					return 1
 				}
-				return strings.Compare(a, b)
+				return strings.Compare(strings.ToLower(a), strings.ToLower(b))
 			})
 
 			choiceStr, err = fzf.SelectWithFzf(names)
