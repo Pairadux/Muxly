@@ -1,10 +1,19 @@
-# muxly
+<div align="center">
+  <img src="./assets/muxly.png" alt="fzf - a command-line fuzzy finder">
+  <a href="https://github.com/Pairadux/Muxly/actions"><img src="https://github.com/Pairadux/Muxly/actions/workflows/linux.yml/badge.svg?branch=master" alt="Build Status"></a>
+  <a href="http://github.com/Pairadux/Muxly/releases"><img src="https://img.shields.io/github/v/tag/Pairadux/Muxly" alt="Version"></a>
+  <a href="https://github.com/Pairadux/Muxly?tab=MIT-1-ov-file#readme"><img src="https://img.shields.io/github/license/Pairadux/Muxly" alt="License"></a>
+  <a href="https://github.com/Pairadux/Muxly/graphs/contributors"><img src="https://img.shields.io/github/contributors/Pairadux/Muxly" alt="Contributors"></a>
+  <a href="https://github.com/Pairadux/Muxly/stargazers"><img src="https://img.shields.io/github/stars/Pairadux/Muxly?style=flat" alt="Stars"></a>
+</div>
+
+---
 
 A lightweight CLI for handling TMUX sessions with ease!
 
 ## What is this?
 
-muxly is a highly configurable Tmux Session Manager based on ThePrimeagen's tmux-sessionizer script. It provides an intuitive interface for creating, managing, and switching between tmux sessions with pre-defined layouts and intelligent directory scanning.
+Muxly is a highly configurable Tmux Session Manager based on ThePrimeagen's tmux-sessionizer script. It provides an intuitive interface for creating, managing, and switching between tmux sessions with pre-defined layouts and intelligent directory scanning.
 
 ## Features
 
@@ -45,7 +54,11 @@ For other platforms, download the appropriate binary from the [releases page](ht
 
 ### Package Managers
 
-AUR and Homebrew packages are planned for the 1.0.0 stable release.
+| Platform | Command |
+|----------|---------|
+| **Arch Linux (AUR)** | `yay -S muxly` or `paru -S muxly` |
+| **macOS (Homebrew)** | `brew install muxly` |
+| **From Source** | See [Building from Source](#building-from-source) |
 
 ### Build from Source
 
