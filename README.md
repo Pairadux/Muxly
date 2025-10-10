@@ -8,11 +8,11 @@
 
 ---
 
-A lightweight CLI for handling TMUX sessions with ease!
+A lightweight, highly customizable CLI for managing tmux sessions with ease!
 
 ## What is this?
 
-Muxly is a highly configurable Tmux Session Manager based on ThePrimeagen's tmux-sessionizer script. It provides an intuitive interface for creating, managing, and switching between tmux sessions with pre-defined layouts and intelligent directory scanning.
+Muxly is a highly configurable Tmux Session Manager based on ThePrimeagen's tmux-sessionizer script. It provides an intuitive interface for creating, managing, and switching between tmux sessions with pre-defined or on-the-fly layouts and intelligent directory scanning.
 
 ## Features
 
