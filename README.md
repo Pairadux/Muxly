@@ -40,24 +40,23 @@ Muxly is a highly configurable Tmux Session Manager based on ThePrimeagen's tmux
 - `tmux` - Terminal multiplexer
 - `fzf` - Fuzzy finder for interactive selection
 
-### Download Pre-built Binary (Recommended)
+### Package Managers (Recommended)
+
+| Platform | Command |
+|----------|---------|
+| **Arch Linux (AUR)** | `yay -S muxly` or `paru -S muxly` |
+| **macOS (Homebrew)** | `brew install muxly` |
+
+### Download Pre-built Binary
 
 ```bash
-# Download and install the latest release
+# Download and install the latest release (this one is for linux 64-bit systems)
 wget -c https://github.com/Pairadux/muxly/releases/latest/download/muxly_Linux_x86_64.tar.gz -O - | tar xz
 sudo chmod +x muxly
 sudo mv muxly /usr/local/bin/
 ```
 
 For other platforms, download the appropriate binary from the [releases page](https://github.com/Pairadux/muxly/releases).
-
-### Package Managers
-
-| Platform | Command |
-|----------|---------|
-| **Arch Linux (AUR)** | `yay -S muxly` or `paru -S muxly` |
-| **macOS (Homebrew)** | `brew install muxly` |
-| **From Source** | See [Building from Source](#building-from-source) |
 
 ### Build from Source
 
