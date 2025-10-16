@@ -21,6 +21,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v3"
 ) // }}}
 
 var (
@@ -126,13 +127,15 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("the name must match an existing directory entry: %s", choiceStr)
 		}
 
-		// IDEA: this is a bit involved, but I want to retrieve a session layout from a .muxly file in the directory of the session to be created, if present
-		// This would enable dynamic session layouts based on user preference/setup
+		sessionLayout := retrieveSessionLayout(selectedPath)
+		if len(sessionLayout.Windows) == 0 {
+			sessionLayout = cfg.SessionLayout
+		}
 
 		session := models.Session{
 			Name:   sessionName,
 			Path:   selectedPath,
-			Layout: cfg.SessionLayout,
+			Layout: sessionLayout,
 		}
 
 		if err := tmux.CreateAndSwitchSession(&cfg, session); err != nil {
@@ -141,6 +144,22 @@ var rootCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func retrieveSessionLayout(path string) models.SessionLayout {
+	layoutPath := filepath.Join(path, ".muxly")
+
+	data, err := os.ReadFile(layoutPath)
+	if err != nil {
+		return models.SessionLayout{}
+	}
+
+	var layout models.SessionLayout
+	if err := yaml.Unmarshal(data, &layout); err != nil {
+		return models.SessionLayout{}
+	}
+
+	return layout
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
