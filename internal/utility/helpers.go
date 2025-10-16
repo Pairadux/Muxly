@@ -29,6 +29,8 @@ func ResolvePath(p string) (string, error) {
 	
 	// Remove unnecessary escape sequences that users might add
 	p = strings.ReplaceAll(p, "\\ ", " ")
+
+	p = os.ExpandEnv(p)
 	
 	if filepath.IsAbs(p) {
 		return p, nil
@@ -37,9 +39,14 @@ func ResolvePath(p string) (string, error) {
 		return homedir.Expand(p)
 	}
 	if strings.HasPrefix(p, "./") || strings.HasPrefix(p, "../") || p == "." || p == ".." {
-		return homedir.Dir()
+		return "", fmt.Errorf("relative paths (%q) are not allowed", p)
 	}
-	return homedir.Dir()
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Clean(filepath.Join(home, p)), nil
 }
 
 // GetSubDirs returns all subdirectories within the specified root directory,
