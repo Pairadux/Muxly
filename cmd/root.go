@@ -55,7 +55,6 @@ var rootCmd = &cobra.Command{
 	}, // }}}
 	PreRunE: func(cmd *cobra.Command, args []string) error { // {{{
 		if len(args) == 1 {
-			// IDEA: Maybe prompt the user and run the command for them
 			switch args[0] {
 			case "init":
 				return fmt.Errorf("unknown command %q for %q. Did you mean:\n  muxly config init?\n", args[0], cmd.Name())
@@ -375,10 +374,7 @@ func deduplicateDisplayNames(allPaths []models.PathInfo) map[string]string {
 			// No duplicates, use basename
 			info := group[0]
 			displayName := filepath.Base(info.Path)
-			// FIXME: move duplicate info.prefix logic to a function
-			if info.Prefix != "" {
-				displayName = info.Prefix + "/" + displayName
-			}
+			displayName = applyPrefix(info.Prefix, displayName)
 			result[info.Path] = displayName
 		} else {
 			// Resolve conflicts by finding minimum distinguishing suffix
@@ -415,9 +411,7 @@ func resolveConflicts(paths []models.PathInfo) map[string]string {
 			result := make(map[string]string)
 			for suffix, info := range suffixes {
 				displayName := suffix
-				if info.Prefix != "" {
-					displayName = info.Prefix + "/" + displayName
-				}
+				displayName = applyPrefix(info.Prefix, displayName)
 				result[info.Path] = displayName
 			}
 			return result
@@ -428,9 +422,7 @@ func resolveConflicts(paths []models.PathInfo) map[string]string {
 	result := make(map[string]string)
 	for _, info := range paths {
 		displayName := info.Path
-		if info.Prefix != "" {
-			displayName = info.Prefix + "/" + displayName
-		}
+		displayName = applyPrefix(info.Prefix, displayName)
 		result[info.Path] = displayName
 	}
 	return result
@@ -494,6 +486,13 @@ func validateConfig() error {
 	}
 
 	return nil
+}
+
+func applyPrefix(prefix, name string) string {
+	if prefix != "" {
+		return prefix + "/" + name
+	}
+	return name
 }
 
 func warnOnConfigIssues() {
