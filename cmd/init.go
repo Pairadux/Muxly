@@ -41,8 +41,9 @@ var (
 			{Name: "term", Cmd: ""},
 		},
 	}
-	defaultEditor            = "vi"
-	defaultTmuxSessionPrefix = "[TMUX] "
+	defaultEditor                  = "vi"
+	defaultTmuxSessionPrefix       = "[TMUX] "
+	defaultAlwaysKillOnLastSession = false
 	// TODO: add config option for "use-absolute-path"
 	// This would change the entries from using the basename to using the resolved absolute path in the fzf selector
 	// TODO: add config option for "use-home-based-path"
@@ -71,6 +72,7 @@ Otherwise, the current config file is overwritten.`,
 		sessionLayout := defaultSessionLayout
 		editor := defaultEditor
 		tmuxSessionPrefix := defaultTmuxSessionPrefix
+		alwaysKillOnLastSession := defaultAlwaysKillOnLastSession
 
 		var configContent string
 
@@ -81,15 +83,16 @@ Otherwise, the current config file is overwritten.`,
 
 		if useDefaults {
 			configContent = generateConfigYAML(models.Config{
-				ScanDirs:          scanDirs,
-				EntryDirs:         entryDirs,
-				IgnoreDirs:        ignoreDirs,
-				FallbackSession:   session,
-				TmuxBase:          tmuxBase,
-				DefaultDepth:      depth,
-				SessionLayout:     sessionLayout,
-				Editor:            editor,
-				TmuxSessionPrefix: tmuxSessionPrefix,
+				ScanDirs:                scanDirs,
+				EntryDirs:               entryDirs,
+				IgnoreDirs:              ignoreDirs,
+				FallbackSession:         session,
+				TmuxBase:                tmuxBase,
+				DefaultDepth:            depth,
+				SessionLayout:           sessionLayout,
+				Editor:                  editor,
+				TmuxSessionPrefix:       tmuxSessionPrefix,
+				AlwaysKillOnLastSession: alwaysKillOnLastSession,
 			})
 		}
 
@@ -188,6 +191,12 @@ func generateConfigYAML(params models.Config) string { // {{{
 	b.WriteString("# The string that will prefix currently active Tmux sessions when using 'muxly'\n")
 	tmuxSessionPrefixYAML, _ := yaml.Marshal(map[string]string{"tmux_session_prefix": params.TmuxSessionPrefix})
 	b.WriteString(string(tmuxSessionPrefixYAML))
+	b.WriteString("\n")
+
+	// Always Kill On Last Session
+	b.WriteString("# Always kill tmux server when killing the last session (skips fallback session prompt)\n")
+	alwaysKillOnLastSessionYAML, _ := yaml.Marshal(map[string]bool{"always_kill_on_last_session": params.AlwaysKillOnLastSession})
+	b.WriteString(string(alwaysKillOnLastSessionYAML))
 	b.WriteString("\n")
 
 	return b.String()

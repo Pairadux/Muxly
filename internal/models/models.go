@@ -63,13 +63,14 @@ type PathInfo struct {
 
 // Config represents the full configuration structure
 type Config struct {
-	ScanDirs          []ScanDir     `mapstructure:"scan_dirs"`
-	EntryDirs         []string      `mapstructure:"entry_dirs"`
-	IgnoreDirs        []string      `mapstructure:"ignore_dirs"`
-	FallbackSession   Session       `mapstructure:"fallback_session"`
-	TmuxBase          int           `mapstructure:"tmux_base"`
-	DefaultDepth      int           `mapstructure:"default_depth"`
-	SessionLayout     SessionLayout `mapstructure:"session_layout"`
-	Editor            string        `mapstructure:"editor"`
-	TmuxSessionPrefix string        `mapstructure:"tmux_session_prefix"`
+	ScanDirs                []ScanDir     `mapstructure:"scan_dirs"`
+	EntryDirs               []string      `mapstructure:"entry_dirs"`
+	IgnoreDirs              []string      `mapstructure:"ignore_dirs"`
+	FallbackSession         Session       `mapstructure:"fallback_session"`
+	TmuxBase                int           `mapstructure:"tmux_base"`
+	DefaultDepth            int           `mapstructure:"default_depth"`
+	SessionLayout           SessionLayout `mapstructure:"session_layout"`
+	Editor                  string        `mapstructure:"editor"`
+	TmuxSessionPrefix       string        `mapstructure:"tmux_session_prefix"`
+	AlwaysKillOnLastSession bool          `mapstructure:"always_kill_on_last_session"`
 }

@@ -28,16 +28,16 @@ If there are no other sessions however, the default sessions configured in the c
 		if currentSession == "" {
 			var killServer bool
 			form := forms.ConfirmationForm("Kill tmux server?", "This will terminate all tmux sessions.", &killServer)
-			
+
 			if err := form.Run(); err != nil {
 				return fmt.Errorf("failed to run confirmation form: %w", err)
 			}
-			
+
 			if !killServer {
 				fmt.Println("Aborting. No changes made.")
 				return nil
 			}
-			
+
 			if err := tmux.KillServer(); err != nil {
 				return fmt.Errorf("failed to kill tmux server: %w", err)
 			}
@@ -55,13 +55,22 @@ If there are no other sessions however, the default sessions configured in the c
 			// IDEA: add config option to allow users to create new session rather than dropping back to existing one on kill
 			// might even just make this the default behavior...
 			if len(sessions) == 0 {
+				// If configured to always kill on last session, skip the prompt
+				if cfg.AlwaysKillOnLastSession {
+					if err := tmux.KillServer(); err != nil {
+						return fmt.Errorf("failed to kill tmux server: %w", err)
+					}
+					fmt.Println("tmux server killed.")
+					return nil
+				}
+
 				var createFallback bool
 				form := forms.ConfirmationForm("Create default session?", "Declining will kill the tmux server.", &createFallback)
-				
+
 				if err := form.Run(); err != nil {
 					return fmt.Errorf("failed to run confirmation form: %w", err)
 				}
-				
+
 				if createFallback {
 					if err := tmux.CreateAndSwitchToFallbackSession(&cfg); err != nil {
 						return fmt.Errorf("Failed to create default session: %w", err)
