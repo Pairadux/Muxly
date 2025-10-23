@@ -478,23 +478,14 @@ func isConfigCommand(cmd *cobra.Command) bool {
 }
 
 // validateConfig ensures that the application configuration is valid and complete.
-// It checks for the presence of a config file and verifies that at least one
-// directory is configured for scanning (either scan_dirs or entry_dirs).
+// It checks for the presence of a config file and validates the config structure.
 // Returns an error with helpful instructions if validation fails.
 func validateConfig() error {
 	if viper.ConfigFileUsed() == "" {
 		return fmt.Errorf("no config file found\nRun 'muxly config init' to create one, or use --config to specify a path\n")
 	}
 
-	if len(cfg.ScanDirs) == 0 && len(cfg.EntryDirs) == 0 {
-		return fmt.Errorf("no directories configured for scanning")
-	}
-
-	if len(cfg.SessionLayout.Windows) == 0 {
-		return fmt.Errorf("session_layout must have at least one window")
-	}
-
-	return nil
+	return config.Validate(&cfg)
 }
 
 func applyPrefix(prefix, name string) string {

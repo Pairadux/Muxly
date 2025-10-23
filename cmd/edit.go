@@ -23,7 +23,7 @@ var editCmd = &cobra.Command{
 If you pass an optional [editor] it'll be used instead of the default $EDITOR.
 You can also set the default editor in the config file that will always be used instead of $EDITOR.`,
 	Args: cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		editor := pickEditor(args)
 
 		editCmd := exec.Command(editor, cfgFilePath)
@@ -31,8 +31,18 @@ You can also set the default editor in the config file that will always be used 
 		editCmd.Stdout = os.Stdout
 		editCmd.Stderr = os.Stderr
 		if err := editCmd.Run(); err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			return fmt.Errorf("editor exited with error: %w", err)
 		}
+
+		// Validate the edited config file
+		if _, err := config.ValidateConfigFile(cfgFilePath); err != nil {
+			fmt.Fprintf(os.Stderr, "\nWarning: Config validation failed: %v\n", err)
+			fmt.Fprintln(os.Stderr, "Please fix the issues above or your config may not work correctly.")
+			return fmt.Errorf("config validation failed")
+		}
+
+		fmt.Fprintln(os.Stderr, "Config file validated successfully")
+		return nil
 	},
 }
 
