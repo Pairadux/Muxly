@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/Pairadux/muxly/internal/config"
 	"github.com/Pairadux/muxly/internal/constants"
@@ -66,80 +65,39 @@ func init() { // {{{
 	initCmd.Flags().BoolP("Defaults", "D", true /* FIXME: change to false once interactive prompt is completed */, "Accept all defaults. (No interactive prompt)")
 } // }}}
 
-func generateConfigYAML(params models.Config) string { // {{{
-	var b strings.Builder
+func generateConfigYAML(cfg models.Config) string { // {{{
+	header := `# Configuration for muxly
+#
+# scan_dirs: Directories to scan for projects (supports depth per directory)
+#   Example: - path: ~/Dev
+#            - path: ~/.config
+#              depth: 2
+#              alias: config
+#
+# entry_dirs: Additional directories always included (not scanned)
+#
+# ignore_dirs: Directory paths to exclude from scanning
+#
+# fallback_session: Session to create when killing the last tmux session
+#
+# tmux_base: Base index for tmux windows (0 or 1, should match your tmux.conf)
+#
+# default_depth: Default scanning depth for scan_dirs without explicit depth
+#
+# session_layout: Default layout for new tmux sessions
+#   windows: List of windows to create with optional commands
+#
+# editor: Default editor for 'muxly config edit' (overrides $EDITOR)
+#
+# tmux_session_prefix: Prefix for active tmux sessions in the selector
+#
+# always_kill_on_last_session: Skip fallback prompt and kill server on last session
 
-	b.WriteString("# Configuration for muxly\n\n")
-
-	// Scan directories
-	// TODO: add additional comments to explain this section, namely, add an "ok" vs "not ok" example section
-	b.WriteString("# Directories to scan for projects\n")
-	b.WriteString("# Each entry can be a simple path or include depth:\n")
-	b.WriteString("#   - path: ~/\n")
-	b.WriteString("#     depth: 3\n")
-	scanDirsYAML, _ := yaml.Marshal(map[string][]models.ScanDir{"scan_dirs": params.ScanDirs})
-	b.WriteString(string(scanDirsYAML))
-	b.WriteString("\n")
-
-	// Entry directories
-	if len(params.EntryDirs) > 0 {
-		b.WriteString("# Additional entry directories (always included)\n")
-		entryDirsYAML, _ := yaml.Marshal(map[string][]string{"entry_dirs": params.EntryDirs})
-		b.WriteString(string(entryDirsYAML))
-	} else {
-		b.WriteString("# Additional entry directories (always included)\n")
-		b.WriteString("# entry_dirs:\n")
-		b.WriteString("#   - ~/special-project\n")
+`
+	yamlData, err := yaml.Marshal(cfg)
+	if err != nil {
+		return header + "# Error generating config: " + err.Error()
 	}
-	b.WriteString("\n")
 
-	// Ignore directories
-	b.WriteString("# Directory names to ignore when scanning\n")
-	ignoreDirsYAML, _ := yaml.Marshal(map[string][]string{"ignore_dirs": params.IgnoreDirs})
-	b.WriteString(string(ignoreDirsYAML))
-	b.WriteString("\n")
-
-	// Fallback session
-	b.WriteString("# Fallback session for when killing the final session\n")
-	fallbackYAML, _ := yaml.Marshal(map[string]models.Session{"fallback_session": params.FallbackSession})
-	b.WriteString(string(fallbackYAML))
-	b.WriteString("\n")
-
-	// Tmux base
-	b.WriteString("# Base index for tmux windows (0 or 1)\n")
-	tmuxBaseYAML, _ := yaml.Marshal(map[string]int{"tmux_base": params.TmuxBase})
-	b.WriteString(string(tmuxBaseYAML))
-	b.WriteString("\n")
-
-	// Default depth
-	b.WriteString("# Default scanning depth for directories\n")
-	defaultDepthYAML, _ := yaml.Marshal(map[string]int{"default_depth": params.DefaultDepth})
-	b.WriteString(string(defaultDepthYAML))
-	b.WriteString("\n")
-
-	// Session layout
-	b.WriteString("# Default layout for new tmux sessions\n")
-	sessionLayoutYAML, _ := yaml.Marshal(map[string]models.SessionLayout{"session_layout": params.SessionLayout})
-	b.WriteString(string(sessionLayoutYAML))
-	b.WriteString("\n")
-
-	// Editor
-	b.WriteString("# Default editor editing this config file\n")
-	editorYAML, _ := yaml.Marshal(map[string]string{"editor": params.Editor})
-	b.WriteString(string(editorYAML))
-	b.WriteString("\n")
-
-	// Tmux Session Prefix
-	b.WriteString("# The string that will prefix currently active Tmux sessions when using 'muxly'\n")
-	tmuxSessionPrefixYAML, _ := yaml.Marshal(map[string]string{"tmux_session_prefix": params.TmuxSessionPrefix})
-	b.WriteString(string(tmuxSessionPrefixYAML))
-	b.WriteString("\n")
-
-	// Always Kill On Last Session
-	b.WriteString("# Always kill tmux server when killing the last session (skips fallback session prompt)\n")
-	alwaysKillOnLastSessionYAML, _ := yaml.Marshal(map[string]bool{"always_kill_on_last_session": params.AlwaysKillOnLastSession})
-	b.WriteString(string(alwaysKillOnLastSessionYAML))
-	b.WriteString("\n")
-
-	return b.String()
+	return header + string(yamlData)
 } // }}}
