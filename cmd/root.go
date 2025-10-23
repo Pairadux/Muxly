@@ -207,6 +207,15 @@ func initConfig() { // {{{
 
 	viper.AutomaticEnv() // read in environment variables that match
 
+	// Bind environment variables for config overrides
+	// Allows MUXLY_* environment variables to override config file values
+	viper.SetEnvPrefix("MUXLY")
+	viper.BindEnv("editor", "MUXLY_EDITOR", "EDITOR")           // Support both MUXLY_EDITOR and standard $EDITOR
+	viper.BindEnv("default_depth")                              // MUXLY_DEFAULT_DEPTH
+	viper.BindEnv("tmux_base")                                  // MUXLY_TMUX_BASE
+	viper.BindEnv("tmux_session_prefix")                        // MUXLY_TMUX_SESSION_PREFIX
+	viper.BindEnv("always_kill_on_last_session")                // MUXLY_ALWAYS_KILL_ON_LAST_SESSION
+
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {

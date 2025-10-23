@@ -10,7 +10,6 @@ import (
 	"os/exec"
 
 	"github.com/Pairadux/muxly/internal/config"
-	"github.com/Pairadux/muxly/internal/constants"
 	"github.com/spf13/cobra"
 ) // }}}
 
@@ -51,16 +50,14 @@ func init() {
 }
 
 func pickEditor(args []string) string {
-	env := os.Getenv(constants.EnvEditor)
-
-	switch {
-	case len(args) > 0:
+	// Precedence: CLI arg > cfg.Editor (from MUXLY_EDITOR/EDITOR env or config file) > default
+	if len(args) > 0 {
 		return args[0]
-	case cfg.Editor != "":
-		return cfg.Editor
-	case env != "":
-		return env
-	default:
-		return config.DefaultEditor
 	}
+
+	if cfg.Editor != "" {
+		return cfg.Editor
+	}
+
+	return config.DefaultEditor
 }
