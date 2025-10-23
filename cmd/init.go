@@ -10,48 +10,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Pairadux/muxly/internal/config"
 	"github.com/Pairadux/muxly/internal/constants"
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 ) // }}}
-
-// Default values - defined once and used everywhere
-var (
-	defaultScanDirs = []models.ScanDir{
-		{Path: "~/Dev", Depth: nil, Alias: ""},
-		{Path: "~/.dotfiles/dot_config", Depth: nil, Alias: ""},
-	}
-	defaultEntryDirs  = []string{"~/Documents", "~/Cloud"}
-	defaultIgnoreDirs = []string{"~/Dev/_practice", "~/Dev/_archive"}
-	defaultTmuxBase   = 1
-	defaultDepth      = 1
-	fallbackSession   = models.Session{
-		Name: "Default",
-		Path: "~/",
-		Layout: models.SessionLayout{
-			Windows: []models.Window{
-				{Name: "window", Cmd: ""},
-			},
-		},
-	}
-	defaultSessionLayout = models.SessionLayout{
-		Windows: []models.Window{
-			{Name: "edit", Cmd: "nvim"},
-			{Name: "term", Cmd: ""},
-		},
-	}
-	defaultEditor                  = "vi"
-	defaultTmuxSessionPrefix       = "[TMUX] "
-	defaultAlwaysKillOnLastSession = false
-	// TODO: add config option for "use-absolute-path"
-	// This would change the entries from using the basename to using the resolved absolute path in the fzf selector
-	// TODO: add config option for "use-home-based-path"
-	// Similar to use-absolute-path but shows paths from ~/ rather than /
-	// Would need to prioritize one over the other if both are enabled and detail which takes priority
-	// TODO: add a config option to remove current session from list of options
-	// Might would help with the duplicate problem, especially in conjuction with absolute path config option
-)
 
 // initCmd represents the init command
 var initCmd = &cobra.Command{
@@ -63,17 +27,6 @@ Creates a config file at the specified location (default location if no argument
 Otherwise, the current config file is overwritten.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// TODO: make an interactive menu for assigning these values
-		scanDirs := defaultScanDirs
-		entryDirs := defaultEntryDirs
-		ignoreDirs := defaultIgnoreDirs
-		tmuxBase := defaultTmuxBase
-		depth := defaultDepth
-		session := fallbackSession
-		sessionLayout := defaultSessionLayout
-		editor := defaultEditor
-		tmuxSessionPrefix := defaultTmuxSessionPrefix
-		alwaysKillOnLastSession := defaultAlwaysKillOnLastSession
-
 		var configContent string
 
 		useDefaults, err := cmd.Flags().GetBool("Defaults")
@@ -82,18 +35,7 @@ Otherwise, the current config file is overwritten.`,
 		}
 
 		if useDefaults {
-			configContent = generateConfigYAML(models.Config{
-				ScanDirs:                scanDirs,
-				EntryDirs:               entryDirs,
-				IgnoreDirs:              ignoreDirs,
-				FallbackSession:         session,
-				TmuxBase:                tmuxBase,
-				DefaultDepth:            depth,
-				SessionLayout:           sessionLayout,
-				Editor:                  editor,
-				TmuxSessionPrefix:       tmuxSessionPrefix,
-				AlwaysKillOnLastSession: alwaysKillOnLastSession,
-			})
+			configContent = generateConfigYAML(config.NewDefaultConfig())
 		}
 
 		// IDEA: before finalizing the changes, maybe diff the current file or show the config options setup and validate that they are correct

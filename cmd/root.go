@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Pairadux/muxly/internal/config"
 	"github.com/Pairadux/muxly/internal/constants"
 	"github.com/Pairadux/muxly/internal/fzf"
 	"github.com/Pairadux/muxly/internal/models"
@@ -497,15 +498,15 @@ func applyPrefix(prefix, name string) string {
 
 func warnOnConfigIssues() {
 	if cfg.Editor == "" {
-		fmt.Fprintln(os.Stderr, "Warning: editor not set, defaulting to 'vi'")
+		fmt.Fprintf(os.Stderr, "Warning: editor not set, defaulting to '%s'\n", config.DefaultEditor)
 	}
 
 	if cfg.FallbackSession.Name == "" {
-		fmt.Fprintln(os.Stderr, "fallback_session.name is missing, defaulting to 'Default'")
+		fmt.Fprintf(os.Stderr, "fallback_session.name is missing, defaulting to '%s'\n", config.DefaultFallbackSessionName)
 	}
 
 	if cfg.FallbackSession.Path == "" {
-		fmt.Fprintln(os.Stderr, "fallback_session.path is missing, defaulting to '~/'")
+		fmt.Fprintf(os.Stderr, "fallback_session.path is missing, defaulting to '%s'\n", config.DefaultFallbackSessionPath)
 	}
 
 	if len(cfg.FallbackSession.Layout.Windows) == 0 {

@@ -9,11 +9,10 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/Pairadux/muxly/internal/config"
 	"github.com/Pairadux/muxly/internal/constants"
 	"github.com/spf13/cobra"
 ) // }}}
-
-const DefaultEditor = "vi"
 
 // editCmd represents the edit command
 var editCmd = &cobra.Command{
@@ -52,6 +51,6 @@ func pickEditor(args []string) string {
 	case env != "":
 		return env
 	default:
-		return DefaultEditor
+		return config.DefaultEditor
 	}
 }
