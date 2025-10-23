@@ -14,6 +14,15 @@ A lightweight, highly customizable CLI for managing tmux sessions with ease!
 
 Muxly is a highly configurable Tmux Session Manager based on ThePrimeagen's tmux-sessionizer script. It provides an intuitive interface for creating, managing, and switching between tmux sessions with pre-defined or on-the-fly layouts and intelligent directory scanning.
 
+## Why Muxly?
+
+- **Simple by default**: Works immediately with minimal setup - just your home directory
+- **Flexible when needed**: YAML config for advanced workflows, environment variable overrides for quick tweaks
+- **Fuzzy finder first**: Built around `fzf` for lightning-fast session selection
+- **Universal design**: No assumptions about your editors, tools, or workflow
+- **Intelligent discovery**: Finds your projects automatically with configurable scanning
+- **Built-in validation**: Config errors are caught immediately with helpful feedback
+
 ## Features
 
 - **Interactive Session Selection**: Use `fzf` for fuzzy finding and selecting sessions
@@ -70,6 +79,28 @@ The binary will be installed as `muxly` in your `$GOPATH/bin` directory.
 
 All examples in this README use `muxly` as the command name.
 
+## Getting Started
+
+Get up and running with Muxly in 3 simple steps:
+
+```bash
+# 1. Create your config file (creates minimal defaults)
+muxly config init
+
+# 2. Customize your config (optional - works with defaults!)
+muxly config edit
+
+# 3. Launch Muxly and select a directory
+muxly
+```
+
+That's it! Muxly will show you your home directory by default. Use the arrow keys or fuzzy search to select a directory, then press Enter to create or switch to that session.
+
+**Next Steps:**
+- Add your project directories to `scan_dirs` in the config
+- Customize your `session_layout` with windows and commands you use frequently
+- Try `muxly create` for an interactive TUI to create sessions on the fly
+
 ## Configuration
 
 Configuration is stored in `$XDG_CONFIG_HOME/muxly/config.yaml` (typically `~/.config/muxly/config.yaml`).
@@ -119,8 +150,53 @@ EDITOR=nano muxly config edit
 
 ### Configuration File
 
+#### Default Configuration
+
+Running `muxly config init` creates this minimal config:
+
+```yaml
+# Additional entry directories (included directly, not scanned)
+entry_dirs:
+  - ~
+
+# Fallback session for when killing the final session
+fallback_session:
+  name: Default
+  path: ~/
+  layout:
+    windows:
+      - name: main
+        cmd: ""
+
+# Base index for tmux windows (0 or 1)
+# See: https://www.man7.org/linux/man-pages/man1/tmux.1.html#OPTIONS (base-index)
+tmux_base: 1
+
+# Default scanning depth for directories
+default_depth: 1
+
+# Default layout for new tmux sessions
+session_layout:
+  windows:
+    - name: main
+      cmd: ""
+
+# Prefix for active tmux sessions in the selector
+tmux_session_prefix: "[TMUX] "
+
+# Editor for 'muxly config edit' (falls back to $EDITOR, then 'vi')
+editor: vi
+
+# Always kill tmux server on last session (skips fallback session prompt)
+always_kill_on_last_session: false
+```
+
+This works immediately - no customization needed! But you'll probably want to add your project directories...
+
+#### Advanced Configuration Example
+
 <details>
-<summary><b>Complete Configuration Example (click to expand)</b></summary>
+<summary><b>Example with custom directories, windows, and commands (click to expand)</b></summary>
 
 ```yaml
 # Directories to scan for projects
@@ -137,7 +213,7 @@ scan_dirs:
 # Additional entry directories (included directly, not scanned)
 entry_dirs:
   - ~/Documents
-  - ~/Cloud
+  - ~/special-project
 
 # Directory paths to exclude from scanning
 ignore_dirs:
@@ -151,7 +227,7 @@ fallback_session:
   path: ~/
   layout:
     windows:
-      - name: shell
+      - name: main
         cmd: ""
 
 # Default layout for new tmux sessions
@@ -182,6 +258,29 @@ always_kill_on_last_session: false
 ```
 
 </details>
+
+#### Directory-Specific Layouts
+
+You can override the default session layout for specific projects by creating a `.muxly` file in the project directory:
+
+**Example: `~/my-project/.muxly`**
+
+```yaml
+windows:
+  - name: editor
+    cmd: nvim src/
+  - name: server
+    cmd: npm run dev
+  - name: tests
+    cmd: npm run test:watch
+```
+
+When you create a session for `~/my-project`, Muxly will use this layout instead of the global `session_layout` from your config file. This is perfect for projects with unique workflows or specific commands.
+
+**Notes:**
+- The `.muxly` file only needs a `windows` array - all other settings come from your global config
+- If no `.muxly` file exists, the global `session_layout` is used
+- `.muxly` files are not scanned/discovered automatically - they only apply when you select that specific directory
 
 ### Configuration Options Reference
 
@@ -244,9 +343,27 @@ muxly config edit
 muxly my-project
 ```
 
-## Warning
+## Project Status
 
-This program is in a highly unstable state. The API and commands are subject to change before final release. The overall functionality of the program should be stable, unless otherwise stated though.
+Muxly is currently in **active development**. While the core functionality is stable and usable for daily workflows, the API and commands may evolve before the 1.0 release based on user feedback and feature requests.
+
+**Current State:**
+- ✅ Core features are stable and tested
+- ✅ Safe for daily use
+- ⚠️ Config structure may receive additions or improvements
+- ⚠️ Command flags/options may change
+
+We follow semantic versioning and will clearly communicate any breaking changes in release notes.
+
+## Community & Contributing
+
+Found a bug? Have a feature request? Want to contribute?
+
+- **Issues**: [Report bugs or request features](https://github.com/Pairadux/muxly/issues)
+- **Discussions**: [Ask questions or share ideas](https://github.com/Pairadux/muxly/discussions)
+- **Contributing**: Pull requests are welcome! Please open an issue first to discuss major changes
+
+We'd love to hear how you're using Muxly and what would make it better for your workflow.
 
 ## Star History
 
