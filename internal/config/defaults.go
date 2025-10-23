@@ -25,37 +25,27 @@ const (
 )
 
 // Complex default values (variables)
+// These are intentionally minimal - just enough for the program to run.
+// Users should customize these in their config file.
 var (
-	DefaultScanDirs = []models.ScanDir{
-		{Path: "~/Dev", Depth: nil, Alias: ""},
-		{Path: "~/.dotfiles/dot_config", Depth: nil, Alias: ""},
-	}
+	DefaultScanDirs = []models.ScanDir{}
 
 	DefaultEntryDirs = []string{
-		"~/Documents",
-		"~/Cloud",
+		"~", // Home directory - universally available
 	}
 
-	DefaultIgnoreDirs = []string{
-		"~/Dev/_practice",
-		"~/Dev/_archive",
-	}
-
-	DefaultFallbackSession = models.Session{
-		Name: DefaultFallbackSessionName,
-		Path: DefaultFallbackSessionPath,
-		Layout: models.SessionLayout{
-			Windows: []models.Window{
-				{Name: "window", Cmd: ""},
-			},
-		},
-	}
+	DefaultIgnoreDirs = []string{}
 
 	DefaultSessionLayout = models.SessionLayout{
 		Windows: []models.Window{
-			{Name: "edit", Cmd: "nvim"},
-			{Name: "term", Cmd: ""},
+			{Name: "main", Cmd: ""}, // Single window with default shell
 		},
+	}
+
+	DefaultFallbackSession = models.Session{
+		Name:   DefaultFallbackSessionName,
+		Path:   DefaultFallbackSessionPath,
+		Layout: DefaultSessionLayout, // Reuse the default session layout
 	}
 )
 
