@@ -192,7 +192,9 @@ func initConfig() { // {{{
 		} else {
 			var err error
 			configDir, err = os.UserConfigDir()
-			fmt.Fprintf(os.Stderr, "UserConfigDir cannot be found: %v\n", err)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "UserConfigDir cannot be found: %v\n", err)
+			}
 		}
 
 		cfgDir := filepath.Join(configDir, "muxly")
@@ -218,6 +220,12 @@ func initConfig() { // {{{
 	if err := viper.Unmarshal(&cfg); err != nil {
 		// FIXME: try unmarshalling 1 key at a time
 		fmt.Fprintf(os.Stderr, "Issue unmarshalling config file: %v\n", err)
+	}
+
+	// Sync cfgFilePath with the actual config file that was loaded
+	// This ensures 'muxly config edit' opens the correct file
+	if viper.ConfigFileUsed() != "" {
+		cfgFilePath = viper.ConfigFileUsed()
 	}
 } // }}}
 
