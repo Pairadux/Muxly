@@ -3,7 +3,7 @@
 
 package tmux
 
-// IMPORTS {{{
+// IMPORTS {{{ 
 import (
 	"fmt"
 	"os"
@@ -16,22 +16,34 @@ import (
 
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/mitchellh/go-homedir"
-) // }}}
+) // }}} 
 
 const DefaultShell = "/bin/bash"
 
 // GetTmuxSessionNames returns a slice of all active tmux session names.
-// Returns an empty slice if tmux is not available or if there's an error.
+// Returns an empty slice if tmux is not available or if there are no sessions.
 func GetTmuxSessionNames() []string {
 	cmd := exec.Command("tmux", "list-sessions", "-F", "#{session_name}")
 	output, err := cmd.Output()
 	if err != nil {
-		return nil
+		// An error can occur if tmux isn't installed or if no server is running.
+		// In either case, there are no sessions, so we return an empty slice
+		// to provide a safe, non-nil value for callers.
+		return []string{}
 	}
 
-	// PERF: Pre-allocate sessions slice with estimated capacity based on typical session count
-	var sessions []string
-	for line := range strings.SplitSeq(strings.TrimSpace(string(output)), "\n") {
+	outputStr := strings.TrimSpace(string(output))
+	if outputStr == "" {
+		return []string{} // No sessions found
+	}
+
+	lines := strings.Split(outputStr, "\n")
+
+	// Pre-allocate the slice. len(lines) is a perfect capacity estimate
+	// as tmux outputs one session name per line, preventing re-allocations.
+	sessions := make([]string, 0, len(lines))
+	for _, line := range lines {
+		// This check handles cases of extraneous newlines in tmux output.
 		if line != "" {
 			sessions = append(sessions, line)
 		}
@@ -165,7 +177,7 @@ func attachToSession(target, fallbackName string) error {
 			return err
 		}
 
-		// If attach failed and server is not running, exit gracefully  
+		// If attach failed and server is not running, exit gracefully
 		if !IsTmuxServerRunning() {
 			os.Exit(0)
 		}
@@ -237,153 +249,8 @@ func buildWindowArgs(isFirst bool, sessionName, windowName, dir, cmd string) []s
 			shell = DefaultShell
 		}
 		cmdStr := cmd + "; exec " + shell
-		args = append(args, "--", shell, "-lc", cmdStr)
+		args = append(args, cmdStr)
 	}
 
 	return args
-}
-
-// KillSession terminates the specified tmux session.
-//
-// Returns an error if the session doesn't exist or if the kill operation fails.
-func KillSession(target string) error {
-	if err := exec.Command("tmux", "kill-session", "-t", target).Run(); err != nil {
-		return fmt.Errorf("killing session: %w", err)
-	}
-
-	return nil
-}
-
-// KillServer terminates the entire tmux server and all sessions.
-//
-// This is a destructive operation that will close all tmux sessions.
-// Returns an error if the kill operation fails.
-func KillServer() error {
-	if err := exec.Command("tmux", "kill-server").Run(); err != nil {
-		return fmt.Errorf("killing server: %w", err)
-	}
-
-	return nil
-}
-
-// CreateAndSwitchToFallbackSession creates and switches to the configured fallback session.
-// If no fallback session is configured, it uses "default" as the session name.
-// The session is created in the user's home directory with the configured layout.
-//
-// Returns an error if session creation or switching fails.
-func CreateAndSwitchToFallbackSession(cfg *models.Config) error {
-	sessionName := cfg.FallbackSession.Name
-	if sessionName == "" {
-		sessionName = "Default"
-	}
-
-	if HasTmuxSession(sessionName) {
-		return SwitchToExistingSession(cfg, sessionName)
-	}
-
-	sessionPath := cfg.FallbackSession.Path
-	if sessionPath == "" {
-		var err error
-		sessionPath, err = homedir.Dir()
-		if err != nil {
-			return fmt.Errorf("failed to get homedir: %w", err)
-		}
-	}
-
-	sessionLayout := cfg.FallbackSession.Layout
-	if len(sessionLayout.Windows) == 0 {
-		sessionLayout = cfg.SessionLayout
-	}
-
-	session := models.Session{
-		Name:   sessionName,
-		Path:   sessionPath,
-		Layout: sessionLayout,
-	}
-
-	if err := CreateAndSwitchSession(cfg, session); err != nil {
-		return fmt.Errorf("failed to create and switch to session '%s': %w", sessionName, err)
-	}
-
-	return nil
-}
-
-func CreateSessionFromForm(cfg models.Config) error {
-	var (
-		useFallback   bool
-		confirmCreate bool
-		sessionName   string
-		path          string
-		windowsStr    string
-	)
-
-	form := forms.CreateForm(&useFallback, &confirmCreate, &sessionName, &path, &windowsStr)
-	if err := form.Run(); err != nil {
-		return fmt.Errorf("form error: %w", err)
-	}
-
-	if !confirmCreate {
-		return nil
-	}
-
-	if useFallback {
-		return CreateAndSwitchToFallbackSession(&cfg)
-	}
-
-	if HasTmuxSession(sessionName) {
-		return fmt.Errorf("session '%s' already exists", sessionName)
-	}
-
-	layout := parseWindows(windowsStr)
-	if len(layout.Windows) == 0 {
-		layout = cfg.SessionLayout
-	}
-
-	session := models.Session{
-		Name:   sessionName,
-		Path:   path,
-		Layout: layout,
-	}
-
-	return CreateAndSwitchSession(&cfg, session)
-}
-
-// parseWindows parses a newline-delimited input string where each line is a name:cmd pair.
-//
-// It converts each name:cmd pair into Window structs for the session layout.
-// If no colon is found in a line, the entire line is treated as the window name with no command.
-// Returns a SessionLayout with parsed windows, or empty layout if input is empty.
-func parseWindows(input string) models.SessionLayout {
-	input = strings.TrimSpace(input)
-	if input == "" {
-		return models.SessionLayout{}
-	}
-
-	var windows []models.Window
-	lines := strings.Split(input, "\n")
-	
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-
-		parts := strings.SplitN(line, ":", 2)
-		name := strings.TrimSpace(parts[0])
-		if name == "" {
-			continue
-		}
-
-		var cmd string
-		if len(parts) > 1 {
-			cmd = strings.TrimSpace(parts[1])
-		}
-
-		windows = append(windows, models.Window{
-			Name: name,
-			Cmd:  cmd,
-		})
-	}
-
-	return models.SessionLayout{Windows: windows}
 }
