@@ -391,7 +391,7 @@ func deduplicateDisplayNames(allPaths []models.PathInfo) map[string]string {
 		if len(group) == 1 {
 			// No duplicates, use basename
 			info := group[0]
-			displayName := filepath.Base(info.Path)
+			displayName := normalizeSessionName(filepath.Base(info.Path))
 			displayName = applyPrefix(info.Prefix, displayName)
 			result[info.Path] = displayName
 		} else {
@@ -428,7 +428,7 @@ func resolveConflicts(paths []models.PathInfo) map[string]string {
 			// All unique at this depth
 			result := make(map[string]string)
 			for suffix, info := range suffixes {
-				displayName := suffix
+				displayName := normalizePathForDisplay(suffix)
 				displayName = applyPrefix(info.Prefix, displayName)
 				result[info.Path] = displayName
 			}
@@ -439,7 +439,7 @@ func resolveConflicts(paths []models.PathInfo) map[string]string {
 	// Fallback: use full path if conflict cant be resolved
 	result := make(map[string]string)
 	for _, info := range paths {
-		displayName := info.Path
+		displayName := normalizePathForDisplay(info.Path)
 		displayName = applyPrefix(info.Prefix, displayName)
 		result[info.Path] = displayName
 	}
@@ -502,6 +502,29 @@ func applyPrefix(prefix, name string) string {
 		return prefix + "/" + name
 	}
 	return name
+}
+
+// normalizeSessionName replaces leading dots with underscores to match tmux's session naming behavior
+func normalizeSessionName(name string) string {
+	if strings.HasPrefix(name, ".") {
+		return "_" + name[1:]
+	}
+	return name
+}
+
+// normalizePathForDisplay normalizes the last component of a path by replacing leading dots with underscores.
+// This ensures display names match the actual session names that tmux creates.
+func normalizePathForDisplay(path string) string {
+	if path == "" {
+		return path
+	}
+
+	parts := strings.Split(path, string(filepath.Separator))
+	if len(parts) > 0 {
+		lastIdx := len(parts) - 1
+		parts[lastIdx] = normalizeSessionName(parts[lastIdx])
+	}
+	return strings.Join(parts, string(filepath.Separator))
 }
 
 func warnOnConfigIssues() {
