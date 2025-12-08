@@ -39,6 +39,8 @@ Muxly is a highly configurable Tmux Session Manager based on ThePrimeagen's tmux
 - `muxly create` - Interactive TUI for creating new sessions
 - `muxly switch` - Switch between active tmux sessions
 - `muxly kill` - Kill current session and switch to another
+- `muxly add` - Add directories to configuration (entry or scan)
+- `muxly remove` - Remove directories from configuration
 - `muxly config init` - Create initial configuration file
 - `muxly config edit` - Edit configuration file
 
@@ -97,7 +99,7 @@ muxly
 That's it! Muxly will show you your home directory by default. Use the arrow keys or fuzzy search to select a directory, then press Enter to create or switch to that session.
 
 **Next Steps:**
-- Add your project directories to `scan_dirs` in the config
+- Add your project directories with `muxly add scan ~/Dev` or edit the config manually
 - Customize your `session_layout` with windows and commands you use frequently
 - Try `muxly create` for an interactive TUI to create sessions on the fly
 
@@ -334,6 +336,18 @@ muxly config init
 
 # Edit config file
 muxly config edit
+
+# Add directories to scan_dirs
+muxly add scan ~/Dev --depth 2 --alias dev
+muxly add scan ~/projects
+
+# Add directories to entry_dirs
+muxly add entry ~/Documents
+muxly add entry .
+
+# Remove directories
+muxly remove scan ~/projects
+muxly remove entry ~/Documents
 ```
 
 ### Direct Session Creation
