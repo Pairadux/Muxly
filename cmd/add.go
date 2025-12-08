@@ -6,91 +6,50 @@ package cmd
 // IMPORTS {{{
 import (
 	"fmt"
-	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/Pairadux/muxly/internal/utility"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 ) // }}}
 
 // addCmd represents the add command
 var addCmd = &cobra.Command{
-	Use:   "add [path]",
-	Short: "Add a directory to entry_dirs",
-	Long: `Add a directory to entry_dirs in the configuration file.
+	Use:   "add",
+	Short: "Add directories to configuration",
+	Long: `Add directories to entry_dirs or scan_dirs in the configuration file.
 
-The path can be absolute, relative, or use tilde expansion.
-Relative paths (like . or ..) will be converted to absolute paths.
+Use subcommands to specify where to add the directory:
+  entry (e) - Add to entry_dirs (direct entries, not scanned)
+  scan (s)  - Add to scan_dirs (scanned recursively with depth)
 
 Examples:
-  muxly add .                    # Add current directory
-  muxly add ~/Dev/my-project     # Add a specific project
-  muxly add /path/to/directory   # Add absolute path`,
-	Args: cobra.ExactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		inputPath := args[0]
-
-		var resolvedPath string
-		var err error
-
-		// Handle relative paths like "." and ".."
-		// filepath.Abs converts them to absolute paths based on current working directory
-		if inputPath == "." || inputPath == ".." {
-			absPath, err := filepath.Abs(inputPath)
-			if err != nil {
-				return fmt.Errorf("failed to resolve relative path %q: %w", inputPath, err)
-			}
-			// Still pass through ResolvePath to handle any env vars and path cleaning
-			resolvedPath, err = utility.ResolvePath(absPath)
-			if err != nil {
-				return fmt.Errorf("failed to resolve path %q: %w", absPath, err)
-			}
-		} else {
-			// For absolute paths, tilde paths, or paths with env vars
-			resolvedPath, err = utility.ResolvePath(inputPath)
-			if err != nil {
-				return fmt.Errorf("failed to resolve path %q: %w", inputPath, err)
-			}
-		}
-
-		// Verify the path actually exists on the filesystem
-		if _, err := os.Stat(resolvedPath); os.IsNotExist(err) {
-			return fmt.Errorf("path does not exist: %s", resolvedPath)
-		} else if err != nil {
-			return fmt.Errorf("failed to access path %q: %w", resolvedPath, err)
-		}
-
-		// Check if this path would already be discovered by a scan_dir
-		// This prevents redundant configuration
-		if matchedScanDir, depth, found := wouldBeFoundByScanDirs(resolvedPath, cfg.ScanDirs); found {
-			return fmt.Errorf("path %q would already be found by scan_dir %s (depth: %d)\nNo need to add it to entry_dirs", resolvedPath, matchedScanDir.String(), depth)
-		}
-
-		// Check if already in entry_dirs to avoid duplicates
-		if slices.Contains(cfg.EntryDirs, resolvedPath) {
-			fmt.Printf("Path %q is already in entry_dirs\n", resolvedPath)
-			return nil
-		}
-
-		// Add to entry_dirs and write config using viper
-		updatedEntryDirs := append(cfg.EntryDirs, resolvedPath)
-		viper.Set("entry_dirs", updatedEntryDirs)
-
-		if err := viper.WriteConfig(); err != nil {
-			return fmt.Errorf("failed to write config: %w", err)
-		}
-
-		fmt.Printf("Added %q to entry_dirs\n", resolvedPath)
-		return nil
-	},
+  muxly add entry ~/Dev/my-project
+  muxly add e .
+  muxly add scan ~/Dev --depth 2 --alias dev
+  muxly add s ~/projects`,
 }
 
 func init() {
 	rootCmd.AddCommand(addCmd)
+}
+
+// resolveInputPath handles path resolution including special handling for relative paths like "." and ".."
+func resolveInputPath(inputPath string) (string, error) {
+	// Handle relative paths like "." and ".."
+	// filepath.Abs converts them to absolute paths based on current working directory
+	if inputPath == "." || inputPath == ".." {
+		absPath, err := filepath.Abs(inputPath)
+		if err != nil {
+			return "", fmt.Errorf("failed to resolve relative path %q: %w", inputPath, err)
+		}
+		// Still pass through ResolvePath to handle any env vars and path cleaning
+		return utility.ResolvePath(absPath)
+	}
+
+	// For absolute paths, tilde paths, or paths with env vars
+	return utility.ResolvePath(inputPath)
 }
 
 // wouldBeFoundByScanDirs checks if a target path would be discovered by any configured scan_dir.
