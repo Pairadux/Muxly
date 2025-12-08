@@ -47,12 +47,18 @@ func ResolvePath(p string) (string, error) {
 	return filepath.Clean(filepath.Join(home, p)), nil
 }
 
-// GetSubDirs returns all subdirectories within the specified root directory,
-// up to the given maximum depth. It uses fastwalk for efficient directory
-// traversal and processes directories concurrently via a goroutine and channel.
+// GetSubDirs returns all subdirectories within root, up to maxDepth levels deep.
 //
-// Walk errors for individual paths are printed to stderr but do not stop
-// the traversal or cause the function to return an error.
+// Depth examples (assuming root = "/home/user/Dev"):
+//   maxDepth = 1: /home/user/Dev/project1, /home/user/Dev/project2
+//   maxDepth = 2: above + /home/user/Dev/project1/src, /home/user/Dev/project2/src
+//
+// Uses fastwalk for efficient concurrent traversal. The root directory itself is
+// always excluded from results. Individual path errors are logged to stderr but
+// don't stop the scan or cause an error return.
+//
+// Performance: Results are collected concurrently via a buffered channel
+// (size: constants.DefaultChannelBufferSize).
 func GetSubDirs(maxDepth int, root string) ([]string, error) {
 	// PERF: Channel buffer size may be too small for large directory trees, consider making it configurable
 	dirChan := make(chan string, constants.DefaultChannelBufferSize)
