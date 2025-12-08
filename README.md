@@ -195,6 +195,8 @@ always_kill_on_last_session: false
 
 This works immediately - no customization needed! But you'll probably want to add your project directories...
 
+**Tip:** Use `muxly add scan ~/your-projects` to add directories, or `muxly config edit` to edit the config file manually.
+
 #### Advanced Configuration Example
 
 <details>
@@ -259,6 +261,14 @@ editor: nvim
 always_kill_on_last_session: false
 ```
 
+**Note:** You can also manage these directories using commands instead of manual editing:
+- `muxly add scan ~/Dev --depth 2 --alias dev` - Add to scan_dirs
+- `muxly add entry ~/Documents` - Add to entry_dirs
+- `muxly remove scan ~/Dev` - Remove from scan_dirs
+- `muxly remove entry ~/Documents` - Remove from entry_dirs
+
+See [Configuration Management](#configuration-management) examples below.
+
 </details>
 
 #### Directory-Specific Layouts
@@ -283,6 +293,7 @@ When you create a session for `~/my-project`, Muxly will use this layout instead
 - The `.muxly` file only needs a `windows` array - all other settings come from your global config
 - If no `.muxly` file exists, the global `session_layout` is used
 - `.muxly` files are not scanned/discovered automatically - they only apply when you select that specific directory
+- When removing an entry directory with `muxly remove entry`, you'll be prompted about deleting its `.muxly` file (use `--keep` or `--delete` flags for non-interactive use)
 
 ### Configuration Options Reference
 
