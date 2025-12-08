@@ -261,6 +261,11 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 	return entries, nil
 }
 
+// buildIgnoreSet creates a set of resolved paths from cfg.IgnoreDirs for O(1) lookup.
+//
+// Using a set (map[string]struct{}) instead of a slice allows constant-time checks
+// to see if a directory should be ignored, rather than linear-time iteration.
+// Paths that fail to resolve are silently skipped.
 func buildIgnoreSet() models.StringSet {
 	ignoreSet := make(models.StringSet)
 	for _, dir := range cfg.IgnoreDirs {
@@ -272,6 +277,17 @@ func buildIgnoreSet() models.StringSet {
 	return ignoreSet
 }
 
+// collectAllPaths gathers all directory paths from scan_dirs and entry_dirs.
+//
+// For scan_dirs: Recursively scans each directory up to the configured depth,
+// respecting the flagDepth override if provided (CLI --depth flag).
+//
+// For entry_dirs: Adds directories directly without scanning subdirectories.
+//
+// Directories in ignoreSet and directories matching the current tmux session name
+// are filtered out. Each path is tagged with an optional prefix (alias) for display.
+//
+// Returns a slice of PathInfo structs containing the path and its display prefix.
 func collectAllPaths(flagDepth int, ignoreSet models.StringSet, currentSession string) []models.PathInfo {
 	var allPaths []models.PathInfo
 
@@ -311,6 +327,14 @@ func collectAllPaths(flagDepth int, ignoreSet models.StringSet, currentSession s
 	return allPaths
 }
 
+// addDirectoryEntries populates the entries map with display names for directories.
+//
+// This function handles the complex task of creating unique, user-friendly display names
+// for directories that may have the same basename (e.g., multiple "src" directories).
+// It calls deduplicateDisplayNames to resolve conflicts by using path suffixes.
+//
+// Entries that would conflict with existing tmux sessions or match the current session
+// are skipped to avoid ambiguity in the selector.
 func addDirectoryEntries(entries map[string]string, allPaths []models.PathInfo, currentSession string, existingSessions map[string]bool) {
 	displayNames := deduplicateDisplayNames(allPaths)
 
@@ -325,6 +349,14 @@ func addDirectoryEntries(entries map[string]string, allPaths []models.PathInfo, 
 	}
 }
 
+// addTmuxSessionEntries adds existing tmux sessions to the entries map.
+//
+// Sessions are prefixed with cfg.TmuxSessionPrefix (default: "[TMUX] ") to distinguish
+// them from directory entries in the selector. The current session is excluded since
+// you can't switch to the session you're already in.
+//
+// For these entries, the value is the session name itself (not a path), which tells
+// the main logic to switch to an existing session rather than create a new one.
 func addTmuxSessionEntries(entries map[string]string, existingSessions map[string]bool, currentSession string) {
 	for sessionName := range existingSessions {
 		if sessionName == currentSession {
@@ -336,8 +368,16 @@ func addTmuxSessionEntries(entries map[string]string, existingSessions map[strin
 	}
 }
 
-// processScanDir processes a ScanDir struct, using the struct's depth
-// and the existing depth priority logic from the ScanDir.GetDepth method.
+// processScanDir scans a single scan_dir entry and adds all discovered subdirectories.
+//
+// Depth priority (highest to lowest):
+//  1. CLI flag (--depth)
+//  2. Per-directory depth (scanDir.Depth)
+//  3. Global default (cfg.DefaultDepth)
+//
+// This is handled by the ScanDir.GetDepth method. The function resolves the path,
+// scans for subdirectories up to the effective depth, and calls addEntry for each.
+// Errors are logged if verbose mode is enabled but don't stop execution.
 func processScanDir(scanDir models.ScanDir, flagDepth int, prefix string, addEntry func(string, string) error) error {
 	defaultDepth := cfg.DefaultDepth
 	effectiveDepth := scanDir.GetDepth(flagDepth, defaultDepth)
@@ -370,8 +410,15 @@ func processScanDir(scanDir models.ScanDir, flagDepth int, prefix string, addEnt
 	return nil
 }
 
-// deduplicateDisplayNames finds the minimum suffix needed to ensure no duplicates
-// using hash-based grouping for efficient conflict resolution.
+// deduplicateDisplayNames creates unique display names for paths with conflicting basenames.
+//
+// When multiple paths have the same basename (e.g., ~/Dev/project1/src and ~/Work/project2/src),
+// this function finds the minimum path suffix needed to make them distinguishable:
+//   - "src" conflicts → try depth 1 → still "src/src" conflicts → try depth 2 → "project1/src" vs "project2/src" ✓
+//
+// Uses hash-based grouping for O(n) performance instead of O(n²) comparisons.
+// Paths without conflicts keep their simple basename. Prefixes (aliases) are applied
+// to the final display names.
 func deduplicateDisplayNames(allPaths []models.PathInfo) map[string]string {
 	if len(allPaths) == 0 {
 		return make(map[string]string)
@@ -404,7 +451,15 @@ func deduplicateDisplayNames(allPaths []models.PathInfo) map[string]string {
 	return result
 }
 
-// resolveConflicts finds the minimum suffix depth needed to make all paths unique
+// resolveConflicts finds the minimum suffix depth needed to make all paths unique.
+//
+// Iterates through increasing suffix depths (1, 2, 3, ...) until all paths have unique
+// display names. For example, with paths /home/user/Dev/app and /home/user/Work/app:
+//   - Depth 1: "app" vs "app" → conflict
+//   - Depth 2: "Dev/app" vs "Work/app" → unique ✓
+//
+// Returns a map of full paths to their unique display names. Caps at maxDepth (10)
+// to prevent infinite loops, though this should never happen in practice.
 func resolveConflicts(paths []models.PathInfo) map[string]string {
 	const maxDepth = 10 // Reasonable limit to prevent infinite loops
 
@@ -446,7 +501,15 @@ func resolveConflicts(paths []models.PathInfo) map[string]string {
 	return result
 }
 
-// getPathSuffix returns the last N components of a path
+// getPathSuffix extracts the last N components of a path for display purposes.
+//
+// Examples:
+//   getPathSuffix("/home/user/Dev/my-project", 1) → "my-project"
+//   getPathSuffix("/home/user/Dev/my-project", 2) → "Dev/my-project"
+//   getPathSuffix("/home/user/Dev/my-project", 5) → "/home/user/Dev/my-project" (entire path)
+//
+// Used by deduplication logic to create progressively longer display names
+// until conflicts are resolved.
 func getPathSuffix(path string, depth int) string {
 	components := strings.Split(filepath.Clean(path), string(filepath.Separator))
 
@@ -466,8 +529,14 @@ func getPathSuffix(path string, depth int) string {
 	return strings.Join(cleanComponents[start:], string(filepath.Separator))
 }
 
-// shouldSkipEntry determines if an entry should be skipped based on current session
-// and existing tmux sessions to avoid duplicates.
+// shouldSkipEntry determines if a directory entry should be excluded from the selector.
+//
+// Skips entries that would cause ambiguity or confusion:
+//   - Matches the current tmux session name (can't switch to yourself)
+//   - Conflicts with an existing tmux session name (without the [TMUX] prefix)
+//
+// This prevents situations where a directory and session have the same name,
+// which would make selection ambiguous.
 func shouldSkipEntry(displayName, currentSession string, existingSessions map[string]bool) bool {
 	return displayName == currentSession || existingSessions[displayName]
 }
@@ -497,6 +566,14 @@ func validateConfig() error {
 	return config.Validate(&cfg)
 }
 
+// applyPrefix adds an alias prefix to a display name if one is configured.
+//
+// Examples:
+//   applyPrefix("dev", "my-project") → "dev/my-project"
+//   applyPrefix("", "my-project")    → "my-project"
+//
+// Prefixes come from the scan_dir alias configuration and help organize
+// the selector display when you have multiple scan directories.
 func applyPrefix(prefix, name string) string {
 	if prefix != "" {
 		return prefix + "/" + name
@@ -504,7 +581,15 @@ func applyPrefix(prefix, name string) string {
 	return name
 }
 
-// normalizeSessionName replaces leading dots with underscores to match tmux's session naming behavior
+// normalizeSessionName converts a directory name into a valid tmux session name.
+//
+// Tmux session names cannot start with dots, so this function replaces leading dots
+// with underscores. For example:
+//   ".config" → "_config"
+//   ".dotfiles" → "_dotfiles"
+//   "regular-name" → "regular-name" (unchanged)
+//
+// This ensures all directory names can be used as session names without errors.
 func normalizeSessionName(name string) string {
 	if strings.HasPrefix(name, ".") {
 		return "_" + name[1:]
