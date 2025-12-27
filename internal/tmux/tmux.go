@@ -29,9 +29,10 @@ func GetTmuxSessionNames() []string {
 		return nil
 	}
 
-	// PERF: Pre-allocate sessions slice with estimated capacity based on typical session count
-	var sessions []string
-	for line := range strings.SplitSeq(strings.TrimSpace(string(output)), "\n") {
+	// PERF: Pre-allocate sessions slice with estimated capacity based on output lines
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	sessions := make([]string, 0, len(lines))
+	for _, line := range lines {
 		if line != "" {
 			sessions = append(sessions, line)
 		}
@@ -165,7 +166,7 @@ func attachToSession(target, fallbackName string) error {
 			return err
 		}
 
-		// If attach failed and server is not running, exit gracefully  
+		// If attach failed and server is not running, exit gracefully
 		if !IsTmuxServerRunning() {
 			os.Exit(0)
 		}
@@ -224,11 +225,12 @@ func CreateSession(session models.Session) error {
 // For the first window it uses new-session, for subsequent windows it uses new-window.
 // If cmd is provided, it wraps it with shell execution to keep the window open.
 func buildWindowArgs(isFirst bool, sessionName, windowName, dir, cmd string) []string {
-	var args []string
+	// PERF: Pre-allocate slice with capacity for base args (7) + optional cmd args (4)
+	args := make([]string, 0, 11)
 	if isFirst {
-		args = []string{"new-session", "-ds", sessionName, "-n", windowName, "-c", dir}
+		args = append(args, "new-session", "-ds", sessionName, "-n", windowName, "-c", dir)
 	} else {
-		args = []string{"new-window", "-t", sessionName, "-n", windowName, "-c", dir}
+		args = append(args, "new-window", "-t", sessionName, "-n", windowName, "-c", dir)
 	}
 
 	if cmd != "" {
@@ -359,9 +361,10 @@ func parseWindows(input string) models.SessionLayout {
 		return models.SessionLayout{}
 	}
 
-	var windows []models.Window
 	lines := strings.Split(input, "\n")
-	
+	// PERF: Pre-allocate windows slice with capacity based on line count
+	windows := make([]models.Window, 0, len(lines))
+
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {

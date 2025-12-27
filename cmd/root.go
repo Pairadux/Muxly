@@ -210,11 +210,11 @@ func initConfig() { // {{{
 	// Bind environment variables for config overrides
 	// Allows MUXLY_* environment variables to override config file values
 	viper.SetEnvPrefix("MUXLY")
-	viper.BindEnv("editor", "MUXLY_EDITOR", "EDITOR")           // Support both MUXLY_EDITOR and standard $EDITOR
-	viper.BindEnv("default_depth")                              // MUXLY_DEFAULT_DEPTH
-	viper.BindEnv("tmux_base")                                  // MUXLY_TMUX_BASE
-	viper.BindEnv("tmux_session_prefix")                        // MUXLY_TMUX_SESSION_PREFIX
-	viper.BindEnv("always_kill_on_last_session")                // MUXLY_ALWAYS_KILL_ON_LAST_SESSION
+	viper.BindEnv("editor", "MUXLY_EDITOR", "EDITOR") // Support both MUXLY_EDITOR and standard $EDITOR
+	viper.BindEnv("default_depth")                    // MUXLY_DEFAULT_DEPTH
+	viper.BindEnv("tmux_base")                        // MUXLY_TMUX_BASE
+	viper.BindEnv("tmux_session_prefix")              // MUXLY_TMUX_SESSION_PREFIX
+	viper.BindEnv("always_kill_on_last_session")      // MUXLY_ALWAYS_KILL_ON_LAST_SESSION
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err != nil {
@@ -254,7 +254,8 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 	ignoreSet := buildIgnoreSet()
 	allPaths := collectAllPaths(flagDepth, ignoreSet, currentSession)
 
-	entries := make(map[string]string)
+	// PERF: Pre-allocate map with capacity based on paths + sessions to reduce rehashing
+	entries := make(map[string]string, len(allPaths)+len(existingSessions))
 	addDirectoryEntries(entries, allPaths, currentSession, existingSessions)
 	addTmuxSessionEntries(entries, existingSessions, currentSession)
 
@@ -262,7 +263,8 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 }
 
 func buildIgnoreSet() models.StringSet {
-	ignoreSet := make(models.StringSet)
+	// PERF: Pre-allocate set with exact capacity to avoid rehashing
+	ignoreSet := make(models.StringSet, len(cfg.IgnoreDirs))
 	for _, dir := range cfg.IgnoreDirs {
 		resolved, err := utility.ResolvePath(dir)
 		if err == nil {
@@ -378,13 +380,15 @@ func deduplicateDisplayNames(allPaths []models.PathInfo) map[string]string {
 	}
 
 	// Group paths by basename
-	groups := make(map[string][]models.PathInfo)
+	// PERF: Pre-allocate map with capacity to reduce rehashing (worst case: all unique basenames)
+	groups := make(map[string][]models.PathInfo, len(allPaths))
 	for _, info := range allPaths {
 		basename := filepath.Base(info.Path)
 		groups[basename] = append(groups[basename], info)
 	}
 
-	result := make(map[string]string)
+	// PERF: Pre-allocate result map with capacity based on total paths
+	result := make(map[string]string, len(allPaths))
 
 	// Process each group
 	for _, group := range groups {
@@ -409,7 +413,8 @@ func resolveConflicts(paths []models.PathInfo) map[string]string {
 	const maxDepth = 10 // Reasonable limit to prevent infinite loops
 
 	for depth := 1; depth <= maxDepth; depth++ {
-		suffixes := make(map[string]models.PathInfo)
+		// PERF: Pre-allocate map with capacity based on paths to reduce rehashing
+		suffixes := make(map[string]models.PathInfo, len(paths))
 		conflicts := false
 
 		for _, info := range paths {
@@ -426,7 +431,8 @@ func resolveConflicts(paths []models.PathInfo) map[string]string {
 
 		if !conflicts {
 			// All unique at this depth
-			result := make(map[string]string)
+			// PERF: Pre-allocate result map with capacity based on suffixes
+			result := make(map[string]string, len(suffixes))
 			for suffix, info := range suffixes {
 				displayName := normalizePathForDisplay(suffix)
 				displayName = applyPrefix(info.Prefix, displayName)
@@ -437,7 +443,8 @@ func resolveConflicts(paths []models.PathInfo) map[string]string {
 	}
 
 	// Fallback: use full path if conflict cant be resolved
-	result := make(map[string]string)
+	// PERF: Pre-allocate result map with capacity based on paths
+	result := make(map[string]string, len(paths))
 	for _, info := range paths {
 		displayName := normalizePathForDisplay(info.Path)
 		displayName = applyPrefix(info.Prefix, displayName)
@@ -451,7 +458,8 @@ func getPathSuffix(path string, depth int) string {
 	components := strings.Split(filepath.Clean(path), string(filepath.Separator))
 
 	// Remove empty components (can happen with leading/trailing separators)
-	var cleanComponents []string
+	// PERF: Pre-allocate slice with capacity based on components
+	cleanComponents := make([]string, 0, len(components))
 	for _, comp := range components {
 		if comp != "" {
 			cleanComponents = append(cleanComponents, comp)

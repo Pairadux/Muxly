@@ -13,7 +13,7 @@ import (
 
 	"github.com/charmbracelet/huh"
 	"github.com/mitchellh/go-homedir"
-)// }}}
+) // }}}
 
 // CreateForm creates and returns an interactive form for session creation.
 //
