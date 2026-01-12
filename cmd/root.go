@@ -89,7 +89,7 @@ var rootCmd = &cobra.Command{
 			choiceStr = args[0]
 		}
 		if choiceStr == "" {
-			// PERF: Pre-allocate slice with exact capacity to avoid reallocations during append
+			// Build list of all entry names for fzf selection
 			names := make([]string, 0, len(entries))
 			for name := range entries {
 				names = append(names, name)
@@ -254,7 +254,7 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 	ignoreSet := buildIgnoreSet()
 	allPaths := collectAllPaths(flagDepth, ignoreSet, currentSession)
 
-	// PERF: Pre-allocate map with capacity based on paths + sessions to reduce rehashing
+	// Pre-allocate map with capacity for all paths and existing sessions
 	entries := make(map[string]string, len(allPaths)+len(existingSessions))
 	addDirectoryEntries(entries, allPaths, currentSession, existingSessions)
 	addTmuxSessionEntries(entries, existingSessions, currentSession)
@@ -263,7 +263,7 @@ func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
 }
 
 func buildIgnoreSet() models.StringSet {
-	// PERF: Pre-allocate set with exact capacity to avoid rehashing
+	// Pre-allocate set with capacity for all ignored directories
 	ignoreSet := make(models.StringSet, len(cfg.IgnoreDirs))
 	for _, dir := range cfg.IgnoreDirs {
 		resolved, err := utility.ResolvePath(dir)
@@ -379,15 +379,14 @@ func deduplicateDisplayNames(allPaths []models.PathInfo) map[string]string {
 		return make(map[string]string)
 	}
 
-	// Group paths by basename
-	// PERF: Pre-allocate map with capacity to reduce rehashing (worst case: all unique basenames)
+	// Group paths by basename (worst case: all unique basenames)
 	groups := make(map[string][]models.PathInfo, len(allPaths))
 	for _, info := range allPaths {
 		basename := filepath.Base(info.Path)
 		groups[basename] = append(groups[basename], info)
 	}
 
-	// PERF: Pre-allocate result map with capacity based on total paths
+	// Build result map with one entry per path
 	result := make(map[string]string, len(allPaths))
 
 	// Process each group
@@ -413,7 +412,7 @@ func resolveConflicts(paths []models.PathInfo) map[string]string {
 	const maxDepth = 10 // Reasonable limit to prevent infinite loops
 
 	for depth := 1; depth <= maxDepth; depth++ {
-		// PERF: Pre-allocate map with capacity based on paths to reduce rehashing
+		// Map each path suffix to its full path info for conflict detection
 		suffixes := make(map[string]models.PathInfo, len(paths))
 		conflicts := false
 
@@ -430,8 +429,7 @@ func resolveConflicts(paths []models.PathInfo) map[string]string {
 		}
 
 		if !conflicts {
-			// All unique at this depth
-			// PERF: Pre-allocate result map with capacity based on suffixes
+			// All unique at this depth - build the result map
 			result := make(map[string]string, len(suffixes))
 			for suffix, info := range suffixes {
 				displayName := normalizePathForDisplay(suffix)
@@ -443,7 +441,6 @@ func resolveConflicts(paths []models.PathInfo) map[string]string {
 	}
 
 	// Fallback: use full path if conflict cant be resolved
-	// PERF: Pre-allocate result map with capacity based on paths
 	result := make(map[string]string, len(paths))
 	for _, info := range paths {
 		displayName := normalizePathForDisplay(info.Path)
@@ -458,7 +455,6 @@ func getPathSuffix(path string, depth int) string {
 	components := strings.Split(filepath.Clean(path), string(filepath.Separator))
 
 	// Remove empty components (can happen with leading/trailing separators)
-	// PERF: Pre-allocate slice with capacity based on components
 	cleanComponents := make([]string, 0, len(components))
 	for _, comp := range components {
 		if comp != "" {

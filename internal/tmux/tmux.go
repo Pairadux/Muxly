@@ -29,7 +29,7 @@ func GetTmuxSessionNames() []string {
 		return nil
 	}
 
-	// PERF: Pre-allocate sessions slice with estimated capacity based on output lines
+	// Parse session names from output, one per line
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
 	sessions := make([]string, 0, len(lines))
 	for _, line := range lines {
@@ -62,7 +62,7 @@ func HasTmuxSession(name string) bool {
 // for efficient membership testing when you need to check many sessions.
 func GetTmuxSessionSet() map[string]bool {
 	names := GetTmuxSessionNames()
-	// PERF: Pre-allocate map with exact capacity to avoid rehashing
+	// Convert session names to a set for efficient membership testing
 	sessions := make(map[string]bool, len(names))
 	for _, name := range names {
 		sessions[name] = true
@@ -225,12 +225,11 @@ func CreateSession(session models.Session) error {
 // For the first window it uses new-session, for subsequent windows it uses new-window.
 // If cmd is provided, it wraps it with shell execution to keep the window open.
 func buildWindowArgs(isFirst bool, sessionName, windowName, dir, cmd string) []string {
-	// PERF: Pre-allocate slice with capacity for base args (7) + optional cmd args (4)
-	args := make([]string, 0, 11)
+	var args []string
 	if isFirst {
-		args = append(args, "new-session", "-ds", sessionName, "-n", windowName, "-c", dir)
+		args = []string{"new-session", "-ds", sessionName, "-n", windowName, "-c", dir}
 	} else {
-		args = append(args, "new-window", "-t", sessionName, "-n", windowName, "-c", dir)
+		args = []string{"new-window", "-t", sessionName, "-n", windowName, "-c", dir}
 	}
 
 	if cmd != "" {
@@ -362,7 +361,7 @@ func parseWindows(input string) models.SessionLayout {
 	}
 
 	lines := strings.Split(input, "\n")
-	// PERF: Pre-allocate windows slice with capacity based on line count
+	// Parse each line into a window (format: "name: command" or just "name")
 	windows := make([]models.Window, 0, len(lines))
 
 	for _, line := range lines {
