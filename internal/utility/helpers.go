@@ -29,7 +29,7 @@ func ResolvePath(p string) (string, error) {
 	p = strings.ReplaceAll(p, "\\ ", " ")
 
 	p = os.ExpandEnv(p)
-	
+
 	if filepath.IsAbs(p) {
 		return p, nil
 	}

@@ -79,22 +79,23 @@ func wouldBeFoundByScanDirs(targetPath string, scanDirs []models.ScanDir) (*mode
 // Uses O(1) path arithmetic instead of O(n) filesystem scanning.
 //
 // Examples:
-//   Given scan_dir: {path: /home/user/Dev, depth: 2}
 //
-//   isWithinDepth(/home/user/Dev/project1, /home/user/Dev, 2)
-//     -> relative path: "project1" (depth 1) -> true
+//	Given scan_dir: {path: /home/user/Dev, depth: 2}
 //
-//   isWithinDepth(/home/user/Dev/project1/src, /home/user/Dev, 2)
-//     -> relative path: "project1/src" (depth 2) -> true
+//	isWithinDepth(/home/user/Dev/project1, /home/user/Dev, 2)
+//	  -> relative path: "project1" (depth 1) -> true
 //
-//   isWithinDepth(/home/user/Dev/project1/src/main, /home/user/Dev, 2)
-//     -> relative path: "project1/src/main" (depth 3) -> false
+//	isWithinDepth(/home/user/Dev/project1/src, /home/user/Dev, 2)
+//	  -> relative path: "project1/src" (depth 2) -> true
 //
-//   isWithinDepth(/home/user/Dev, /home/user/Dev, 2)
-//     -> relative path: "." (scan dir itself) -> false
+//	isWithinDepth(/home/user/Dev/project1/src/main, /home/user/Dev, 2)
+//	  -> relative path: "project1/src/main" (depth 3) -> false
 //
-//   isWithinDepth(/different/path, /home/user/Dev, 2)
-//     -> not under scan path -> false
+//	isWithinDepth(/home/user/Dev, /home/user/Dev, 2)
+//	  -> relative path: "." (scan dir itself) -> false
+//
+//	isWithinDepth(/different/path, /home/user/Dev, 2)
+//	  -> not under scan path -> false
 func isWithinDepth(targetPath, scanPath string, depth int) bool {
 	relPath, err := filepath.Rel(scanPath, targetPath)
 	if err != nil || strings.HasPrefix(relPath, "..") {
