@@ -127,7 +127,7 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("the name must match an existing directory entry: %s", choiceStr)
 		}
 
-		sessionLayout := retrieveSessionLayout(selectedPath)
+		sessionLayout := loadMuxlyFile(selectedPath)
 		if len(sessionLayout.Windows) == 0 {
 			sessionLayout = cfg.SessionLayout
 		}
@@ -146,7 +146,14 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-func retrieveSessionLayout(path string) models.SessionLayout {
+// loadMuxlyFile attempts to load a .muxly file from the given directory.
+//
+// Returns the parsed SessionLayout if the file exists and is valid YAML,
+// or an empty SessionLayout otherwise. This provides project-specific
+// session configuration that overrides the global session_layout from config.
+//
+// Errors are silently ignored since .muxly files are optional overrides.
+func loadMuxlyFile(path string) models.SessionLayout {
 	layoutPath := filepath.Join(path, ".muxly")
 
 	data, err := os.ReadFile(layoutPath)
