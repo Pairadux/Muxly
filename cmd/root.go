@@ -214,11 +214,11 @@ func initConfig() { // {{{
 	// Bind environment variables for config overrides
 	// Allows MUXLY_* environment variables to override config file values
 	viper.SetEnvPrefix("MUXLY")
-	viper.BindEnv("editor", "MUXLY_EDITOR", "EDITOR")           // Support both MUXLY_EDITOR and standard $EDITOR
-	viper.BindEnv("default_depth")                              // MUXLY_DEFAULT_DEPTH
-	viper.BindEnv("tmux_base")                                  // MUXLY_TMUX_BASE
-	viper.BindEnv("tmux_session_prefix")                        // MUXLY_TMUX_SESSION_PREFIX
-	viper.BindEnv("always_kill_on_last_session")                // MUXLY_ALWAYS_KILL_ON_LAST_SESSION
+	viper.BindEnv("editor", "MUXLY_EDITOR", "EDITOR") // Support both MUXLY_EDITOR and standard $EDITOR
+	viper.BindEnv("default_depth")                    // MUXLY_DEFAULT_DEPTH
+	viper.BindEnv("tmux_base")                        // MUXLY_TMUX_BASE
+	viper.BindEnv("tmux_session_prefix")              // MUXLY_TMUX_SESSION_PREFIX
+	viper.BindEnv("always_kill_on_last_session")      // MUXLY_ALWAYS_KILL_ON_LAST_SESSION
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err != nil {
@@ -508,9 +508,10 @@ func resolveConflicts(paths []models.PathInfo) map[string]string {
 // getPathSuffix extracts the last N components of a path for display purposes.
 //
 // Examples:
-//   getPathSuffix("/home/user/Dev/my-project", 1) → "my-project"
-//   getPathSuffix("/home/user/Dev/my-project", 2) → "Dev/my-project"
-//   getPathSuffix("/home/user/Dev/my-project", 5) → "/home/user/Dev/my-project" (entire path)
+//
+//	getPathSuffix("/home/user/Dev/my-project", 1) → "my-project"
+//	getPathSuffix("/home/user/Dev/my-project", 2) → "Dev/my-project"
+//	getPathSuffix("/home/user/Dev/my-project", 5) → "/home/user/Dev/my-project" (entire path)
 //
 // Used by deduplication logic to create progressively longer display names
 // until conflicts are resolved.
@@ -573,8 +574,9 @@ func validateConfig() error {
 // applyPrefix adds an alias prefix to a display name if one is configured.
 //
 // Examples:
-//   applyPrefix("dev", "my-project") → "dev/my-project"
-//   applyPrefix("", "my-project")    → "my-project"
+//
+//	applyPrefix("dev", "my-project") → "dev/my-project"
+//	applyPrefix("", "my-project")    → "my-project"
 //
 // Prefixes come from the scan_dir alias configuration and help organize
 // the selector display when you have multiple scan directories.
@@ -589,9 +591,10 @@ func applyPrefix(prefix, name string) string {
 //
 // Tmux session names cannot start with dots, so this function replaces leading dots
 // with underscores. For example:
-//   ".config" → "_config"
-//   ".dotfiles" → "_dotfiles"
-//   "regular-name" → "regular-name" (unchanged)
+//
+//	".config" → "_config"
+//	".dotfiles" → "_dotfiles"
+//	"regular-name" → "regular-name" (unchanged)
 //
 // This ensures all directory names can be used as session names without errors.
 func normalizeSessionName(name string) string {
