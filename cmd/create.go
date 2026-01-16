@@ -1,6 +1,3 @@
-// SPDX-License-Identifier: MIT
-// © 2025 Austin Gause <a.gause@outlook.com>
-
 package cmd
 
 // IMPORTS {{{
@@ -48,4 +45,3 @@ An interactive prompt for creating a session.`,
 func init() {
 	rootCmd.AddCommand(createCmd)
 }
-

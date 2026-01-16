@@ -1,6 +1,3 @@
-// SPDX-License-Identifier: MIT
-// © 2025 Austin Gause <a.gause@outlook.com>
-
 package forms
 
 // IMPORTS {{{
@@ -13,7 +10,7 @@ import (
 
 	"github.com/charmbracelet/huh"
 	"github.com/mitchellh/go-homedir"
-)// }}}
+) // }}}
 
 // CreateForm creates and returns an interactive form for session creation.
 //

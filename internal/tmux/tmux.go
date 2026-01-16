@@ -1,6 +1,3 @@
-// SPDX-License-Identifier: MIT
-// © 2025 Austin Gause <a.gause@outlook.com>
-
 package tmux
 
 // IMPORTS {{{
@@ -165,7 +162,7 @@ func attachToSession(target, fallbackName string) error {
 			return err
 		}
 
-		// If attach failed and server is not running, exit gracefully  
+		// If attach failed and server is not running, exit gracefully
 		if !IsTmuxServerRunning() {
 			os.Exit(0)
 		}
@@ -361,7 +358,7 @@ func parseWindows(input string) models.SessionLayout {
 
 	var windows []models.Window
 	lines := strings.Split(input, "\n")
-	
+
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {

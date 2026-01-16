@@ -1,6 +1,3 @@
-// SPDX-License-Identifier: MIT
-// © 2025 Austin Gause <a.gause@outlook.com>
-
 package cmd
 
 import "github.com/spf13/cobra"
