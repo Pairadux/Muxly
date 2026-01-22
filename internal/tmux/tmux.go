@@ -26,9 +26,10 @@ func GetTmuxSessionNames() []string {
 		return nil
 	}
 
-	// PERF: Pre-allocate sessions slice with estimated capacity based on typical session count
-	var sessions []string
-	for line := range strings.SplitSeq(strings.TrimSpace(string(output)), "\n") {
+	// Parse session names from output, one per line
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	sessions := make([]string, 0, len(lines))
+	for _, line := range lines {
 		if line != "" {
 			sessions = append(sessions, line)
 		}
@@ -58,7 +59,7 @@ func HasTmuxSession(name string) bool {
 // for efficient membership testing when you need to check many sessions.
 func GetTmuxSessionSet() map[string]bool {
 	names := GetTmuxSessionNames()
-	// PERF: Pre-allocate map with exact capacity to avoid rehashing
+	// Convert session names to a set for efficient membership testing
 	sessions := make(map[string]bool, len(names))
 	for _, name := range names {
 		sessions[name] = true
@@ -356,7 +357,6 @@ func parseWindows(input string) models.SessionLayout {
 		return models.SessionLayout{}
 	}
 
-	var windows []models.Window
 	lines := strings.Split(input, "\n")
 
 	for _, line := range lines {
