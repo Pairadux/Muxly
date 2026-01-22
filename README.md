@@ -43,6 +43,7 @@ Muxly is a highly configurable Tmux Session Manager based on ThePrimeagen's tmux
 - `muxly remove` - Remove directories from configuration
 - `muxly config init` - Create initial configuration file
 - `muxly config edit` - Edit configuration file
+- `muxly completion <shell>` - Generate shell completion scripts (hidden command)
 
 ## Installation
 
@@ -102,6 +103,58 @@ That's it! Muxly will show you your home directory by default. Use the arrow key
 - Add your project directories with `muxly add scan ~/Dev` or edit the config manually
 - Customize your `session_layout` with windows and commands you use frequently
 - Try `muxly create` for an interactive TUI to create sessions on the fly
+
+## Shell Completion
+
+Muxly supports shell completion for command and flag suggestions. To enable it, run the appropriate command for your shell:
+
+<details>
+<summary><b>Bash</b></summary>
+
+```bash
+# Add to ~/.bashrc
+echo 'eval "$(muxly completion bash)"' >> ~/.bashrc
+
+# Or generate a completion file
+muxly completion bash > /etc/bash_completion.d/muxly
+```
+
+</details>
+
+<details>
+<summary><b>Zsh</b></summary>
+
+```bash
+# Add to ~/.zshrc (make sure compinit is loaded)
+echo 'eval "$(muxly completion zsh)"' >> ~/.zshrc
+
+# Or add to your fpath
+muxly completion zsh > "${fpath[1]}/_muxly"
+```
+
+</details>
+
+<details>
+<summary><b>Fish</b></summary>
+
+```bash
+# Add to fish completions directory
+muxly completion fish > ~/.config/fish/completions/muxly.fish
+```
+
+</details>
+
+<details>
+<summary><b>PowerShell</b></summary>
+
+```powershell
+# Add to your PowerShell profile
+muxly completion powershell >> $PROFILE
+```
+
+</details>
+
+After adding the completion script, restart your shell or source your config file.
 
 ## Configuration
 
