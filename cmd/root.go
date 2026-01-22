@@ -143,29 +143,6 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-// loadMuxlyFile attempts to load a .muxly file from the given directory.
-//
-// Returns the parsed SessionLayout if the file exists and is valid YAML,
-// or an empty SessionLayout otherwise. This provides project-specific
-// session configuration that overrides the global session_layout from config.
-//
-// Errors are silently ignored since .muxly files are optional overrides.
-func loadMuxlyFile(path string) models.SessionLayout {
-	layoutPath := filepath.Join(path, ".muxly")
-
-	data, err := os.ReadFile(layoutPath)
-	if err != nil {
-		return models.SessionLayout{}
-	}
-
-	var layout models.SessionLayout
-	if err := yaml.Unmarshal(data, &layout); err != nil {
-		return models.SessionLayout{}
-	}
-
-	return layout
-}
-
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() { // {{{
@@ -241,6 +218,29 @@ func initConfig() { // {{{
 		cfgFilePath = viper.ConfigFileUsed()
 	}
 } // }}}
+
+// loadMuxlyFile attempts to load a .muxly file from the given directory.
+//
+// Returns the parsed SessionLayout if the file exists and is valid YAML,
+// or an empty SessionLayout otherwise. This provides project-specific
+// session configuration that overrides the global session_layout from config.
+//
+// Errors are silently ignored since .muxly files are optional overrides.
+func loadMuxlyFile(path string) models.SessionLayout {
+	layoutPath := filepath.Join(path, ".muxly")
+
+	data, err := os.ReadFile(layoutPath)
+	if err != nil {
+		return models.SessionLayout{}
+	}
+
+	var layout models.SessionLayout
+	if err := yaml.Unmarshal(data, &layout); err != nil {
+		return models.SessionLayout{}
+	}
+
+	return layout
+}
 
 // buildDirectoryEntries creates a map of display names to directory paths by
 // processing scan_dirs and entry_dirs from the configuration. It handles
