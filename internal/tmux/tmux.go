@@ -358,6 +358,7 @@ func parseWindows(input string) models.SessionLayout {
 	}
 
 	lines := strings.Split(input, "\n")
+	windows := make([]models.Window, 0, len(lines))
 
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
