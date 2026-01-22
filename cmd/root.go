@@ -1,6 +1,3 @@
-// SPDX-License-Identifier: MIT
-// © 2025 Austin Gause <a.gause@outlook.com>
-
 package cmd
 
 // IMPORTS {{{
@@ -39,6 +36,9 @@ var rootCmd = &cobra.Command{
 	Short:   "A tool for quickly opening tmux sessions",
 	Long:    "A tool for quickly opening tmux sessions\n\nBased on ThePrimeagen's tmux-sessionizer script.",
 	Args:    cobra.MaximumNArgs(1),
+	CompletionOptions: cobra.CompletionOptions{
+		HiddenDefaultCmd: true,
+	},
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error { // {{{
 		if isConfigCommand(cmd) {
 			return nil
@@ -146,29 +146,6 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-// loadMuxlyFile attempts to load a .muxly file from the given directory.
-//
-// Returns the parsed SessionLayout if the file exists and is valid YAML,
-// or an empty SessionLayout otherwise. This provides project-specific
-// session configuration that overrides the global session_layout from config.
-//
-// Errors are silently ignored since .muxly files are optional overrides.
-func loadMuxlyFile(path string) models.SessionLayout {
-	layoutPath := filepath.Join(path, ".muxly")
-
-	data, err := os.ReadFile(layoutPath)
-	if err != nil {
-		return models.SessionLayout{}
-	}
-
-	var layout models.SessionLayout
-	if err := yaml.Unmarshal(data, &layout); err != nil {
-		return models.SessionLayout{}
-	}
-
-	return layout
-}
-
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() { // {{{
@@ -244,6 +221,29 @@ func initConfig() { // {{{
 		cfgFilePath = viper.ConfigFileUsed()
 	}
 } // }}}
+
+// loadMuxlyFile attempts to load a .muxly file from the given directory.
+//
+// Returns the parsed SessionLayout if the file exists and is valid YAML,
+// or an empty SessionLayout otherwise. This provides project-specific
+// session configuration that overrides the global session_layout from config.
+//
+// Errors are silently ignored since .muxly files are optional overrides.
+func loadMuxlyFile(path string) models.SessionLayout {
+	layoutPath := filepath.Join(path, ".muxly")
+
+	data, err := os.ReadFile(layoutPath)
+	if err != nil {
+		return models.SessionLayout{}
+	}
+
+	var layout models.SessionLayout
+	if err := yaml.Unmarshal(data, &layout); err != nil {
+		return models.SessionLayout{}
+	}
+
+	return layout
+}
 
 // buildDirectoryEntries creates a map of display names to directory paths by
 // processing scan_dirs and entry_dirs from the configuration. It handles
@@ -515,9 +515,10 @@ func resolveConflicts(paths []models.PathInfo) map[string]string {
 // getPathSuffix extracts the last N components of a path for display purposes.
 //
 // Examples:
-//   getPathSuffix("/home/user/Dev/my-project", 1) → "my-project"
-//   getPathSuffix("/home/user/Dev/my-project", 2) → "Dev/my-project"
-//   getPathSuffix("/home/user/Dev/my-project", 5) → "/home/user/Dev/my-project" (entire path)
+//
+//	getPathSuffix("/home/user/Dev/my-project", 1) → "my-project"
+//	getPathSuffix("/home/user/Dev/my-project", 2) → "Dev/my-project"
+//	getPathSuffix("/home/user/Dev/my-project", 5) → "/home/user/Dev/my-project" (entire path)
 //
 // Used by deduplication logic to create progressively longer display names
 // until conflicts are resolved.
@@ -580,8 +581,9 @@ func validateConfig() error {
 // applyPrefix adds an alias prefix to a display name if one is configured.
 //
 // Examples:
-//   applyPrefix("dev", "my-project") → "dev/my-project"
-//   applyPrefix("", "my-project")    → "my-project"
+//
+//	applyPrefix("dev", "my-project") → "dev/my-project"
+//	applyPrefix("", "my-project")    → "my-project"
 //
 // Prefixes come from the scan_dir alias configuration and help organize
 // the selector display when you have multiple scan directories.
@@ -596,9 +598,10 @@ func applyPrefix(prefix, name string) string {
 //
 // Tmux session names cannot start with dots, so this function replaces leading dots
 // with underscores. For example:
-//   ".config" → "_config"
-//   ".dotfiles" → "_dotfiles"
-//   "regular-name" → "regular-name" (unchanged)
+//
+//	".config" → "_config"
+//	".dotfiles" → "_dotfiles"
+//	"regular-name" → "regular-name" (unchanged)
 //
 // This ensures all directory names can be used as session names without errors.
 func normalizeSessionName(name string) string {

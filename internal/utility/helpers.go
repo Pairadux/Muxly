@@ -1,6 +1,3 @@
-// SPDX-License-Identifier: MIT
-// © 2025 Austin Gause <a.gause@outlook.com>
-
 package utility
 
 // IMPORTS {{{
@@ -50,8 +47,9 @@ func ResolvePath(p string) (string, error) {
 // GetSubDirs returns all subdirectories within root, up to maxDepth levels deep.
 //
 // Depth examples (assuming root = "/home/user/Dev"):
-//   maxDepth = 1: /home/user/Dev/project1, /home/user/Dev/project2
-//   maxDepth = 2: above + /home/user/Dev/project1/src, /home/user/Dev/project2/src
+//
+//	maxDepth = 1: /home/user/Dev/project1, /home/user/Dev/project2
+//	maxDepth = 2: above + /home/user/Dev/project1/src, /home/user/Dev/project2/src
 //
 // Uses fastwalk for efficient concurrent traversal. The root directory itself is
 // always excluded from results. Individual path errors are logged to stderr but
