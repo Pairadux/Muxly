@@ -36,6 +36,9 @@ var rootCmd = &cobra.Command{
 	Short:   "A tool for quickly opening tmux sessions",
 	Long:    "A tool for quickly opening tmux sessions\n\nBased on ThePrimeagen's tmux-sessionizer script.",
 	Args:    cobra.MaximumNArgs(1),
+	CompletionOptions: cobra.CompletionOptions{
+		HiddenDefaultCmd: true,
+	},
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error { // {{{
 		if isConfigCommand(cmd) {
 			return nil
