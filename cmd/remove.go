@@ -35,7 +35,16 @@ func init() {
 	rootCmd.AddCommand(removeCmd)
 }
 
-// handleMuxlyFile handles the .muxly file deletion logic for entry directories
+// handleMuxlyFile manages .muxly file deletion when removing an entry directory.
+//
+// Behavior depends on flags and environment:
+//   - --keep flag: Keeps .muxly file
+//   - --delete flag: Deletes .muxly file
+//   - No flags + interactive (TTY): Prompts user with a confirmation form
+//   - No flags + non-interactive: Returns error requiring explicit flag choice
+//
+// This prevents accidental .muxly deletion in scripts while providing a smooth
+// interactive experience. Returns error if --keep and --delete are both specified.
 func handleMuxlyFile(cmd *cobra.Command, resolvedPath string) error {
 	muxlyFile := filepath.Join(resolvedPath, ".muxly")
 	if _, err := os.Stat(muxlyFile); err != nil {
