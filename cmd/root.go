@@ -211,8 +211,8 @@ func initConfig() { // {{{
 	}
 
 	if err := viper.Unmarshal(&cfg); err != nil {
-		// FIXME: try unmarshalling 1 key at a time
-		fmt.Fprintf(os.Stderr, "Issue unmarshalling config file: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Failed to parse config file: %v\n", err)
+		os.Exit(1)
 	}
 
 	// Sync cfgFilePath with the actual config file that was loaded
