@@ -131,7 +131,7 @@ func CreateAndSwitchSession(cfg *models.Config, session models.Session) error {
 // getSessionTarget returns the target string for tmux commands,
 // incorporating the tmux_base configuration for window targeting.
 func getSessionTarget(cfg *models.Config, name string) string {
-	tmuxBase := cfg.TmuxBase
+	tmuxBase := cfg.Settings.TmuxBase
 	if tmuxBase >= 0 {
 		return fmt.Sprintf("%s:%d", name, tmuxBase)
 	}
