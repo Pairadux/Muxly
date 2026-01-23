@@ -2,6 +2,7 @@ package cmd
 
 // IMPORTS {{{
 import (
+	"errors"
 	"fmt"
 
 	"github.com/Pairadux/muxly/internal/forms"
@@ -70,6 +71,9 @@ If there are no other sessions however, the default sessions configured in the c
 
 				if createFallback {
 					if err := tmux.CreateAndSwitchToFallbackSession(&cfg); err != nil {
+						if errors.Is(err, tmux.ErrGracefulExit) {
+							return nil
+						}
 						return fmt.Errorf("Failed to create default session: %w", err)
 					}
 					if err := tmux.KillSession(currentSession); err != nil {
@@ -100,6 +104,9 @@ If there are no other sessions however, the default sessions configured in the c
 		}
 		sessionName := choiceStr
 		if err := tmux.SwitchToExistingSession(&cfg, sessionName); err != nil {
+			if errors.Is(err, tmux.ErrGracefulExit) {
+				return nil
+			}
 			return fmt.Errorf("Failed to switch session: %w", err)
 		}
 
