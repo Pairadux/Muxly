@@ -49,23 +49,25 @@ var (
 // NewDefaultConfig returns a new Config struct with all default values
 func NewDefaultConfig() models.Config {
 	return models.Config{
-		ScanDirs:                DefaultScanDirs,
-		EntryDirs:               DefaultEntryDirs,
-		IgnoreDirs:              DefaultIgnoreDirs,
-		FallbackSession:         DefaultFallbackSession,
-		TmuxBase:                DefaultTmuxBase,
-		DefaultDepth:            DefaultScanDepth,
-		SessionLayout:           DefaultSessionLayout,
-		Editor:                  DefaultEditor,
-		TmuxSessionPrefix:       DefaultTmuxSessionPrefix,
-		AlwaysKillOnLastSession: DefaultAlwaysKillOnLastSession,
+		ScanDirs:        DefaultScanDirs,
+		EntryDirs:       DefaultEntryDirs,
+		IgnoreDirs:      DefaultIgnoreDirs,
+		FallbackSession: DefaultFallbackSession,
+		SessionLayout:   DefaultSessionLayout,
+		Settings: models.Settings{
+			Editor:                  DefaultEditor,
+			TmuxBase:                DefaultTmuxBase,
+			DefaultDepth:            DefaultScanDepth,
+			TmuxSessionPrefix:       DefaultTmuxSessionPrefix,
+			AlwaysKillOnLastSession: DefaultAlwaysKillOnLastSession,
+		},
 	}
 }
 
 // ApplyDefaults fills in any missing values in the provided config with defaults
 func ApplyDefaults(cfg *models.Config) {
-	if cfg.Editor == "" {
-		cfg.Editor = DefaultEditor
+	if cfg.Settings.Editor == "" {
+		cfg.Settings.Editor = DefaultEditor
 	}
 	if cfg.FallbackSession.Name == "" {
 		cfg.FallbackSession.Name = DefaultFallbackSessionName
@@ -76,13 +78,13 @@ func ApplyDefaults(cfg *models.Config) {
 	if len(cfg.FallbackSession.Layout.Windows) == 0 {
 		cfg.FallbackSession.Layout = cfg.SessionLayout
 	}
-	if cfg.TmuxSessionPrefix == "" {
-		cfg.TmuxSessionPrefix = DefaultTmuxSessionPrefix
+	if cfg.Settings.TmuxSessionPrefix == "" {
+		cfg.Settings.TmuxSessionPrefix = DefaultTmuxSessionPrefix
 	}
-	if cfg.TmuxBase == 0 {
-		cfg.TmuxBase = DefaultTmuxBase
+	if cfg.Settings.TmuxBase == 0 {
+		cfg.Settings.TmuxBase = DefaultTmuxBase
 	}
-	if cfg.DefaultDepth == 0 {
-		cfg.DefaultDepth = DefaultScanDepth
+	if cfg.Settings.DefaultDepth == 0 {
+		cfg.Settings.DefaultDepth = DefaultScanDepth
 	}
 }
