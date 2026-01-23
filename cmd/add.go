@@ -62,7 +62,7 @@ func wouldBeFoundByScanDirs(targetPath string, scanDirs []models.ScanDir) (*mode
 			continue
 		}
 
-		depth := scanDir.GetDepth(0, cfg.DefaultDepth)
+		depth := scanDir.GetDepth(0, cfg.Settings.DefaultDepth)
 
 		if isWithinDepth(targetPath, resolvedScanPath, depth) {
 			return &scanDir, depth, true

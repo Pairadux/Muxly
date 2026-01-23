@@ -47,13 +47,13 @@ func init() {
 }
 
 func pickEditor(args []string) string {
-	// Precedence: CLI arg > cfg.Editor (from MUXLY_EDITOR/EDITOR env or config file) > default
+	// Precedence: CLI arg > cfg.Settings.Editor (from MUXLY_EDITOR/EDITOR env or config file) > default
 	if len(args) > 0 {
 		return args[0]
 	}
 
-	if cfg.Editor != "" {
-		return cfg.Editor
+	if cfg.Settings.Editor != "" {
+		return cfg.Settings.Editor
 	}
 
 	return config.DefaultEditor

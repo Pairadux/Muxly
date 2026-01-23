@@ -74,8 +74,8 @@ var rootCmd = &cobra.Command{
 			fmt.Printf("entry_dirs: %v\n", cfg.EntryDirs)
 			fmt.Printf("ignore_dirs: %v\n", cfg.IgnoreDirs)
 			fmt.Printf("fallback_session: %v\n", cfg.FallbackSession)
-			fmt.Printf("tmux_base: %v\n", cfg.TmuxBase)
-			fmt.Printf("default_depth: %v\n", cfg.DefaultDepth)
+			fmt.Printf("tmux_base: %v\n", cfg.Settings.TmuxBase)
+			fmt.Printf("default_depth: %v\n", cfg.Settings.DefaultDepth)
 			fmt.Printf("session_layout: %v\n", cfg.SessionLayout)
 		}
 
@@ -97,8 +97,8 @@ var rootCmd = &cobra.Command{
 			}
 
 			slices.SortFunc(names, func(a, b string) int {
-				isTmuxA := strings.HasPrefix(a, cfg.TmuxSessionPrefix)
-				isTmuxB := strings.HasPrefix(b, cfg.TmuxSessionPrefix)
+				isTmuxA := strings.HasPrefix(a, cfg.Settings.TmuxSessionPrefix)
+				isTmuxB := strings.HasPrefix(b, cfg.Settings.TmuxSessionPrefix)
 				if isTmuxA && !isTmuxB {
 					return -1
 				}
@@ -121,7 +121,7 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
-		sessionName, _ := strings.CutPrefix(choiceStr, cfg.TmuxSessionPrefix)
+		sessionName, _ := strings.CutPrefix(choiceStr, cfg.Settings.TmuxSessionPrefix)
 
 		selectedPath, exists := entries[choiceStr]
 		if !exists && len(args) == 0 {
@@ -198,11 +198,11 @@ func initConfig() { // {{{
 	// Bind environment variables for config overrides
 	// Allows MUXLY_* environment variables to override config file values
 	viper.SetEnvPrefix("MUXLY")
-	viper.BindEnv("editor", "MUXLY_EDITOR", "EDITOR") // Support both MUXLY_EDITOR and standard $EDITOR
-	viper.BindEnv("default_depth")                    // MUXLY_DEFAULT_DEPTH
-	viper.BindEnv("tmux_base")                        // MUXLY_TMUX_BASE
-	viper.BindEnv("tmux_session_prefix")              // MUXLY_TMUX_SESSION_PREFIX
-	viper.BindEnv("always_kill_on_last_session")      // MUXLY_ALWAYS_KILL_ON_LAST_SESSION
+	viper.BindEnv("settings.editor", "MUXLY_EDITOR", "EDITOR") // Support both MUXLY_EDITOR and standard $EDITOR
+	viper.BindEnv("settings.default_depth")                    // MUXLY_DEFAULT_DEPTH
+	viper.BindEnv("settings.tmux_base")                        // MUXLY_TMUX_BASE
+	viper.BindEnv("settings.tmux_session_prefix")              // MUXLY_TMUX_SESSION_PREFIX
+	viper.BindEnv("settings.always_kill_on_last_session")      // MUXLY_ALWAYS_KILL_ON_LAST_SESSION
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err != nil {
@@ -364,7 +364,7 @@ func addDirectoryEntries(entries map[string]string, allPaths []models.PathInfo, 
 
 // addTmuxSessionEntries adds existing tmux sessions to the entries map.
 //
-// Sessions are prefixed with cfg.TmuxSessionPrefix (default: "[TMUX] ") to distinguish
+// Sessions are prefixed with cfg.Settings.TmuxSessionPrefix (default: "[TMUX] ") to distinguish
 // them from directory entries in the selector. The current session is excluded since
 // you can't switch to the session you're already in.
 //
@@ -376,7 +376,7 @@ func addTmuxSessionEntries(entries map[string]string, existingSessions map[strin
 			continue
 		}
 
-		displayName := cfg.TmuxSessionPrefix + sessionName
+		displayName := cfg.Settings.TmuxSessionPrefix + sessionName
 		entries[displayName] = sessionName
 	}
 }
@@ -386,13 +386,13 @@ func addTmuxSessionEntries(entries map[string]string, existingSessions map[strin
 // Depth priority (highest to lowest):
 //  1. CLI flag (--depth)
 //  2. Per-directory depth (scanDir.Depth)
-//  3. Global default (cfg.DefaultDepth)
+//  3. Global default (cfg.Settings.DefaultDepth)
 //
 // This is handled by the ScanDir.GetDepth method. The function resolves the path,
 // scans for subdirectories up to the effective depth, and calls addEntry for each.
 // Errors are logged if verbose mode is enabled but don't stop execution.
 func processScanDir(scanDir models.ScanDir, flagDepth int, prefix string, addEntry func(string, string) error) error {
-	defaultDepth := cfg.DefaultDepth
+	defaultDepth := cfg.Settings.DefaultDepth
 	effectiveDepth := scanDir.GetDepth(flagDepth, defaultDepth)
 
 	// get absolute path
@@ -631,7 +631,7 @@ func normalizePathForDisplay(path string) string {
 }
 
 func warnOnConfigIssues() {
-	if cfg.Editor == "" {
+	if cfg.Settings.Editor == "" {
 		fmt.Fprintf(os.Stderr, "Warning: editor not set, defaulting to '%s'\n", config.DefaultEditor)
 	}
 

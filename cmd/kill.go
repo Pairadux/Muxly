@@ -54,7 +54,7 @@ If there are no other sessions however, the default sessions configured in the c
 			// might even just make this the default behavior...
 			if len(sessions) == 0 {
 				// If configured to always kill on last session, skip the prompt
-				if cfg.AlwaysKillOnLastSession {
+				if cfg.Settings.AlwaysKillOnLastSession {
 					if err := tmux.KillServer(); err != nil {
 						return fmt.Errorf("failed to kill tmux server: %w", err)
 					}
