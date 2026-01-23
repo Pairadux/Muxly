@@ -4,23 +4,22 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"maps"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
 
+	"github.com/Pairadux/muxly/internal/checks"
 	"github.com/Pairadux/muxly/internal/config"
 	"github.com/Pairadux/muxly/internal/constants"
 	"github.com/Pairadux/muxly/internal/fzf"
 	"github.com/Pairadux/muxly/internal/models"
+	"github.com/Pairadux/muxly/internal/selector"
+	"github.com/Pairadux/muxly/internal/session"
 	"github.com/Pairadux/muxly/internal/tmux"
-	"github.com/Pairadux/muxly/internal/utility"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"gopkg.in/yaml.v3"
 ) // }}}
 
 var (
@@ -45,7 +44,7 @@ var rootCmd = &cobra.Command{
 			return nil
 		}
 
-		if err := verifyExternalUtils(); err != nil {
+		if err := checks.VerifyExternalUtils(); err != nil {
 			return err
 		}
 		if err := validateConfig(); err != nil {
@@ -80,7 +79,8 @@ var rootCmd = &cobra.Command{
 		}
 
 		flagDepth, _ := cmd.Flags().GetInt("depth")
-		entries, err := buildDirectoryEntries(flagDepth)
+		builder := selector.NewBuilder(&cfg, verbose)
+		entries, err := builder.BuildEntries(flagDepth)
 		if err != nil {
 			return fmt.Errorf("failed to build directory entries: %w", err)
 		}
@@ -128,7 +128,7 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("the name must match an existing directory entry: %s", choiceStr)
 		}
 
-		sessionLayout := loadMuxlyFile(selectedPath)
+		sessionLayout := session.LoadMuxlyFile(selectedPath)
 		if len(sessionLayout.Windows) == 0 {
 			sessionLayout = cfg.SessionLayout
 		}
@@ -226,336 +226,6 @@ func initConfig() { // {{{
 	}
 } // }}}
 
-// loadMuxlyFile attempts to load a .muxly file from the given directory.
-//
-// Returns the parsed SessionLayout if the file exists and is valid YAML,
-// or an empty SessionLayout otherwise. This provides project-specific
-// session configuration that overrides the global session_layout from config.
-//
-// Errors are silently ignored since .muxly files are optional overrides.
-func loadMuxlyFile(path string) models.SessionLayout {
-	layoutPath := filepath.Join(path, ".muxly")
-
-	data, err := os.ReadFile(layoutPath)
-	if err != nil {
-		return models.SessionLayout{}
-	}
-
-	var layout models.SessionLayout
-	if err := yaml.Unmarshal(data, &layout); err != nil {
-		return models.SessionLayout{}
-	}
-
-	return layout
-}
-
-// buildDirectoryEntries creates a map of display names to directory paths by
-// processing scan_dirs and entry_dirs from the configuration. It handles
-// directory scanning at specified depths, filters out ignored directories,
-// excludes the current tmux session, and marks existing tmux sessions with
-// a "[TMUX]" prefix.
-//
-// The flagDepth parameter can override the scanning depth for scan_dirs.
-// Returns a map where keys are display names and values are resolved paths
-// or session names for existing tmux sessions.
-func buildDirectoryEntries(flagDepth int) (map[string]string, error) {
-	existingSessions := tmux.GetTmuxSessionSet()
-	currentSession := tmux.GetCurrentTmuxSession()
-
-	ignoreSet := buildIgnoreSet()
-	allPaths := collectAllPaths(flagDepth, ignoreSet, currentSession)
-
-	// Pre-allocate map with capacity for all paths and existing sessions
-	entries := make(map[string]string, len(allPaths)+len(existingSessions))
-	addDirectoryEntries(entries, allPaths, currentSession, existingSessions)
-	addTmuxSessionEntries(entries, existingSessions, currentSession)
-
-	return entries, nil
-}
-
-// buildIgnoreSet creates a set of resolved paths from cfg.IgnoreDirs for O(1) lookup.
-//
-// Using a set (map[string]struct{}) instead of a slice allows constant-time checks
-// to see if a directory should be ignored, rather than linear-time iteration.
-// Paths that fail to resolve are silently skipped.
-func buildIgnoreSet() models.StringSet {
-	// Pre-allocate set with capacity for all ignored directories
-	ignoreSet := make(models.StringSet, len(cfg.IgnoreDirs))
-	for _, dir := range cfg.IgnoreDirs {
-		resolved, err := utility.ResolvePath(dir)
-		if err == nil {
-			ignoreSet[resolved] = struct{}{}
-		}
-	}
-	return ignoreSet
-}
-
-// collectAllPaths gathers all directory paths from scan_dirs and entry_dirs.
-//
-// For scan_dirs: Recursively scans each directory up to the configured depth,
-// respecting the flagDepth override if provided (CLI --depth flag).
-//
-// For entry_dirs: Adds directories directly without scanning subdirectories.
-//
-// Directories in ignoreSet and directories matching the current tmux session name
-// are filtered out. Each path is tagged with an optional prefix (alias) for display.
-//
-// Returns a slice of PathInfo structs containing the path and its display prefix.
-func collectAllPaths(flagDepth int, ignoreSet models.StringSet, currentSession string) []models.PathInfo {
-	var allPaths []models.PathInfo
-
-	addPath := func(path, prefix string) error {
-		if _, ignored := ignoreSet[path]; ignored {
-			return nil
-		}
-
-		name := filepath.Base(path)
-		if name == currentSession {
-			return nil
-		}
-
-		info := models.PathInfo{Path: path, Prefix: prefix}
-		allPaths = append(allPaths, info)
-		return nil
-	}
-
-	for _, scanDir := range cfg.ScanDirs {
-		prefix := scanDir.Alias
-		if err := processScanDir(scanDir, flagDepth, prefix, addPath); err != nil {
-			continue
-		}
-	}
-
-	for _, entryDir := range cfg.EntryDirs {
-		resolved, err := utility.ResolvePath(entryDir)
-		if err != nil {
-			if verbose {
-				fmt.Fprintf(os.Stderr, "Warning: failed to resolve entry directory %s: %v\n", entryDir, err)
-			}
-			continue
-		}
-		addPath(resolved, "")
-	}
-
-	return allPaths
-}
-
-// addDirectoryEntries populates the entries map with display names for directories.
-//
-// This function handles the complex task of creating unique, user-friendly display names
-// for directories that may have the same basename (e.g., multiple "src" directories).
-// It calls deduplicateDisplayNames to resolve conflicts by using path suffixes.
-//
-// Entries that would conflict with existing tmux sessions or match the current session
-// are skipped to avoid ambiguity in the selector.
-func addDirectoryEntries(entries map[string]string, allPaths []models.PathInfo, currentSession string, existingSessions map[string]bool) {
-	displayNames := deduplicateDisplayNames(allPaths)
-
-	for _, info := range allPaths {
-		displayName := displayNames[info.Path]
-
-		if shouldSkipEntry(displayName, currentSession, existingSessions) {
-			continue
-		}
-
-		entries[displayName] = info.Path
-	}
-}
-
-// addTmuxSessionEntries adds existing tmux sessions to the entries map.
-//
-// Sessions are prefixed with cfg.Settings.TmuxSessionPrefix (default: "[TMUX] ") to distinguish
-// them from directory entries in the selector. The current session is excluded since
-// you can't switch to the session you're already in.
-//
-// For these entries, the value is the session name itself (not a path), which tells
-// the main logic to switch to an existing session rather than create a new one.
-func addTmuxSessionEntries(entries map[string]string, existingSessions map[string]bool, currentSession string) {
-	for sessionName := range existingSessions {
-		if sessionName == currentSession {
-			continue
-		}
-
-		displayName := cfg.Settings.TmuxSessionPrefix + sessionName
-		entries[displayName] = sessionName
-	}
-}
-
-// processScanDir scans a single scan_dir entry and adds all discovered subdirectories.
-//
-// Depth priority (highest to lowest):
-//  1. CLI flag (--depth)
-//  2. Per-directory depth (scanDir.Depth)
-//  3. Global default (cfg.Settings.DefaultDepth)
-//
-// This is handled by the ScanDir.GetDepth method. The function resolves the path,
-// scans for subdirectories up to the effective depth, and calls addEntry for each.
-// Errors are logged if verbose mode is enabled but don't stop execution.
-func processScanDir(scanDir models.ScanDir, flagDepth int, prefix string, addEntry func(string, string) error) error {
-	defaultDepth := cfg.Settings.DefaultDepth
-	effectiveDepth := scanDir.GetDepth(flagDepth, defaultDepth)
-
-	// get absolute path
-	resolved, err := utility.ResolvePath(scanDir.Path)
-	if err != nil {
-		if verbose {
-			fmt.Fprintf(os.Stderr, "Warning: failed to resolve scan directory %s: %v\n", scanDir.Path, err)
-		}
-		return nil
-	}
-
-	// get subdirs
-	subDirs, err := utility.GetSubDirs(effectiveDepth, resolved)
-	if err != nil {
-		if verbose {
-			fmt.Fprintf(os.Stderr, "Warning: failed to scan directory %s: %v\n", resolved, err)
-		}
-		return nil
-	}
-
-	// add subdirs
-	for _, subDir := range subDirs {
-		if err := addEntry(subDir, prefix); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// deduplicateDisplayNames creates unique display names for paths with conflicting basenames.
-//
-// When multiple paths have the same basename (e.g., ~/Dev/project1/src and ~/Work/project2/src),
-// this function finds the minimum path suffix needed to make them distinguishable:
-//   - "src" conflicts → try depth 1 → still "src/src" conflicts → try depth 2 → "project1/src" vs "project2/src" ✓
-//
-// Uses hash-based grouping for O(n) performance instead of O(n²) comparisons.
-// Paths without conflicts keep their simple basename. Prefixes (aliases) are applied
-// to the final display names.
-func deduplicateDisplayNames(allPaths []models.PathInfo) map[string]string {
-	if len(allPaths) == 0 {
-		return make(map[string]string)
-	}
-
-	// Group paths by basename (worst case: all unique basenames)
-	groups := make(map[string][]models.PathInfo, len(allPaths))
-	for _, info := range allPaths {
-		basename := filepath.Base(info.Path)
-		groups[basename] = append(groups[basename], info)
-	}
-
-	// Build result map with one entry per path
-	result := make(map[string]string, len(allPaths))
-
-	// Process each group
-	for _, group := range groups {
-		if len(group) == 1 {
-			// No duplicates, use basename
-			info := group[0]
-			displayName := normalizeSessionName(filepath.Base(info.Path))
-			displayName = applyPrefix(info.Prefix, displayName)
-			result[info.Path] = displayName
-		} else {
-			// Resolve conflicts by finding minimum distinguishing suffix
-			resolved := resolveConflicts(group)
-			maps.Copy(result, resolved)
-		}
-	}
-
-	return result
-}
-
-// resolveConflicts finds the minimum suffix depth needed to make all paths unique.
-//
-// Iterates through increasing suffix depths (1, 2, 3, ...) until all paths have unique
-// display names. For example, with paths /home/user/Dev/app and /home/user/Work/app:
-//   - Depth 1: "app" vs "app" → conflict
-//   - Depth 2: "Dev/app" vs "Work/app" → unique ✓
-//
-// Returns a map of full paths to their unique display names. Caps at maxDepth (10)
-// to prevent infinite loops, though this should never happen in practice.
-func resolveConflicts(paths []models.PathInfo) map[string]string {
-	const maxDepth = 10 // Reasonable limit to prevent infinite loops
-
-	for depth := 1; depth <= maxDepth; depth++ {
-		// Map each path suffix to its full path info for conflict detection
-		suffixes := make(map[string]models.PathInfo, len(paths))
-		conflicts := false
-
-		for _, info := range paths {
-			suffix := getPathSuffix(info.Path, depth)
-			if existing, exists := suffixes[suffix]; exists {
-				// Check if it's actually the same path (shouldn't happen but safety check)
-				if existing.Path != info.Path {
-					conflicts = true
-					break
-				}
-			}
-			suffixes[suffix] = info
-		}
-
-		if !conflicts {
-			// All unique at this depth - build the result map
-			result := make(map[string]string, len(suffixes))
-			for suffix, info := range suffixes {
-				displayName := normalizePathForDisplay(suffix)
-				displayName = applyPrefix(info.Prefix, displayName)
-				result[info.Path] = displayName
-			}
-			return result
-		}
-	}
-
-	// Fallback: use full path if conflict cant be resolved
-	result := make(map[string]string, len(paths))
-	for _, info := range paths {
-		displayName := normalizePathForDisplay(info.Path)
-		displayName = applyPrefix(info.Prefix, displayName)
-		result[info.Path] = displayName
-	}
-	return result
-}
-
-// getPathSuffix extracts the last N components of a path for display purposes.
-//
-// Examples:
-//
-//	getPathSuffix("/home/user/Dev/my-project", 1) → "my-project"
-//	getPathSuffix("/home/user/Dev/my-project", 2) → "Dev/my-project"
-//	getPathSuffix("/home/user/Dev/my-project", 5) → "/home/user/Dev/my-project" (entire path)
-//
-// Used by deduplication logic to create progressively longer display names
-// until conflicts are resolved.
-func getPathSuffix(path string, depth int) string {
-	components := strings.Split(filepath.Clean(path), string(filepath.Separator))
-
-	// Remove empty components (can happen with leading/trailing separators)
-	cleanComponents := make([]string, 0, len(components))
-	for _, comp := range components {
-		if comp != "" {
-			cleanComponents = append(cleanComponents, comp)
-		}
-	}
-
-	if depth >= len(cleanComponents) {
-		return strings.Join(cleanComponents, string(filepath.Separator))
-	}
-
-	start := len(cleanComponents) - depth
-	return strings.Join(cleanComponents[start:], string(filepath.Separator))
-}
-
-// shouldSkipEntry determines if a directory entry should be excluded from the selector.
-//
-// Skips entries that would cause ambiguity or confusion:
-//   - Matches the current tmux session name (can't switch to yourself)
-//   - Conflicts with an existing tmux session name (without the [TMUX] prefix)
-//
-// This prevents situations where a directory and session have the same name,
-// which would make selection ambiguous.
-func shouldSkipEntry(displayName, currentSession string, existingSessions map[string]bool) bool {
-	return displayName == currentSession || existingSessions[displayName]
-}
 
 // isConfigCommand checks if the given command or any of its parent commands
 // is "config". This is used to skip config validation for commands like
@@ -582,54 +252,6 @@ func validateConfig() error {
 	return config.Validate(&cfg)
 }
 
-// applyPrefix adds an alias prefix to a display name if one is configured.
-//
-// Examples:
-//
-//	applyPrefix("dev", "my-project") → "dev/my-project"
-//	applyPrefix("", "my-project")    → "my-project"
-//
-// Prefixes come from the scan_dir alias configuration and help organize
-// the selector display when you have multiple scan directories.
-func applyPrefix(prefix, name string) string {
-	if prefix != "" {
-		return prefix + "/" + name
-	}
-	return name
-}
-
-// normalizeSessionName converts a directory name into a valid tmux session name.
-//
-// Tmux session names cannot start with dots, so this function replaces leading dots
-// with underscores. For example:
-//
-//	".config" → "_config"
-//	".dotfiles" → "_dotfiles"
-//	"regular-name" → "regular-name" (unchanged)
-//
-// This ensures all directory names can be used as session names without errors.
-func normalizeSessionName(name string) string {
-	if strings.HasPrefix(name, ".") {
-		return "_" + name[1:]
-	}
-	return name
-}
-
-// normalizePathForDisplay normalizes the last component of a path by replacing leading dots with underscores.
-// This ensures display names match the actual session names that tmux creates.
-func normalizePathForDisplay(path string) string {
-	if path == "" {
-		return path
-	}
-
-	parts := strings.Split(path, string(filepath.Separator))
-	if len(parts) > 0 {
-		lastIdx := len(parts) - 1
-		parts[lastIdx] = normalizeSessionName(parts[lastIdx])
-	}
-	return strings.Join(parts, string(filepath.Separator))
-}
-
 func warnOnConfigIssues() {
 	if cfg.Settings.Editor == "" {
 		fmt.Fprintf(os.Stderr, "Warning: editor not set, defaulting to '%s'\n", config.DefaultEditor)
@@ -646,21 +268,4 @@ func warnOnConfigIssues() {
 	if len(cfg.FallbackSession.Layout.Windows) == 0 {
 		fmt.Fprintln(os.Stderr, "fallback_session.layout.windows is empty, using default layout")
 	}
-}
-
-func verifyExternalUtils() error {
-	var missing []string
-
-	if _, err := exec.LookPath("tmux"); err != nil {
-		missing = append(missing, "tmux")
-	}
-	if _, err := exec.LookPath("fzf"); err != nil {
-		missing = append(missing, "fzf")
-	}
-
-	if len(missing) > 0 {
-		return fmt.Errorf("missing required tools: %s", strings.Join(missing, ", "))
-	}
-
-	return nil
 }
