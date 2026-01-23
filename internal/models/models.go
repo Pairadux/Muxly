@@ -58,16 +58,21 @@ type PathInfo struct {
 	Prefix string
 }
 
+// Settings groups general configuration options
+type Settings struct {
+	Editor                  string `mapstructure:"editor" yaml:"editor"`
+	TmuxBase                int    `mapstructure:"tmux_base" yaml:"tmux_base"`
+	DefaultDepth            int    `mapstructure:"default_depth" yaml:"default_depth"`
+	TmuxSessionPrefix       string `mapstructure:"tmux_session_prefix" yaml:"tmux_session_prefix"`
+	AlwaysKillOnLastSession bool   `mapstructure:"always_kill_on_last_session" yaml:"always_kill_on_last_session"`
+}
+
 // Config represents the full configuration structure
 type Config struct {
-	ScanDirs                []ScanDir     `mapstructure:"scan_dirs"`
-	EntryDirs               []string      `mapstructure:"entry_dirs"`
-	IgnoreDirs              []string      `mapstructure:"ignore_dirs"`
-	FallbackSession         Session       `mapstructure:"fallback_session"`
-	TmuxBase                int           `mapstructure:"tmux_base"`
-	DefaultDepth            int           `mapstructure:"default_depth"`
-	SessionLayout           SessionLayout `mapstructure:"session_layout"`
-	Editor                  string        `mapstructure:"editor"`
-	TmuxSessionPrefix       string        `mapstructure:"tmux_session_prefix"`
-	AlwaysKillOnLastSession bool          `mapstructure:"always_kill_on_last_session"`
+	ScanDirs        []ScanDir     `mapstructure:"scan_dirs" yaml:"scan_dirs"`
+	EntryDirs       []string      `mapstructure:"entry_dirs" yaml:"entry_dirs"`
+	IgnoreDirs      []string      `mapstructure:"ignore_dirs" yaml:"ignore_dirs"`
+	FallbackSession Session       `mapstructure:"fallback_session" yaml:"fallback_session"`
+	SessionLayout   SessionLayout `mapstructure:"session_layout" yaml:"session_layout"`
+	Settings        Settings      `mapstructure:"settings" yaml:"settings"`
 }
