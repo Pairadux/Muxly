@@ -2,6 +2,7 @@ package tmux
 
 // IMPORTS {{{
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -14,6 +15,11 @@ import (
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/mitchellh/go-homedir"
 ) // }}}
+
+// ErrGracefulExit signals that the program should exit successfully (exit code 0).
+// This is used when attaching to a tmux session completes normally, as the attach
+// operation takes over the terminal and the Go program should terminate.
+var ErrGracefulExit = errors.New("graceful exit")
 
 const DefaultShell = "/bin/bash"
 
@@ -133,11 +139,11 @@ func getSessionTarget(cfg *models.Config, name string) string {
 	return name
 }
 
-// attachToSession attaches to a session when not currently in tmux
+// attachToSession attaches to a session when not currently in tmux.
+// Returns ErrGracefulExit on successful attach or when server is not running.
 func attachToSession(target, fallbackName string) error {
-	// Check if server is running before attempting to attach
 	if !IsTmuxServerRunning() {
-		os.Exit(0) // Exit gracefully if no server
+		return ErrGracefulExit
 	}
 
 	cmd := exec.Command("tmux", "attach-session", "-t", target)
@@ -152,27 +158,22 @@ func attachToSession(target, fallbackName string) error {
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			cmd.Stdin = os.Stdin
-			err := cmd.Run()
-			if err == nil {
-				os.Exit(0) // Exit successfully after attaching
+			if cmd.Run() == nil {
+				return ErrGracefulExit
 			}
-			// If attach failed and server is not running, exit gracefully
 			if !IsTmuxServerRunning() {
-				os.Exit(0)
+				return ErrGracefulExit
 			}
 			return err
 		}
 
-		// If attach failed and server is not running, exit gracefully
 		if !IsTmuxServerRunning() {
-			os.Exit(0)
+			return ErrGracefulExit
 		}
 		return fmt.Errorf("attaching to session: %w", err)
 	}
 
-	// Exit successfully after attaching to the session
-	os.Exit(0)
-	return nil // This line is never reached but required for compilation
+	return ErrGracefulExit
 }
 
 // switchClientToSession switches to a session when already in tmux

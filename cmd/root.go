@@ -2,6 +2,7 @@ package cmd
 
 // IMPORTS {{{
 import (
+	"errors"
 	"fmt"
 	"maps"
 	"os"
@@ -139,6 +140,9 @@ var rootCmd = &cobra.Command{
 		}
 
 		if err := tmux.CreateAndSwitchSession(&cfg, session); err != nil {
+			if errors.Is(err, tmux.ErrGracefulExit) {
+				return nil
+			}
 			return fmt.Errorf("Failed to switch session: %w", err)
 		}
 

@@ -2,6 +2,8 @@ package cmd
 
 // IMPORTS {{{
 import (
+	"errors"
+
 	"github.com/Pairadux/muxly/internal/tmux"
 
 	"github.com/spf13/cobra"
@@ -37,8 +39,13 @@ An interactive prompt for creating a session.`,
 		// Repeat for however many windows
 		// Present user with a finalized session and ask for confifrmation before creating and entering session
 
-		return tmux.CreateSessionFromForm(cfg)
-
+		if err := tmux.CreateSessionFromForm(cfg); err != nil {
+			if errors.Is(err, tmux.ErrGracefulExit) {
+				return nil
+			}
+			return err
+		}
+		return nil
 	},
 }
 

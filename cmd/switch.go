@@ -2,6 +2,7 @@ package cmd
 
 // IMPORTS {{{
 import (
+	"errors"
 	"fmt"
 
 	"github.com/Pairadux/muxly/internal/fzf"
@@ -53,6 +54,9 @@ If no other sessions found, exit.`,
 		}
 		sessionName := choiceStr
 		if err := tmux.SwitchToExistingSession(&cfg, sessionName); err != nil {
+			if errors.Is(err, tmux.ErrGracefulExit) {
+				return nil
+			}
 			return fmt.Errorf("Failed to switch session: %w", err)
 		}
 
