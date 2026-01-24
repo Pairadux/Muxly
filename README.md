@@ -223,27 +223,25 @@ fallback_session:
       - name: main
         cmd: ""
 
-# Base index for tmux windows (0 or 1)
-# See: https://www.man7.org/linux/man-pages/man1/tmux.1.html#OPTIONS (base-index)
-tmux_base: 1
-
-# Default scanning depth for directories
-default_depth: 1
-
 # Default layout for new tmux sessions
 session_layout:
   windows:
     - name: main
       cmd: ""
 
-# Prefix for active tmux sessions in the selector
-tmux_session_prefix: "[TMUX] "
-
-# Editor for 'muxly config edit' (falls back to $EDITOR, then 'vi')
-editor: vi
-
-# Always kill tmux server on last session (skips fallback session prompt)
-always_kill_on_last_session: false
+# General settings
+settings:
+  # Editor for 'muxly config edit' (falls back to $EDITOR, then 'vi')
+  editor: vi
+  # Base index for tmux windows (0 or 1)
+  # See: https://www.man7.org/linux/man-pages/man1/tmux.1.html#OPTIONS (base-index)
+  tmux_base: 1
+  # Default scanning depth for directories
+  default_depth: 1
+  # Prefix for active tmux sessions in the selector
+  tmux_session_prefix: "[TMUX] "
+  # Always kill tmux server on last session (skips fallback session prompt)
+  always_kill_on_last_session: false
 ```
 
 This works immediately - no customization needed! But you'll probably want to add your project directories...
@@ -297,21 +295,19 @@ session_layout:
     - name: git
       cmd: lazygit     # Opens lazygit in third window
 
-# Base index for tmux windows (should match your tmux.conf)
-# See: https://www.man7.org/linux/man-pages/man1/tmux.1.html#OPTIONS (base-index)
-tmux_base: 1
-
-# Default scanning depth for scan_dirs (can be overridden per directory)
-default_depth: 1
-
-# Prefix for active tmux sessions in the selector
-tmux_session_prefix: "[TMUX] "
-
-# Editor for 'muxly config edit' (falls back to $EDITOR, then 'vi')
-editor: nvim
-
-# Always kill tmux server on last session (skips fallback session prompt)
-always_kill_on_last_session: false
+# General settings
+settings:
+  # Editor for 'muxly config edit' (falls back to $EDITOR, then 'vi')
+  editor: nvim
+  # Base index for tmux windows (should match your tmux.conf)
+  # See: https://www.man7.org/linux/man-pages/man1/tmux.1.html#OPTIONS (base-index)
+  tmux_base: 1
+  # Default scanning depth for scan_dirs (can be overridden per directory)
+  default_depth: 1
+  # Prefix for active tmux sessions in the selector
+  tmux_session_prefix: "[TMUX] "
+  # Always kill tmux server on last session (skips fallback session prompt)
+  always_kill_on_last_session: false
 ```
 
 **Note:** You can also manage these directories using commands instead of manual editing:
@@ -354,7 +350,7 @@ When you create a session for `~/my-project`, Muxly will use this layout instead
 |--------|------|----------|-------------|
 | `scan_dirs` | array | yes* | Directories to scan for projects |
 | `scan_dirs[].path` | string | yes | Directory path to scan (supports `~` and environment variables) |
-| `scan_dirs[].depth` | int | no | Scan depth for this directory (overrides `default_depth`) |
+| `scan_dirs[].depth` | int | no | Scan depth for this directory (overrides `settings.default_depth`) |
 | `scan_dirs[].alias` | string | no | Display prefix in selector (e.g., "dev" shows as "dev/project-name") |
 | `entry_dirs` | array | yes* | Directories always included without scanning |
 | `ignore_dirs` | array | no | Paths to exclude from scanning |
@@ -366,11 +362,12 @@ When you create a session for `~/my-project`, Muxly will use this layout instead
 | `session_layout.windows` | array | yes | List of windows to create (must have at least one) |
 | `session_layout.windows[].name` | string | yes | Window name |
 | `session_layout.windows[].cmd` | string | no | Command to run in window (empty string opens default shell) |
-| `tmux_base` | int | no | Tmux window [base index](https://www.man7.org/linux/man-pages/man1/tmux.1.html#OPTIONS) - 0 or 1, should match your tmux.conf (default: `1`) |
-| `default_depth` | int | no | Default scanning depth for `scan_dirs` (default: `1`) |
-| `tmux_session_prefix` | string | no | Prefix for active sessions in selector (default: `"[TMUX] "`) |
-| `editor` | string | no | Editor for config editing, falls back to `$EDITOR` (default: `"vi"`) |
-| `always_kill_on_last_session` | bool | no | Skip fallback prompt and kill server on last session (default: `false`) |
+| `settings` | object | no | General application settings |
+| `settings.editor` | string | no | Editor for config editing, falls back to `$EDITOR` (default: `"vi"`) |
+| `settings.tmux_base` | int | no | Tmux window [base index](https://www.man7.org/linux/man-pages/man1/tmux.1.html#OPTIONS) - 0 or 1, should match your tmux.conf (default: `1`) |
+| `settings.default_depth` | int | no | Default scanning depth for `scan_dirs` (default: `1`) |
+| `settings.tmux_session_prefix` | string | no | Prefix for active sessions in selector (default: `"[TMUX] "`) |
+| `settings.always_kill_on_last_session` | bool | no | Skip fallback prompt and kill server on last session (default: `false`) |
 
 \* At least one of `scan_dirs` or `entry_dirs` must be configured.
 
