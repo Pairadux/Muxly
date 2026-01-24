@@ -31,7 +31,10 @@ var (
 		"~", // Home directory - universally available
 	}
 
-	DefaultIgnoreDirs = []string{}
+	DefaultIgnoreDirs = []string{
+		".git",
+		"node_modules",
+	}
 
 	DefaultSessionLayout = models.SessionLayout{
 		Windows: []models.Window{

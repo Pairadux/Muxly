@@ -257,24 +257,26 @@ This works immediately - no customization needed! But you'll probably want to ad
 # Directories to scan for projects
 # Each directory is scanned recursively up to the specified depth
 scan_dirs:
-  - path: ~/Dev
+  - path: ~/projects
     depth: 2           # Override default_depth for this directory
-    alias: dev         # Display as "dev/project-name" in selector
-  - path: ~/.config
+    alias: proj        # Display as "proj/project-name" in selector
+  - path: ~/work       # Alias is optional
     depth: 1
-    alias: config
-  - path: ~/projects   # Uses default_depth if not specified
+  - path: ~/dotfiles   # Uses default_depth if not specified
 
 # Additional entry directories (included directly, not scanned)
 entry_dirs:
   - ~/Documents
-  - ~/special-project
+  - ~/notes
 
 # Directory paths to exclude from scanning
+# Note: Specifying ignore_dirs replaces the defaults (.git, node_modules)
 ignore_dirs:
-  - ~/Dev/_practice
-  - ~/Dev/_archive
-  - ~/Dev/tmp
+  - .git
+  - node_modules
+  - .vscode
+  - .idea
+  - ~/projects/archived
 
 # Session to create when killing the last tmux session
 fallback_session:
