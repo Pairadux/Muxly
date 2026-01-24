@@ -5,21 +5,17 @@ import (
 	"strings"
 )
 
-// NormalizeSessionName converts a directory name into a valid tmux session name.
+// SanitizeSessionName converts a directory name into a valid tmux session name.
 //
-// Tmux session names cannot start with dots, so this function replaces leading dots
-// with underscores.
-func NormalizeSessionName(name string) string {
-	if strings.HasPrefix(name, ".") {
-		return "_" + name[1:]
-	}
-	return name
+// Tmux session names cannot start with dots, so this function strips leading dots.
+func SanitizeSessionName(name string) string {
+	return strings.TrimPrefix(name, ".")
 }
 
-// NormalizePathForDisplay normalizes the last component of a path by replacing
-// leading dots with underscores. This ensures display names match the actual
-// session names that tmux creates.
-func NormalizePathForDisplay(path string) string {
+// SanitizePathForDisplay sanitizes the last component of a path by stripping
+// leading dots. This ensures display names match the actual session names that
+// tmux creates.
+func SanitizePathForDisplay(path string) string {
 	if path == "" {
 		return path
 	}
@@ -27,7 +23,7 @@ func NormalizePathForDisplay(path string) string {
 	parts := strings.Split(path, string(filepath.Separator))
 	if len(parts) > 0 {
 		lastIdx := len(parts) - 1
-		parts[lastIdx] = NormalizeSessionName(parts[lastIdx])
+		parts[lastIdx] = SanitizeSessionName(parts[lastIdx])
 	}
 	return strings.Join(parts, string(filepath.Separator))
 }

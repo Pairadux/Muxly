@@ -28,7 +28,7 @@ func DeduplicateDisplayNames(allPaths []models.PathInfo) map[string]string {
 	for _, group := range groups {
 		if len(group) == 1 {
 			info := group[0]
-			displayName := NormalizeSessionName(filepath.Base(info.Path))
+			displayName := SanitizeSessionName(filepath.Base(info.Path))
 			displayName = ApplyPrefix(info.Prefix, displayName)
 			result[info.Path] = displayName
 		} else {
@@ -62,7 +62,7 @@ func resolveConflicts(paths []models.PathInfo) map[string]string {
 		if !conflicts {
 			result := make(map[string]string, len(suffixes))
 			for suffix, info := range suffixes {
-				displayName := NormalizePathForDisplay(suffix)
+				displayName := SanitizePathForDisplay(suffix)
 				displayName = ApplyPrefix(info.Prefix, displayName)
 				result[info.Path] = displayName
 			}
@@ -72,7 +72,7 @@ func resolveConflicts(paths []models.PathInfo) map[string]string {
 
 	result := make(map[string]string, len(paths))
 	for _, info := range paths {
-		displayName := NormalizePathForDisplay(info.Path)
+		displayName := SanitizePathForDisplay(info.Path)
 		displayName = ApplyPrefix(info.Prefix, displayName)
 		result[info.Path] = displayName
 	}
