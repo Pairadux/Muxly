@@ -77,18 +77,15 @@ func generateConfigYAML(cfg models.Config) string { // {{{
 #
 # fallback_session: Session to create when killing the last tmux session
 #
-# tmux_base: Base index for tmux windows (0 or 1, should match your tmux.conf)
-#
-# default_depth: Default scanning depth for scan_dirs without explicit depth
-#
 # session_layout: Default layout for new tmux sessions
 #   windows: List of windows to create with optional commands
 #
-# editor: Default editor for 'muxly config edit' (overrides $EDITOR)
-#
-# tmux_session_prefix: Prefix for active tmux sessions in the selector
-#
-# always_kill_on_last_session: Skip fallback prompt and kill server on last session
+# settings: General application settings
+#   editor: Default editor for 'muxly config edit' (overrides $EDITOR)
+#   tmux_base: Base index for tmux windows (0 or 1, should match your tmux.conf)
+#   default_depth: Default scanning depth for scan_dirs without explicit depth
+#   tmux_session_prefix: Prefix for active tmux sessions in the selector
+#   always_kill_on_last_session: Skip fallback prompt and kill server on last session
 
 `
 	yamlData, err := yaml.Marshal(cfg)
