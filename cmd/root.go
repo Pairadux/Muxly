@@ -226,7 +226,6 @@ func initConfig() { // {{{
 	}
 } // }}}
 
-
 // isConfigCommand checks if the given command or any of its parent commands
 // is "config". This is used to skip config validation for commands like
 // "muxly config init" or "muxly config edit", which are intended to manage or
