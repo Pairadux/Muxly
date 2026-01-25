@@ -1,6 +1,5 @@
 package tmux
 
-
 import (
 	"errors"
 	"fmt"

@@ -1,6 +1,5 @@
 package utility
 
-
 import (
 	"fmt"
 	"io/fs"

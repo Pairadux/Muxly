@@ -1,6 +1,5 @@
 package fzf
 
-
 import (
 	"fmt"
 	"os"

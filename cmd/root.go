@@ -1,6 +1,5 @@
 package cmd
 
-
 import (
 	"errors"
 	"fmt"
@@ -39,7 +38,7 @@ var rootCmd = &cobra.Command{
 	CompletionOptions: cobra.CompletionOptions{
 		HiddenDefaultCmd: true,
 	},
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error { 
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if isConfigCommand(cmd) {
 			return nil
 		}
@@ -54,7 +53,7 @@ var rootCmd = &cobra.Command{
 
 		return nil
 	},
-	PreRunE: func(cmd *cobra.Command, args []string) error { 
+	PreRunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 1 {
 			switch args[0] {
 			case "init":
@@ -152,14 +151,14 @@ var rootCmd = &cobra.Command{
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() { 
+func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}
 }
 
-func init() { 
+func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVar(&cfgFileFlag, "config", "", "config file (default $XDG_CONFIG_HOME/muxly/config.yaml)")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
@@ -167,7 +166,7 @@ func init() {
 }
 
 // initConfig reads in config file and ENV variables if set.
-func initConfig() { 
+func initConfig() {
 	if cfgFileFlag != "" {
 		cfgFilePath = cfgFileFlag
 		viper.SetConfigFile(cfgFilePath)

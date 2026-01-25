@@ -1,6 +1,5 @@
 package cmd
 
-
 import (
 	"fmt"
 	"os"
@@ -51,7 +50,7 @@ Otherwise, the current config file is overwritten.`,
 	},
 }
 
-func init() { 
+func init() {
 	configCmd.AddCommand(initCmd)
 	// initCmd.Flags().IntP("tmux_base", "b", defaultTmuxBase, "What number your windows start ordering at.")
 	// initCmd.Flags().IntP("default_depth", "d", defaultDepth, "Default depth to scan.")
@@ -62,7 +61,7 @@ func init() {
 	initCmd.Flags().BoolP("Defaults", "D", true /* FIXME: change to false once interactive prompt is completed */, "Accept all defaults. (No interactive prompt)")
 }
 
-func generateConfigYAML(cfg models.Config) string { 
+func generateConfigYAML(cfg models.Config) string {
 	header := `# Configuration for muxly
 #
 # scan_dirs: Directories to scan for projects (supports depth per directory)

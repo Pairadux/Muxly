@@ -1,6 +1,5 @@
 package cmd
 
-
 import (
 	"errors"
 	"fmt"
