@@ -43,6 +43,7 @@ Muxly is a highly configurable Tmux Session Manager based on ThePrimeagen's tmux
 - `muxly remove` - Remove directories from configuration
 - `muxly config init` - Create initial configuration file
 - `muxly config edit` - Edit configuration file
+- `muxly doctor` - Validate environment and configuration
 - `muxly completion <shell>` - Generate shell completion scripts (hidden command)
 
 ## Installation
