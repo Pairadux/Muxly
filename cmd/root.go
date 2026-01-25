@@ -39,7 +39,7 @@ var rootCmd = &cobra.Command{
 		HiddenDefaultCmd: true,
 	},
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if isConfigCommand(cmd) {
+		if bypassesStartupChecks(cmd) {
 			return nil
 		}
 
@@ -225,13 +225,13 @@ func initConfig() {
 	}
 }
 
-// isConfigCommand checks if the given command or any of its parent commands
-// is "config". This is used to skip config validation for commands like
-// "muxly config init" or "muxly config edit", which are intended to manage or
-// create the config file.
-func isConfigCommand(cmd *cobra.Command) bool {
+// bypassesStartupChecks checks if the given command should skip the standard
+// startup validation (external utils and config). Commands like "config" and
+// "doctor" need to run even when the environment isn't fully configured.
+func bypassesStartupChecks(cmd *cobra.Command) bool {
 	for c := cmd; c != nil; c = c.Parent() {
-		if c.Name() == "config" {
+		switch c.Name() {
+		case "config", "doctor":
 			return true
 		}
 	}
