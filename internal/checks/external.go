@@ -2,6 +2,7 @@ package checks
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -25,38 +26,84 @@ func VerifyExternalUtils() error {
 	return nil
 }
 
+func getVersion(cmd string, args ...string) string {
+	out, err := exec.Command(cmd, args...).Output()
+	if err != nil {
+		return ""
+	}
+	version := strings.TrimSpace(string(out))
+	version = strings.TrimPrefix(version, "tmux ")
+	if idx := strings.Index(version, " "); idx != -1 {
+		version = version[:idx]
+	}
+	return version
+}
+
+func checkTool(name, versionFlag, missingHint string) CheckResult {
+	if _, err := exec.LookPath(name); err != nil {
+		return CheckResult{
+			Name:    name,
+			Status:  StatusError,
+			Message: fmt.Sprintf("%s not found in PATH", name),
+			Hint:    missingHint,
+		}
+	}
+
+	version := getVersion(name, versionFlag)
+	detail := ""
+	if version != "" {
+		detail = fmt.Sprintf("(%s)", version)
+	}
+
+	return CheckResult{
+		Name:    name,
+		Status:  StatusOK,
+		Message: name,
+		Detail:  detail,
+	}
+}
+
 // CheckExternalUtils returns detailed check results for external tools.
-// This is designed for a future `muxly doctor` command.
 func CheckExternalUtils() []CheckResult {
-	var results []CheckResult
+	return []CheckResult{
+		checkTool("tmux", "-V", "Install tmux: https://github.com/tmux/tmux"),
+		checkTool("fzf", "--version", "Install fzf: https://github.com/junegunn/fzf"),
+	}
+}
 
-	if _, err := exec.LookPath("tmux"); err != nil {
-		results = append(results, CheckResult{
-			Name:    "tmux",
-			Status:  StatusError,
-			Message: "tmux not found in PATH",
-		})
-	} else {
-		results = append(results, CheckResult{
-			Name:    "tmux",
-			Status:  StatusOK,
-			Message: "tmux is installed",
-		})
+// CheckEditor validates the configured editor or falls back to environment.
+func CheckEditor(configEditor string) CheckResult {
+	editor := configEditor
+	if editor == "" {
+		editor = os.Getenv("EDITOR")
+	}
+	if editor == "" {
+		editor = os.Getenv("VISUAL")
 	}
 
-	if _, err := exec.LookPath("fzf"); err != nil {
-		results = append(results, CheckResult{
-			Name:    "fzf",
-			Status:  StatusError,
-			Message: "fzf not found in PATH",
-		})
-	} else {
-		results = append(results, CheckResult{
-			Name:    "fzf",
-			Status:  StatusOK,
-			Message: "fzf is installed",
-		})
+	if editor == "" {
+		return CheckResult{
+			Name:    "editor",
+			Status:  StatusWarning,
+			Message: "No editor configured",
+			Hint:    "Set settings.editor in config or $EDITOR environment variable",
+		}
 	}
 
-	return results
+	cmd := strings.Fields(editor)[0]
+	if _, err := exec.LookPath(cmd); err != nil {
+		return CheckResult{
+			Name:    "editor",
+			Status:  StatusWarning,
+			Message: fmt.Sprintf("Editor '%s' not found in PATH", cmd),
+			Hint:    "Verify the editor command is installed and in your PATH",
+		}
+	}
+
+	return CheckResult{
+		Name:    "editor",
+		Status:  StatusOK,
+		Message: "Editor",
+		Detail:  fmt.Sprintf("(%s)", editor),
+	}
 }
