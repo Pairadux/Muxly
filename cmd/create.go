@@ -1,13 +1,13 @@
 package cmd
 
-// IMPORTS {{{
+
 import (
 	"errors"
 
 	"github.com/Pairadux/muxly/internal/tmux"
 
 	"github.com/spf13/cobra"
-) // }}}
+)
 
 // createCmd represents the create command
 var createCmd = &cobra.Command{

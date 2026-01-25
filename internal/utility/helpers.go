@@ -1,6 +1,6 @@
 package utility
 
-// IMPORTS {{{
+
 import (
 	"fmt"
 	"io/fs"
@@ -11,7 +11,7 @@ import (
 	"github.com/Pairadux/muxly/internal/constants"
 	"github.com/charlievieth/fastwalk"
 	"github.com/mitchellh/go-homedir"
-) // }}}
+)
 
 // ResolvePath takes an "unknown" path pattern and returns an absolute path.
 //

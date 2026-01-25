@@ -1,6 +1,6 @@
 package cmd
 
-// IMPORTS {{{
+
 import (
 	"errors"
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"github.com/Pairadux/muxly/internal/tmux"
 
 	"github.com/spf13/cobra"
-) // }}}
+)
 
 // killCmd represents the kill command
 var killCmd = &cobra.Command{

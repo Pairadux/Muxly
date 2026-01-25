@@ -1,6 +1,6 @@
 package cmd
 
-// IMPORTS {{{
+
 import (
 	"fmt"
 	"os"
@@ -11,7 +11,7 @@ import (
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
-) // }}}
+)
 
 // initCmd represents the init command
 var initCmd = &cobra.Command{
@@ -51,7 +51,7 @@ Otherwise, the current config file is overwritten.`,
 	},
 }
 
-func init() { // {{{
+func init() { 
 	configCmd.AddCommand(initCmd)
 	// initCmd.Flags().IntP("tmux_base", "b", defaultTmuxBase, "What number your windows start ordering at.")
 	// initCmd.Flags().IntP("default_depth", "d", defaultDepth, "Default depth to scan.")
@@ -60,9 +60,9 @@ func init() { // {{{
 	// initCmd.Flags().StringArrayP("entry_dirs", "e", defaultEntryDirs, "A list of paths that are entries themselves.")
 	// initCmd.Flags().StringArrayP("ignore_dirs", "i", defaultIgnoreDirs, "A list of paths that should be removed.")
 	initCmd.Flags().BoolP("Defaults", "D", true /* FIXME: change to false once interactive prompt is completed */, "Accept all defaults. (No interactive prompt)")
-} // }}}
+}
 
-func generateConfigYAML(cfg models.Config) string { // {{{
+func generateConfigYAML(cfg models.Config) string { 
 	header := `# Configuration for muxly
 #
 # scan_dirs: Directories to scan for projects (supports depth per directory)
@@ -94,4 +94,4 @@ func generateConfigYAML(cfg models.Config) string { // {{{
 	}
 
 	return header + string(yamlData)
-} // }}}
+}

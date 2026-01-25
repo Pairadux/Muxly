@@ -1,6 +1,6 @@
 package cmd
 
-// IMPORTS {{{
+
 import (
 	"errors"
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"github.com/Pairadux/muxly/internal/tmux"
 
 	"github.com/spf13/cobra"
-) // }}}
+)
 
 // switchCmd represents the switch command
 var switchCmd = &cobra.Command{

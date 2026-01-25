@@ -1,6 +1,6 @@
 package tmux
 
-// IMPORTS {{{
+
 import (
 	"errors"
 	"fmt"
@@ -14,7 +14,7 @@ import (
 
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/mitchellh/go-homedir"
-) // }}}
+)
 
 // ErrGracefulExit signals that the program should exit successfully (exit code 0).
 // This is used when attaching to a tmux session completes normally, as the attach

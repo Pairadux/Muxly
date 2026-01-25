@@ -1,13 +1,13 @@
 package cmd
 
-// IMPORTS {{{
+
 import (
 	"fmt"
 	"slices"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-) // }}}
+)
 
 // removeEntryCmd removes a directory from entry_dirs
 var removeEntryCmd = &cobra.Command{

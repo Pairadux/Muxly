@@ -1,6 +1,6 @@
 package cmd
 
-// IMPORTS {{{
+
 import (
 	"fmt"
 	"path/filepath"
@@ -9,7 +9,7 @@ import (
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/Pairadux/muxly/internal/utility"
 	"github.com/spf13/cobra"
-) // }}}
+)
 
 // addCmd represents the add command
 var addCmd = &cobra.Command{

@@ -1,6 +1,6 @@
 package cmd
 
-// IMPORTS {{{
+
 import (
 	"fmt"
 	"os"
@@ -8,7 +8,7 @@ import (
 
 	"github.com/Pairadux/muxly/internal/config"
 	"github.com/spf13/cobra"
-) // }}}
+)
 
 // editCmd represents the edit command
 var editCmd = &cobra.Command{

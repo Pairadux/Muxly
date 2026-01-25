@@ -1,6 +1,6 @@
 package cmd
 
-// IMPORTS {{{
+
 import (
 	"fmt"
 	"os"
@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-) // }}}
+)
 
 // addEntryCmd adds a directory to entry_dirs
 var addEntryCmd = &cobra.Command{

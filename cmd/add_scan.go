@@ -1,6 +1,6 @@
 package cmd
 
-// IMPORTS {{{
+
 import (
 	"fmt"
 	"os"
@@ -9,7 +9,7 @@ import (
 	"github.com/Pairadux/muxly/internal/utility"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-) // }}}
+)
 
 // addScanCmd adds a directory to scan_dirs
 var addScanCmd = &cobra.Command{

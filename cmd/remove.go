@@ -1,6 +1,6 @@
 package cmd
 
-// IMPORTS {{{
+
 import (
 	"fmt"
 	"os"
@@ -9,7 +9,7 @@ import (
 	"github.com/Pairadux/muxly/internal/forms"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
-) // }}}
+)
 
 // removeCmd represents the remove command
 var removeCmd = &cobra.Command{

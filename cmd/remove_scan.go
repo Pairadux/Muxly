@@ -1,13 +1,13 @@
 package cmd
 
-// IMPORTS {{{
+
 import (
 	"fmt"
 
 	"github.com/Pairadux/muxly/internal/utility"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-) // }}}
+)
 
 // removeScanCmd removes a directory from scan_dirs
 var removeScanCmd = &cobra.Command{
