@@ -19,7 +19,7 @@ func DeduplicateDisplayNames(allPaths []models.PathInfo) map[string]string {
 
 	groups := make(map[string][]models.PathInfo, len(allPaths))
 	for _, info := range allPaths {
-		basename := filepath.Base(info.Path)
+		basename := SanitizeSessionName(filepath.Base(info.Path))
 		groups[basename] = append(groups[basename], info)
 	}
 
