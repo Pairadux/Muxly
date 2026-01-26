@@ -1,7 +1,7 @@
 <div align="center">
   <img src="./assets/muxly.png" alt="fzf - a command-line fuzzy finder">
   <a href="http://github.com/Pairadux/Muxly/releases"><img src="https://img.shields.io/github/v/tag/Pairadux/Muxly" alt="Version"></a>
-  <a href="https://github.com/Pairadux/Muxly?tab=MIT-1-ov-file#readme"><img src="https://img.shields.io/github/license/Pairadux/Muxly" alt="License"></a>
+  <a href="https://github.com/Pairadux/Muxly/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Pairadux/Muxly" alt="License"></a>
   <a href="https://github.com/Pairadux/Muxly/graphs/contributors"><img src="https://img.shields.io/github/contributors/Pairadux/Muxly" alt="Contributors"></a>
   <a href="https://github.com/Pairadux/Muxly/stargazers"><img src="https://img.shields.io/github/stars/Pairadux/Muxly?style=flat" alt="Stars"></a>
 </div>
