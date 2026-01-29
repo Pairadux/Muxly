@@ -3,7 +3,6 @@ package selector
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/Pairadux/muxly/internal/tmux"
@@ -65,11 +64,6 @@ func (b *Builder) collectAllPaths(flagDepth int, ignoreSet models.StringSet, cur
 
 	addPath := func(path, prefix string) error {
 		if _, ignored := ignoreSet[path]; ignored {
-			return nil
-		}
-
-		name := filepath.Base(path)
-		if name == currentSession {
 			return nil
 		}
 
