@@ -1,0 +1,63 @@
+# Muxly Test Configuration
+# Use with: muxly --config testdata/muxly-fixtures/config.yaml
+# Run from repo root so $PWD resolves correctly
+
+scan_dirs:
+  # No conflicts - unique basenames
+  - path: $PWD/testdata/muxly-fixtures/no-conflicts
+    depth: 1
+
+  # Same basename conflicts (dev/src vs work/src)
+  # Scan from dev/ and work/ directly to only get src
+  - path: $PWD/testdata/muxly-fixtures/same-basename/dev
+    depth: 1
+  - path: $PWD/testdata/muxly-fixtures/same-basename/work
+    depth: 1
+
+  # Dotfiles (.config, ..double-hidden, ...triple)
+  - path: $PWD/testdata/muxly-fixtures/dotfiles
+    depth: 1
+
+  # Dotfile vs regular conflicts (.settings vs settings)
+  # Scan from hidden/ and visible/ directly
+  - path: $PWD/testdata/muxly-fixtures/dotfile-conflicts/hidden
+    depth: 1
+  - path: $PWD/testdata/muxly-fixtures/dotfile-conflicts/visible
+    depth: 1
+
+  # Special characters (dots, colons)
+  - path: $PWD/testdata/muxly-fixtures/special-chars
+    depth: 1
+
+  # Alias testing - same basename "muxly" with different aliases
+  - path: $PWD/testdata/muxly-fixtures/aliases/cfg-source
+    depth: 1
+    alias: cfg
+
+  - path: $PWD/testdata/muxly-fixtures/aliases/dev-source
+    depth: 1
+    alias: dev
+
+  # Deep nesting - scan from deepest parent to only get project
+  - path: $PWD/testdata/muxly-fixtures/deep-nesting/a/b/c
+    depth: 1
+
+session_layout:
+  windows:
+    - name: main
+      cmd: ""
+
+fallback_session:
+  name: test-fallback
+  path: ~/
+  layout:
+    windows:
+      - name: main
+        cmd: ""
+
+settings:
+  editor: vi
+  tmux_base: 1
+  default_depth: 1
+  tmux_session_prefix: "[TMUX] "
+  always_kill_on_last_session: false
