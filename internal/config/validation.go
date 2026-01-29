@@ -20,6 +20,17 @@ func Validate(cfg *models.Config) error {
 		return fmt.Errorf("session_layout must have at least one window")
 	}
 
+	seenAliases := make(map[string]string)
+	for _, scanDir := range cfg.ScanDirs {
+		if scanDir.Alias != "" {
+			if existingPath, exists := seenAliases[scanDir.Alias]; exists {
+				return fmt.Errorf("duplicate alias %q used by both %q and %q",
+					scanDir.Alias, existingPath, scanDir.Path)
+			}
+			seenAliases[scanDir.Alias] = scanDir.Path
+		}
+	}
+
 	return nil
 }
 

@@ -1,20 +1,40 @@
 package selector
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 )
 
-// SanitizeSessionName converts a directory name into a valid tmux session name.
-//
-// Tmux session names cannot start with dots, so this function strips leading dots.
-func SanitizeSessionName(name string) string {
-	return strings.TrimPrefix(name, ".")
+// SanitizeSessionName creates a valid tmux session name from a directory name.
+// Strips all leading dots, replaces middle dots with underscores, replaces colons with dashes.
+// Returns the sanitized name and the count of leading dots stripped.
+func SanitizeSessionName(name string) (string, int) {
+	dotCount := 0
+	for dotCount < len(name) && name[dotCount] == '.' {
+		dotCount++
+	}
+	sanitized := name[dotCount:]
+	sanitized = strings.ReplaceAll(sanitized, ".", "_")
+	sanitized = strings.ReplaceAll(sanitized, ":", "-")
+	return sanitized, dotCount
+}
+
+// DotdirSuffix returns the appropriate suffix for a dotfile.
+// Single dot: " [dotdir]", multiple dots: " [dotdir x2]", etc.
+func DotdirSuffix(dotCount int) string {
+	if dotCount == 0 {
+		return ""
+	}
+	if dotCount == 1 {
+		return " [dotdir]"
+	}
+	return fmt.Sprintf(" [dotdir x%d]", dotCount)
 }
 
 // SanitizePathForDisplay sanitizes the last component of a path by stripping
-// leading dots. This ensures display names match the actual session names that
-// tmux creates.
+// leading dots and replacing middle dots/colons. This ensures display names
+// match the actual session names that tmux creates.
 func SanitizePathForDisplay(path string) string {
 	if path == "" {
 		return path
@@ -23,7 +43,8 @@ func SanitizePathForDisplay(path string) string {
 	parts := strings.Split(path, string(filepath.Separator))
 	if len(parts) > 0 {
 		lastIdx := len(parts) - 1
-		parts[lastIdx] = SanitizeSessionName(parts[lastIdx])
+		sanitized, _ := SanitizeSessionName(parts[lastIdx])
+		parts[lastIdx] = sanitized
 	}
 	return strings.Join(parts, string(filepath.Separator))
 }

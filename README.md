@@ -157,6 +157,16 @@ muxly completion powershell >> $PROFILE
 
 After adding the completion script, restart your shell or source your config file.
 
+## Directory Naming Notes
+
+Muxly sanitizes directory names to create valid tmux session names:
+
+- **Dotfiles**: Leading dots are stripped for display. `.config` appears as `config [dotdir]`
+- **Middle dots**: Replaced with underscores. `my.project` becomes `my_project`
+- **Colons**: Replaced with dashes. `project:v2` becomes `project-v2`
+
+**Unsupported characters**: Directory names containing emojis or other special Unicode characters may cause unexpected behavior. Stick to alphanumeric characters, dashes, underscores, and dots for best results.
+
 ## Configuration
 
 Configuration is stored in `$XDG_CONFIG_HOME/muxly/config.yaml` (typically `~/.config/muxly/config.yaml`).
