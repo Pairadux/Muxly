@@ -20,6 +20,8 @@ builds:
       - linux
       - windows
       - darwin
+    ldflags:
+      - -s -w -X github.com/Pairadux/muxly/cmd.Version={{.Version}}
 
 archives:
   - formats: [tar.gz]

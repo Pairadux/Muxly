@@ -28,9 +28,13 @@ var (
 	verbose     bool
 )
 
+// Version is set at build time via ldflags
+var Version = "dev"
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:     "muxly [SESSION]",
+	Version: Version,
 	Example: "",
 	Short:   "A tool for quickly opening tmux sessions",
 	Long:    "A tool for quickly opening tmux sessions\n\nBased on ThePrimeagen's tmux-sessionizer script.",
