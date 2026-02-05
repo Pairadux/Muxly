@@ -2,43 +2,88 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
+	"path/filepath"
+	"slices"
+	"strings"
 
+	"github.com/Pairadux/muxly/internal/forms"
+	"github.com/Pairadux/muxly/internal/fzf"
+	"github.com/Pairadux/muxly/internal/models"
+	"github.com/Pairadux/muxly/internal/selector"
 	"github.com/Pairadux/muxly/internal/tmux"
+	"github.com/Pairadux/muxly/internal/utility"
 
 	"github.com/spf13/cobra"
 )
 
-// createCmd represents the create command
 var createCmd = &cobra.Command{
 	Use:   "create",
-	Short: "Create a session",
-	Long: `Create a session
-
-An interactive prompt for creating a session.`,
+	Short: "Create a session from a template",
+	Long:  "Create a session from a template\n\nSelect a template, then choose a directory to create the session in.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Needed for a session:
-		// Session Name
-		// Session Path
-		// Session Layout
-		//
-		// Prompts:
-		// if Use Default:
-		// Proceed with default session creation
-		// else:
-		// Enter Session Name
-		// Verify the name isn't already in use
-		// Path
-		// Use home?
-		// Use CWD?
-		// Enter Path
-		// Layout
-		// Use default layout?
-		// Enter window 1 name
-		// Enter window 1 cmd
-		// Repeat for however many windows
-		// Present user with a finalized session and ask for confifrmation before creating and entering session
+		allTemplates := append([]models.SessionTemplate{cfg.PrimaryTemplate}, cfg.Templates...)
 
-		if err := tmux.CreateSessionFromForm(cfg); err != nil {
+		var selectedIdx int
+		form := forms.TemplateSelectForm(allTemplates, &selectedIdx)
+		if err := form.Run(); err != nil {
+			return fmt.Errorf("template selection failed: %w", err)
+		}
+
+		tmpl := allTemplates[selectedIdx]
+
+		var sessionPath string
+		if tmpl.Path != "" {
+			resolved, err := utility.ResolvePath(tmpl.Path)
+			if err != nil {
+				return fmt.Errorf("failed to resolve template path: %w", err)
+			}
+			sessionPath = resolved
+		} else {
+			builder := selector.NewBuilder(&cfg, verbose)
+			entries, err := builder.BuildEntries(0)
+			if err != nil {
+				return fmt.Errorf("failed to build directory entries: %w", err)
+			}
+
+			names := make([]string, 0, len(entries))
+			for name := range entries {
+				names = append(names, name)
+			}
+
+			slices.SortFunc(names, func(a, b string) int {
+				isTmuxA := strings.HasPrefix(a, cfg.Settings.TmuxSessionPrefix)
+				isTmuxB := strings.HasPrefix(b, cfg.Settings.TmuxSessionPrefix)
+				if isTmuxA && !isTmuxB {
+					return -1
+				}
+				if !isTmuxA && isTmuxB {
+					return 1
+				}
+				return strings.Compare(strings.ToLower(a), strings.ToLower(b))
+			})
+
+			choiceStr, err := fzf.SelectWithFzf(names)
+			if err != nil {
+				if err.Error() == "user cancelled" {
+					return nil
+				}
+				return fmt.Errorf("selecting with fzf failed: %w", err)
+			}
+			if choiceStr == "" {
+				return nil
+			}
+
+			path, exists := entries[choiceStr]
+			if !exists {
+				return fmt.Errorf("selected entry not found: %s", choiceStr)
+			}
+			sessionPath = path
+		}
+
+		sessionName := filepath.Base(sessionPath)
+
+		if err := tmux.CreateSessionFromTemplate(&cfg, tmpl, sessionPath, sessionName); err != nil {
 			if errors.Is(err, tmux.ErrGracefulExit) {
 				return nil
 			}

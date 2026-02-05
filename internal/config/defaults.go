@@ -10,25 +10,19 @@ import "github.com/Pairadux/muxly/internal/models"
 // TODO: add a config option to remove current session from list of options
 // Might would help with the duplicate problem, especially in conjuction with absolute path config option
 
-// Simple default values (constants)
 const (
 	DefaultEditor                  = "vi"
-	DefaultFallbackSessionName     = "Default"
-	DefaultFallbackSessionPath     = "~/"
 	DefaultTmuxSessionPrefix       = "[TMUX] "
 	DefaultTmuxBase                = 1
 	DefaultScanDepth               = 1
 	DefaultAlwaysKillOnLastSession = false
 )
 
-// Complex default values (variables)
-// These are intentionally minimal - just enough for the program to run.
-// Users should customize these in their config file.
 var (
 	DefaultScanDirs = []models.ScanDir{}
 
 	DefaultEntryDirs = []string{
-		"~", // Home directory - universally available
+		"~",
 	}
 
 	DefaultIgnoreDirs = []string{
@@ -36,27 +30,38 @@ var (
 		"node_modules",
 	}
 
-	DefaultSessionLayout = models.SessionLayout{
+	DefaultPrimaryTemplate = models.SessionTemplate{
+		Name: "Editor + Terminal",
 		Windows: []models.Window{
-			{Name: "main", Cmd: ""}, // Single window with default shell
+			{Name: "editor"},
+			{Name: "term"},
 		},
 	}
 
-	DefaultFallbackSession = models.Session{
-		Name:   DefaultFallbackSessionName,
-		Path:   DefaultFallbackSessionPath,
-		Layout: DefaultSessionLayout, // Reuse the default session layout
+	DefaultTemplates = []models.SessionTemplate{
+		{
+			Name: "Single Window",
+			Windows: []models.Window{
+				{Name: "main"},
+			},
+		},
+		{
+			Name: "Quick Session",
+			Path: "~/",
+			Windows: []models.Window{
+				{Name: "main"},
+			},
+		},
 	}
 )
 
-// NewDefaultConfig returns a new Config struct with all default values
 func NewDefaultConfig() models.Config {
 	return models.Config{
 		ScanDirs:        DefaultScanDirs,
 		EntryDirs:       DefaultEntryDirs,
 		IgnoreDirs:      DefaultIgnoreDirs,
-		FallbackSession: DefaultFallbackSession,
-		SessionLayout:   DefaultSessionLayout,
+		PrimaryTemplate: DefaultPrimaryTemplate,
+		Templates:       DefaultTemplates,
 		Settings: models.Settings{
 			Editor:                  DefaultEditor,
 			TmuxBase:                DefaultTmuxBase,
@@ -67,19 +72,12 @@ func NewDefaultConfig() models.Config {
 	}
 }
 
-// ApplyDefaults fills in any missing values in the provided config with defaults
 func ApplyDefaults(cfg *models.Config) {
 	if cfg.Settings.Editor == "" {
 		cfg.Settings.Editor = DefaultEditor
 	}
-	if cfg.FallbackSession.Name == "" {
-		cfg.FallbackSession.Name = DefaultFallbackSessionName
-	}
-	if cfg.FallbackSession.Path == "" {
-		cfg.FallbackSession.Path = DefaultFallbackSessionPath
-	}
-	if len(cfg.FallbackSession.Layout.Windows) == 0 {
-		cfg.FallbackSession.Layout = cfg.SessionLayout
+	if cfg.PrimaryTemplate.Name == "" {
+		cfg.PrimaryTemplate = DefaultPrimaryTemplate
 	}
 	if cfg.Settings.TmuxSessionPrefix == "" {
 		cfg.Settings.TmuxSessionPrefix = DefaultTmuxSessionPrefix
