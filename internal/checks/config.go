@@ -84,20 +84,38 @@ func ValidateConfig(cfg *models.Config) []CheckResult {
 		})
 	}
 
-	windowCount := len(cfg.SessionLayout.Windows)
+	if cfg.PrimaryTemplate.Name == "" {
+		results = append(results, CheckResult{
+			Name:    "primary_template",
+			Status:  StatusError,
+			Message: "Primary template name not set",
+			Hint:    "Set primary_template.name in config",
+		})
+	}
+
+	windowCount := len(cfg.PrimaryTemplate.Windows)
 	if windowCount == 0 {
 		results = append(results, CheckResult{
-			Name:    "session_layout",
+			Name:    "primary_template",
 			Status:  StatusError,
-			Message: "Session layout has no windows",
-			Hint:    "Add at least one window to session_layout.windows",
+			Message: "Primary template has no windows",
+			Hint:    "Add at least one window to primary_template.windows",
 		})
 	} else {
 		results = append(results, CheckResult{
-			Name:    "session_layout",
+			Name:    "primary_template",
 			Status:  StatusOK,
-			Message: "Session layout",
+			Message: "Primary template",
 			Detail:  fmt.Sprintf("(%d window(s))", windowCount),
+		})
+	}
+
+	if len(cfg.Templates) > 0 {
+		results = append(results, CheckResult{
+			Name:    "templates",
+			Status:  StatusOK,
+			Message: "Additional templates",
+			Detail:  fmt.Sprintf("(%d)", len(cfg.Templates)),
 		})
 	}
 
@@ -107,24 +125,6 @@ func ValidateConfig(cfg *models.Config) []CheckResult {
 			Status:  StatusWarning,
 			Message: fmt.Sprintf("Unusual tmux_base value: %d", cfg.Settings.TmuxBase),
 			Hint:    "tmux_base is typically 0 or 1",
-		})
-	}
-
-	if cfg.FallbackSession.Name == "" {
-		results = append(results, CheckResult{
-			Name:    "fallback_session",
-			Status:  StatusWarning,
-			Message: "Fallback session name not configured",
-			Hint:    "Set fallback_session.name for when no directory is selected",
-		})
-	}
-
-	if cfg.FallbackSession.Path == "" {
-		results = append(results, CheckResult{
-			Name:    "fallback_session",
-			Status:  StatusWarning,
-			Message: "Fallback session path not configured",
-			Hint:    "Set fallback_session.path for the fallback session's working directory",
 		})
 	}
 

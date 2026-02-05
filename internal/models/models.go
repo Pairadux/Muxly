@@ -6,18 +6,24 @@ import "fmt"
 type StringSet map[string]struct{}
 
 type Window struct {
-	Name string `mapstructure:"name"`
-	Cmd  string `mapstructure:"cmd,omitempty"`
+	Name string `mapstructure:"name" yaml:"name"`
+	Cmd  string `mapstructure:"cmd,omitempty" yaml:"cmd,omitempty"`
 }
 
 type SessionLayout struct {
-	Windows []Window `mapstructure:"windows"`
+	Windows []Window `mapstructure:"windows" yaml:"windows"`
+}
+
+type SessionTemplate struct {
+	Name    string   `mapstructure:"name" yaml:"name"`
+	Path    string   `mapstructure:"path,omitempty" yaml:"path,omitempty"`
+	Windows []Window `mapstructure:"windows" yaml:"windows"`
 }
 
 type ScanDir struct {
-	Path  string `mapstructure:"path"`
-	Depth *int   `mapstructure:"depth,omitempty"`
-	Alias string `mapstructure:"alias,omitempty"`
+	Path  string `mapstructure:"path" yaml:"path"`
+	Depth *int   `mapstructure:"depth,omitempty" yaml:"depth,omitempty"`
+	Alias string `mapstructure:"alias,omitempty" yaml:"alias,omitempty"`
 }
 
 type Session struct {
@@ -69,10 +75,10 @@ type Settings struct {
 
 // Config represents the full configuration structure
 type Config struct {
-	ScanDirs        []ScanDir     `mapstructure:"scan_dirs" yaml:"scan_dirs"`
-	EntryDirs       []string      `mapstructure:"entry_dirs" yaml:"entry_dirs"`
-	IgnoreDirs      []string      `mapstructure:"ignore_dirs" yaml:"ignore_dirs"`
-	FallbackSession Session       `mapstructure:"fallback_session" yaml:"fallback_session"`
-	SessionLayout   SessionLayout `mapstructure:"session_layout" yaml:"session_layout"`
-	Settings        Settings      `mapstructure:"settings" yaml:"settings"`
+	ScanDirs        []ScanDir         `mapstructure:"scan_dirs" yaml:"scan_dirs"`
+	EntryDirs       []string          `mapstructure:"entry_dirs" yaml:"entry_dirs"`
+	IgnoreDirs      []string          `mapstructure:"ignore_dirs" yaml:"ignore_dirs"`
+	PrimaryTemplate SessionTemplate   `mapstructure:"primary_template" yaml:"primary_template"`
+	Templates       []SessionTemplate `mapstructure:"templates,omitempty" yaml:"templates,omitempty"`
+	Settings        Settings          `mapstructure:"settings" yaml:"settings"`
 }

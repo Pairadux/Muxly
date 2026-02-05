@@ -42,18 +42,10 @@ scan_dirs:
   - path: $PWD/testdata/muxly-fixtures/deep-nesting/a/b/c
     depth: 1
 
-session_layout:
+primary_template:
+  name: Test Default
   windows:
     - name: main
-      cmd: ""
-
-fallback_session:
-  name: test-fallback
-  path: ~/
-  layout:
-    windows:
-      - name: main
-        cmd: ""
 
 settings:
   editor: vi

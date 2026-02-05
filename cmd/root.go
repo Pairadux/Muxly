@@ -75,10 +75,10 @@ var rootCmd = &cobra.Command{
 			fmt.Printf("scan_dirs: %v\n", cfg.ScanDirs)
 			fmt.Printf("entry_dirs: %v\n", cfg.EntryDirs)
 			fmt.Printf("ignore_dirs: %v\n", cfg.IgnoreDirs)
-			fmt.Printf("fallback_session: %v\n", cfg.FallbackSession)
+			fmt.Printf("primary_template: %v\n", cfg.PrimaryTemplate)
+			fmt.Printf("templates: %v\n", cfg.Templates)
 			fmt.Printf("tmux_base: %v\n", cfg.Settings.TmuxBase)
 			fmt.Printf("default_depth: %v\n", cfg.Settings.DefaultDepth)
-			fmt.Printf("session_layout: %v\n", cfg.SessionLayout)
 		}
 
 		flagDepth, _ := cmd.Flags().GetInt("depth")
@@ -133,7 +133,7 @@ var rootCmd = &cobra.Command{
 
 		sessionLayout := session.LoadMuxlyFile(selectedPath)
 		if len(sessionLayout.Windows) == 0 {
-			sessionLayout = cfg.SessionLayout
+			sessionLayout = models.SessionLayout{Windows: cfg.PrimaryTemplate.Windows}
 		}
 
 		session := models.Session{
@@ -257,17 +257,5 @@ func validateConfig() error {
 func warnOnConfigIssues() {
 	if cfg.Settings.Editor == "" {
 		fmt.Fprintf(os.Stderr, "Warning: editor not set, defaulting to '%s'\n", config.DefaultEditor)
-	}
-
-	if cfg.FallbackSession.Name == "" {
-		fmt.Fprintf(os.Stderr, "fallback_session.name is missing, defaulting to '%s'\n", config.DefaultFallbackSessionName)
-	}
-
-	if cfg.FallbackSession.Path == "" {
-		fmt.Fprintf(os.Stderr, "fallback_session.path is missing, defaulting to '%s'\n", config.DefaultFallbackSessionPath)
-	}
-
-	if len(cfg.FallbackSession.Layout.Windows) == 0 {
-		fmt.Fprintln(os.Stderr, "fallback_session.layout.windows is empty, using default layout")
 	}
 }

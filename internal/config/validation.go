@@ -16,8 +16,25 @@ func Validate(cfg *models.Config) error {
 		return fmt.Errorf("no directories configured for scanning (scan_dirs or entry_dirs required)")
 	}
 
-	if len(cfg.SessionLayout.Windows) == 0 {
-		return fmt.Errorf("session_layout must have at least one window")
+	if cfg.PrimaryTemplate.Name == "" {
+		return fmt.Errorf("primary_template.name is required")
+	}
+	if len(cfg.PrimaryTemplate.Windows) == 0 {
+		return fmt.Errorf("primary_template must have at least one window")
+	}
+
+	seenNames := map[string]bool{cfg.PrimaryTemplate.Name: true}
+	for _, tmpl := range cfg.Templates {
+		if tmpl.Name == "" {
+			return fmt.Errorf("all templates must have a name")
+		}
+		if seenNames[tmpl.Name] {
+			return fmt.Errorf("duplicate template name %q", tmpl.Name)
+		}
+		seenNames[tmpl.Name] = true
+		if len(tmpl.Windows) == 0 {
+			return fmt.Errorf("template %q must have at least one window", tmpl.Name)
+		}
 	}
 
 	seenAliases := make(map[string]string)

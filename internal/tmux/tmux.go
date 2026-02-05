@@ -9,8 +9,6 @@ import (
 	"strings"
 
 	"github.com/Pairadux/muxly/internal/constants"
-	"github.com/Pairadux/muxly/internal/forms"
-
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/mitchellh/go-homedir"
 )
@@ -264,22 +262,17 @@ func KillServer() error {
 	return nil
 }
 
-// CreateAndSwitchToFallbackSession creates and switches to the configured fallback session.
-// If no fallback session is configured, it uses "default" as the session name.
-// The session is created in the user's home directory with the configured layout.
-//
-// Returns an error if session creation or switching fails.
-func CreateAndSwitchToFallbackSession(cfg *models.Config) error {
-	sessionName := cfg.FallbackSession.Name
-	if sessionName == "" {
-		sessionName = "Default"
-	}
+// CreateSessionFromPrimaryTemplate creates and switches to a session using the primary template.
+// Used by the kill command when no other sessions exist.
+func CreateSessionFromPrimaryTemplate(cfg *models.Config) error {
+	tmpl := cfg.PrimaryTemplate
 
+	sessionName := tmpl.Name
 	if HasTmuxSession(sessionName) {
 		return SwitchToExistingSession(cfg, sessionName)
 	}
 
-	sessionPath := cfg.FallbackSession.Path
+	sessionPath := tmpl.Path
 	if sessionPath == "" {
 		var err error
 		sessionPath, err = homedir.Dir()
@@ -288,100 +281,26 @@ func CreateAndSwitchToFallbackSession(cfg *models.Config) error {
 		}
 	}
 
-	sessionLayout := cfg.FallbackSession.Layout
-	if len(sessionLayout.Windows) == 0 {
-		sessionLayout = cfg.SessionLayout
+	session := models.Session{
+		Name:   sessionName,
+		Path:   sessionPath,
+		Layout: models.SessionLayout{Windows: tmpl.Windows},
+	}
+
+	return CreateAndSwitchSession(cfg, session)
+}
+
+// CreateSessionFromTemplate creates and switches to a session from a given template and path.
+func CreateSessionFromTemplate(cfg *models.Config, tmpl models.SessionTemplate, sessionPath, sessionName string) error {
+	if HasTmuxSession(sessionName) {
+		return SwitchToExistingSession(cfg, sessionName)
 	}
 
 	session := models.Session{
 		Name:   sessionName,
 		Path:   sessionPath,
-		Layout: sessionLayout,
+		Layout: models.SessionLayout{Windows: tmpl.Windows},
 	}
 
-	if err := CreateAndSwitchSession(cfg, session); err != nil {
-		return fmt.Errorf("failed to create and switch to session '%s': %w", sessionName, err)
-	}
-
-	return nil
-}
-
-func CreateSessionFromForm(cfg models.Config) error {
-	var (
-		useFallback   bool
-		confirmCreate bool
-		sessionName   string
-		path          string
-		windowsStr    string
-	)
-
-	form := forms.CreateForm(&useFallback, &confirmCreate, &sessionName, &path, &windowsStr)
-	if err := form.Run(); err != nil {
-		return fmt.Errorf("form error: %w", err)
-	}
-
-	if !confirmCreate {
-		return nil
-	}
-
-	if useFallback {
-		return CreateAndSwitchToFallbackSession(&cfg)
-	}
-
-	if HasTmuxSession(sessionName) {
-		return fmt.Errorf("session '%s' already exists", sessionName)
-	}
-
-	layout := parseWindows(windowsStr)
-	if len(layout.Windows) == 0 {
-		layout = cfg.SessionLayout
-	}
-
-	session := models.Session{
-		Name:   sessionName,
-		Path:   path,
-		Layout: layout,
-	}
-
-	return CreateAndSwitchSession(&cfg, session)
-}
-
-// parseWindows parses a newline-delimited input string where each line is a name:cmd pair.
-//
-// It converts each name:cmd pair into Window structs for the session layout.
-// If no colon is found in a line, the entire line is treated as the window name with no command.
-// Returns a SessionLayout with parsed windows, or empty layout if input is empty.
-func parseWindows(input string) models.SessionLayout {
-	input = strings.TrimSpace(input)
-	if input == "" {
-		return models.SessionLayout{}
-	}
-
-	lines := strings.Split(input, "\n")
-	windows := make([]models.Window, 0, len(lines))
-
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-
-		parts := strings.SplitN(line, ":", 2)
-		name := strings.TrimSpace(parts[0])
-		if name == "" {
-			continue
-		}
-
-		var cmd string
-		if len(parts) > 1 {
-			cmd = strings.TrimSpace(parts[1])
-		}
-
-		windows = append(windows, models.Window{
-			Name: name,
-			Cmd:  cmd,
-		})
-	}
-
-	return models.SessionLayout{Windows: windows}
+	return CreateAndSwitchSession(cfg, session)
 }
