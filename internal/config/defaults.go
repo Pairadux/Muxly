@@ -13,7 +13,7 @@ import "github.com/Pairadux/muxly/internal/models"
 const (
 	DefaultEditor                  = "vi"
 	DefaultTmuxSessionPrefix       = "[TMUX] "
-	DefaultTmuxBase                = 1
+	DefaultTmuxBase                = 0
 	DefaultScanDepth               = 1
 	DefaultAlwaysKillOnLastSession = false
 )
@@ -82,7 +82,7 @@ func ApplyDefaults(cfg *models.Config) {
 	if cfg.Settings.TmuxSessionPrefix == "" {
 		cfg.Settings.TmuxSessionPrefix = DefaultTmuxSessionPrefix
 	}
-	if cfg.Settings.TmuxBase == 0 {
+	if cfg.Settings.TmuxBase < 0 {
 		cfg.Settings.TmuxBase = DefaultTmuxBase
 	}
 	if cfg.Settings.DefaultDepth == 0 {
