@@ -74,11 +74,11 @@ var createCmd = &cobra.Command{
 				return nil
 			}
 
-			path, exists := entries[choiceStr]
+			selected, exists := entries[choiceStr]
 			if !exists {
 				return fmt.Errorf("selected entry not found: %s", choiceStr)
 			}
-			sessionPath = path
+			sessionPath = selected.Path
 		}
 
 		sessionName := filepath.Base(sessionPath)

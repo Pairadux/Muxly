@@ -21,8 +21,8 @@ const (
 var (
 	DefaultScanDirs = []models.ScanDir{}
 
-	DefaultEntryDirs = []string{
-		"~",
+	DefaultEntryDirs = []models.EntryDir{
+		{Path: "~"},
 	}
 
 	DefaultIgnoreDirs = []string{

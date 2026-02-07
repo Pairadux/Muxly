@@ -32,14 +32,14 @@ func NewBuilder(cfg *models.Config, verbose bool) *Builder {
 // The flagDepth parameter can override the scanning depth for scan_dirs.
 // Returns a map where keys are display names and values are resolved paths
 // or session names for existing tmux sessions.
-func (b *Builder) BuildEntries(flagDepth int) (map[string]string, error) {
+func (b *Builder) BuildEntries(flagDepth int) (map[string]models.DirEntry, error) {
 	existingSessions := tmux.GetTmuxSessionSet()
 	currentSession := tmux.GetCurrentTmuxSession()
 
 	ignoreSet := b.buildIgnoreSet()
 	allPaths := b.collectAllPaths(flagDepth, ignoreSet, currentSession)
 
-	entries := make(map[string]string, len(allPaths)+len(existingSessions))
+	entries := make(map[string]models.DirEntry, len(allPaths)+len(existingSessions))
 	b.addDirectoryEntries(entries, allPaths, currentSession, existingSessions)
 	b.addTmuxSessionEntries(entries, existingSessions, currentSession)
 
@@ -59,16 +59,16 @@ func (b *Builder) buildIgnoreSet() models.StringSet {
 }
 
 // collectAllPaths gathers all directory paths from scan_dirs and entry_dirs.
-func (b *Builder) collectAllPaths(flagDepth int, ignoreSet models.StringSet, currentSession string) []models.PathInfo {
-	var allPaths []models.PathInfo
+func (b *Builder) collectAllPaths(flagDepth int, ignoreSet models.StringSet, currentSession string) []models.DirEntry {
+	var allPaths []models.DirEntry
 
-	addPath := func(path, prefix string) error {
+	addPath := func(path, prefix, template string) error {
 		if _, ignored := ignoreSet[path]; ignored {
 			return nil
 		}
 
-		info := models.PathInfo{Path: path, Prefix: prefix}
-		allPaths = append(allPaths, info)
+		entry := models.DirEntry{Path: path, Prefix: prefix, Template: template}
+		allPaths = append(allPaths, entry)
 		return nil
 	}
 
@@ -80,21 +80,21 @@ func (b *Builder) collectAllPaths(flagDepth int, ignoreSet models.StringSet, cur
 	}
 
 	for _, entryDir := range b.cfg.EntryDirs {
-		resolved, err := utility.ResolvePath(entryDir)
+		resolved, err := utility.ResolvePath(entryDir.Path)
 		if err != nil {
 			if b.verbose {
-				fmt.Fprintf(os.Stderr, "Warning: failed to resolve entry directory %s: %v\n", entryDir, err)
+				fmt.Fprintf(os.Stderr, "Warning: failed to resolve entry directory %s: %v\n", entryDir.Path, err)
 			}
 			continue
 		}
-		addPath(resolved, "")
+		addPath(resolved, "", entryDir.Template)
 	}
 
 	return allPaths
 }
 
 // addDirectoryEntries populates the entries map with display names for directories.
-func (b *Builder) addDirectoryEntries(entries map[string]string, allPaths []models.PathInfo, currentSession string, existingSessions map[string]bool) {
+func (b *Builder) addDirectoryEntries(entries map[string]models.DirEntry, allPaths []models.DirEntry, currentSession string, existingSessions map[string]bool) {
 	displayNames := DeduplicateDisplayNames(allPaths)
 
 	for _, info := range allPaths {
@@ -104,24 +104,24 @@ func (b *Builder) addDirectoryEntries(entries map[string]string, allPaths []mode
 			continue
 		}
 
-		entries[displayName] = info.Path
+		entries[displayName] = info
 	}
 }
 
 // addTmuxSessionEntries adds existing tmux sessions to the entries map.
-func (b *Builder) addTmuxSessionEntries(entries map[string]string, existingSessions map[string]bool, currentSession string) {
+func (b *Builder) addTmuxSessionEntries(entries map[string]models.DirEntry, existingSessions map[string]bool, currentSession string) {
 	for sessionName := range existingSessions {
 		if sessionName == currentSession {
 			continue
 		}
 
 		displayName := b.cfg.Settings.TmuxSessionPrefix + sessionName
-		entries[displayName] = sessionName
+		entries[displayName] = models.DirEntry{Path: sessionName}
 	}
 }
 
 // processScanDir scans a single scan_dir entry and adds all discovered subdirectories.
-func (b *Builder) processScanDir(scanDir models.ScanDir, flagDepth int, prefix string, addEntry func(string, string) error) error {
+func (b *Builder) processScanDir(scanDir models.ScanDir, flagDepth int, prefix string, addEntry func(string, string, string) error) error {
 	defaultDepth := b.cfg.Settings.DefaultDepth
 	effectiveDepth := scanDir.GetDepth(flagDepth, defaultDepth)
 
@@ -142,7 +142,7 @@ func (b *Builder) processScanDir(scanDir models.ScanDir, flagDepth int, prefix s
 	}
 
 	for _, subDir := range subDirs {
-		if err := addEntry(subDir, prefix); err != nil {
+		if err := addEntry(subDir, prefix, scanDir.Template); err != nil {
 			return err
 		}
 	}

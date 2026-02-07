@@ -5,6 +5,7 @@ import (
 	"os"
 	"slices"
 
+	"github.com/Pairadux/muxly/internal/models"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -48,14 +49,14 @@ Examples:
 			return fmt.Errorf("path %q would already be found by scan_dir %s (depth: %d)\nNo need to add it to entry_dirs", resolvedPath, matchedScanDir.String(), depth)
 		}
 
-		// Check if already in entry_dirs to avoid duplicates
-		if slices.Contains(cfg.EntryDirs, resolvedPath) {
+		if slices.ContainsFunc(cfg.EntryDirs, func(ed models.EntryDir) bool {
+			return ed.Path == resolvedPath
+		}) {
 			fmt.Printf("Path %q is already in entry_dirs\n", resolvedPath)
 			return nil
 		}
 
-		// Add to entry_dirs and write config using viper
-		updatedEntryDirs := append(cfg.EntryDirs, resolvedPath)
+		updatedEntryDirs := append(cfg.EntryDirs, models.EntryDir{Path: resolvedPath})
 		viper.Set("entry_dirs", updatedEntryDirs)
 
 		if err := viper.WriteConfig(); err != nil {

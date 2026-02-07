@@ -46,6 +46,15 @@ func Validate(cfg *models.Config) error {
 			}
 			seenAliases[scanDir.Alias] = scanDir.Path
 		}
+		if scanDir.Template != "" && !seenNames[scanDir.Template] {
+			return fmt.Errorf("scan_dir %q references unknown template %q", scanDir.Path, scanDir.Template)
+		}
+	}
+
+	for _, entryDir := range cfg.EntryDirs {
+		if entryDir.Template != "" && !seenNames[entryDir.Template] {
+			return fmt.Errorf("entry_dir %q references unknown template %q", entryDir.Path, entryDir.Template)
+		}
 	}
 
 	return nil

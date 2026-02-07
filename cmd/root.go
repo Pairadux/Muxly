@@ -126,23 +126,28 @@ var rootCmd = &cobra.Command{
 
 		sessionName, _ := strings.CutPrefix(choiceStr, cfg.Settings.TmuxSessionPrefix)
 
-		selectedPath, exists := entries[choiceStr]
+		selected, exists := entries[choiceStr]
 		if !exists && len(args) == 0 {
 			return fmt.Errorf("the name must match an existing directory entry: %s", choiceStr)
 		}
 
-		sessionLayout := session.LoadMuxlyFile(selectedPath)
+		sessionLayout := session.LoadMuxlyFile(selected.Path)
+		if len(sessionLayout.Windows) == 0 && selected.Template != "" {
+			if tmpl, found := config.FindTemplateByName(&cfg, selected.Template); found {
+				sessionLayout = models.SessionLayout{Windows: tmpl.Windows}
+			}
+		}
 		if len(sessionLayout.Windows) == 0 {
 			sessionLayout = models.SessionLayout{Windows: cfg.PrimaryTemplate.Windows}
 		}
 
-		session := models.Session{
+		sess := models.Session{
 			Name:   sessionName,
-			Path:   selectedPath,
+			Path:   selected.Path,
 			Layout: sessionLayout,
 		}
 
-		if err := tmux.CreateAndSwitchSession(&cfg, session); err != nil {
+		if err := tmux.CreateAndSwitchSession(&cfg, sess); err != nil {
 			if errors.Is(err, tmux.ErrGracefulExit) {
 				return nil
 			}

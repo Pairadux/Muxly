@@ -21,9 +21,15 @@ type SessionTemplate struct {
 }
 
 type ScanDir struct {
-	Path  string `mapstructure:"path" yaml:"path"`
-	Depth *int   `mapstructure:"depth,omitempty" yaml:"depth,omitempty"`
-	Alias string `mapstructure:"alias,omitempty" yaml:"alias,omitempty"`
+	Path     string `mapstructure:"path" yaml:"path"`
+	Depth    *int   `mapstructure:"depth,omitempty" yaml:"depth,omitempty"`
+	Alias    string `mapstructure:"alias,omitempty" yaml:"alias,omitempty"`
+	Template string `mapstructure:"template,omitempty" yaml:"template,omitempty"`
+}
+
+type EntryDir struct {
+	Path     string `mapstructure:"path" yaml:"path"`
+	Template string `mapstructure:"template,omitempty" yaml:"template,omitempty"`
 }
 
 type Session struct {
@@ -55,13 +61,25 @@ func (s ScanDir) String() string {
 	if s.Alias != "" {
 		result = fmt.Sprintf("%s (alias: %s)", result, s.Alias)
 	}
+	if s.Template != "" {
+		result = fmt.Sprintf("%s (template: %s)", result, s.Template)
+	}
 	return result
 }
 
-// PathInfo holds metadata for a directory path including any alias prefix
-type PathInfo struct {
-	Path   string
-	Prefix string
+func (e EntryDir) String() string {
+	result := e.Path
+	if e.Template != "" {
+		result = fmt.Sprintf("%s (template: %s)", result, e.Template)
+	}
+	return result
+}
+
+// DirEntry holds metadata for a resolved directory in the selector
+type DirEntry struct {
+	Path     string
+	Prefix   string
+	Template string
 }
 
 // Settings groups general configuration options
@@ -76,7 +94,7 @@ type Settings struct {
 // Config represents the full configuration structure
 type Config struct {
 	ScanDirs        []ScanDir         `mapstructure:"scan_dirs" yaml:"scan_dirs"`
-	EntryDirs       []string          `mapstructure:"entry_dirs" yaml:"entry_dirs"`
+	EntryDirs       []EntryDir        `mapstructure:"entry_dirs" yaml:"entry_dirs"`
 	IgnoreDirs      []string          `mapstructure:"ignore_dirs" yaml:"ignore_dirs"`
 	PrimaryTemplate SessionTemplate   `mapstructure:"primary_template" yaml:"primary_template"`
 	Templates       []SessionTemplate `mapstructure:"templates,omitempty" yaml:"templates,omitempty"`

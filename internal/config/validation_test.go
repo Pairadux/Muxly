@@ -30,7 +30,7 @@ func TestValidate(t *testing.T) {
 		{
 			name: "valid entry_dirs only",
 			cfg: &models.Config{
-				EntryDirs: []string{"~/Documents"},
+				EntryDirs: []models.EntryDir{{Path: "~/Documents"}},
 				PrimaryTemplate: models.SessionTemplate{
 					Name:    "Default",
 					Windows: []models.Window{{Name: "main"}},
@@ -42,7 +42,7 @@ func TestValidate(t *testing.T) {
 			name: "valid both dirs",
 			cfg: &models.Config{
 				ScanDirs:  []models.ScanDir{{Path: "~/Dev"}},
-				EntryDirs: []string{"~/Documents"},
+				EntryDirs: []models.EntryDir{{Path: "~/Documents"}},
 				PrimaryTemplate: models.SessionTemplate{
 					Name:    "Default",
 					Windows: []models.Window{{Name: "main"}},
@@ -199,6 +199,79 @@ func TestValidate(t *testing.T) {
 				},
 			},
 			expectError: false,
+		},
+		{
+			name: "valid scan_dir template reference",
+			cfg: &models.Config{
+				ScanDirs: []models.ScanDir{
+					{Path: "~/Dev", Template: "Dev"},
+				},
+				PrimaryTemplate: models.SessionTemplate{
+					Name:    "Default",
+					Windows: []models.Window{{Name: "main"}},
+				},
+				Templates: []models.SessionTemplate{
+					{Name: "Dev", Windows: []models.Window{{Name: "editor"}}},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "valid scan_dir references primary template",
+			cfg: &models.Config{
+				ScanDirs: []models.ScanDir{
+					{Path: "~/Dev", Template: "Default"},
+				},
+				PrimaryTemplate: models.SessionTemplate{
+					Name:    "Default",
+					Windows: []models.Window{{Name: "main"}},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "invalid scan_dir unknown template",
+			cfg: &models.Config{
+				ScanDirs: []models.ScanDir{
+					{Path: "~/Dev", Template: "Nonexistent"},
+				},
+				PrimaryTemplate: models.SessionTemplate{
+					Name:    "Default",
+					Windows: []models.Window{{Name: "main"}},
+				},
+			},
+			expectError: true,
+			errContains: "scan_dir \"~/Dev\" references unknown template",
+		},
+		{
+			name: "valid entry_dir template reference",
+			cfg: &models.Config{
+				EntryDirs: []models.EntryDir{
+					{Path: "~/Documents", Template: "Dev"},
+				},
+				PrimaryTemplate: models.SessionTemplate{
+					Name:    "Default",
+					Windows: []models.Window{{Name: "main"}},
+				},
+				Templates: []models.SessionTemplate{
+					{Name: "Dev", Windows: []models.Window{{Name: "editor"}}},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "invalid entry_dir unknown template",
+			cfg: &models.Config{
+				EntryDirs: []models.EntryDir{
+					{Path: "~/Documents", Template: "Nonexistent"},
+				},
+				PrimaryTemplate: models.SessionTemplate{
+					Name:    "Default",
+					Windows: []models.Window{{Name: "main"}},
+				},
+			},
+			expectError: true,
+			errContains: "entry_dir \"~/Documents\" references unknown template",
 		},
 	}
 

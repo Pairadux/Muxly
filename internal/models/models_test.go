@@ -118,11 +118,54 @@ func TestScanDirString(t *testing.T) {
 			scanDir:  ScanDir{Path: "~/Dev", Alias: ""},
 			expected: "~/Dev",
 		},
+		{
+			name:     "path with template",
+			scanDir:  ScanDir{Path: "~/Dev", Template: "Go Dev"},
+			expected: "~/Dev (template: Go Dev)",
+		},
+		{
+			name:     "path with depth alias and template",
+			scanDir:  ScanDir{Path: "~/Dev", Depth: intPtr(2), Alias: "dev", Template: "Go Dev"},
+			expected: "~/Dev:2 (alias: dev) (template: Go Dev)",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.scanDir.String()
+			if got != tt.expected {
+				t.Errorf("String() = %q, want %q", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestEntryDirString(t *testing.T) {
+	tests := []struct {
+		name     string
+		entryDir EntryDir
+		expected string
+	}{
+		{
+			name:     "path only",
+			entryDir: EntryDir{Path: "~/Documents"},
+			expected: "~/Documents",
+		},
+		{
+			name:     "path with template",
+			entryDir: EntryDir{Path: "~/Documents", Template: "Single Window"},
+			expected: "~/Documents (template: Single Window)",
+		},
+		{
+			name:     "empty template is not shown",
+			entryDir: EntryDir{Path: "~/Documents", Template: ""},
+			expected: "~/Documents",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.entryDir.String()
 			if got != tt.expected {
 				t.Errorf("String() = %q, want %q", got, tt.expected)
 			}

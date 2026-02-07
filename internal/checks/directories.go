@@ -16,8 +16,8 @@ func ValidateDirectories(cfg *models.Config) []CheckResult {
 		results = append(results, checkDirectory(sd.Path, "scan_dirs"))
 	}
 
-	for _, path := range cfg.EntryDirs {
-		results = append(results, checkDirectory(path, "entry_dirs"))
+	for _, ed := range cfg.EntryDirs {
+		results = append(results, checkDirectory(ed.Path, "entry_dirs"))
 	}
 
 	return results

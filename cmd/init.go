@@ -64,13 +64,17 @@ func init() {
 func generateConfigYAML(cfg models.Config) string {
 	header := `# Configuration for muxly
 #
-# scan_dirs: Directories to scan for projects (supports depth per directory)
+# scan_dirs: Directories to scan for projects (supports depth, alias, and template per directory)
 #   Example: - path: ~/Dev
 #            - path: ~/.config
 #              depth: 2
 #              alias: config
+#              template: "Single Window"
 #
 # entry_dirs: Additional directories always included (not scanned)
+#   Supports optional template assignment:
+#   Example: - path: ~/special-project
+#              template: "Single Window"
 #
 # ignore_dirs: Directory paths to exclude from scanning
 #

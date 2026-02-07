@@ -9,17 +9,17 @@ import (
 func TestDeduplicateDisplayNames(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    []models.PathInfo
+		input    []models.DirEntry
 		expected map[string]string
 	}{
 		{
 			name:     "empty input",
-			input:    []models.PathInfo{},
+			input:    []models.DirEntry{},
 			expected: map[string]string{},
 		},
 		{
 			name: "single directory",
-			input: []models.PathInfo{
+			input: []models.DirEntry{
 				{Path: "/home/user/Dev/muxly"},
 			},
 			expected: map[string]string{
@@ -28,7 +28,7 @@ func TestDeduplicateDisplayNames(t *testing.T) {
 		},
 		{
 			name: "two unique basenames",
-			input: []models.PathInfo{
+			input: []models.DirEntry{
 				{Path: "/Dev/foo"},
 				{Path: "/Work/bar"},
 			},
@@ -39,7 +39,7 @@ func TestDeduplicateDisplayNames(t *testing.T) {
 		},
 		{
 			name: "same basename different parents",
-			input: []models.PathInfo{
+			input: []models.DirEntry{
 				{Path: "/Dev/muxly"},
 				{Path: "/Work/muxly"},
 			},
@@ -50,7 +50,7 @@ func TestDeduplicateDisplayNames(t *testing.T) {
 		},
 		{
 			name: "same basename deeper conflict",
-			input: []models.PathInfo{
+			input: []models.DirEntry{
 				{Path: "/a/b/src"},
 				{Path: "/x/y/src"},
 			},
@@ -61,7 +61,7 @@ func TestDeduplicateDisplayNames(t *testing.T) {
 		},
 		{
 			name: "same parent different grandparent",
-			input: []models.PathInfo{
+			input: []models.DirEntry{
 				{Path: "/a/shared/src"},
 				{Path: "/b/shared/src"},
 			},
@@ -72,7 +72,7 @@ func TestDeduplicateDisplayNames(t *testing.T) {
 		},
 		{
 			name: "three-way conflict",
-			input: []models.PathInfo{
+			input: []models.DirEntry{
 				{Path: "/Dev/muxly"},
 				{Path: "/Work/muxly"},
 				{Path: "/Projects/muxly"},
@@ -85,7 +85,7 @@ func TestDeduplicateDisplayNames(t *testing.T) {
 		},
 		{
 			name: "single with alias no conflict",
-			input: []models.PathInfo{
+			input: []models.DirEntry{
 				{Path: "/config/muxly", Prefix: "cfg"},
 			},
 			expected: map[string]string{
@@ -94,7 +94,7 @@ func TestDeduplicateDisplayNames(t *testing.T) {
 		},
 		{
 			name: "conflict one has alias",
-			input: []models.PathInfo{
+			input: []models.DirEntry{
 				{Path: "/config/muxly", Prefix: "cfg"},
 				{Path: "/Dev/muxly"},
 			},
@@ -105,7 +105,7 @@ func TestDeduplicateDisplayNames(t *testing.T) {
 		},
 		{
 			name: "conflict both have aliases",
-			input: []models.PathInfo{
+			input: []models.DirEntry{
 				{Path: "/config/muxly", Prefix: "cfg"},
 				{Path: "/Dev/muxly", Prefix: "dev"},
 			},
@@ -116,7 +116,7 @@ func TestDeduplicateDisplayNames(t *testing.T) {
 		},
 		{
 			name: "three-way one alias",
-			input: []models.PathInfo{
+			input: []models.DirEntry{
 				{Path: "/config/muxly", Prefix: "cfg"},
 				{Path: "/Dev/muxly"},
 				{Path: "/Work/muxly"},
@@ -129,7 +129,7 @@ func TestDeduplicateDisplayNames(t *testing.T) {
 		},
 		{
 			name: "single dotdir no conflict",
-			input: []models.PathInfo{
+			input: []models.DirEntry{
 				{Path: "/Dev/.config"},
 			},
 			expected: map[string]string{
@@ -138,7 +138,7 @@ func TestDeduplicateDisplayNames(t *testing.T) {
 		},
 		{
 			name: "dotdir and regular same basename",
-			input: []models.PathInfo{
+			input: []models.DirEntry{
 				{Path: "/Dev/.muxly"},
 				{Path: "/Work/muxly"},
 			},
@@ -149,7 +149,7 @@ func TestDeduplicateDisplayNames(t *testing.T) {
 		},
 		{
 			name: "two dotdirs different parents",
-			input: []models.PathInfo{
+			input: []models.DirEntry{
 				{Path: "/Dev/.config"},
 				{Path: "/Work/.config"},
 			},
@@ -160,7 +160,7 @@ func TestDeduplicateDisplayNames(t *testing.T) {
 		},
 		{
 			name: "multiple leading dots",
-			input: []models.PathInfo{
+			input: []models.DirEntry{
 				{Path: "/Dev/..hidden"},
 			},
 			expected: map[string]string{
@@ -169,7 +169,7 @@ func TestDeduplicateDisplayNames(t *testing.T) {
 		},
 		{
 			name: "triple dots",
-			input: []models.PathInfo{
+			input: []models.DirEntry{
 				{Path: "/Dev/...weird"},
 			},
 			expected: map[string]string{
@@ -178,7 +178,7 @@ func TestDeduplicateDisplayNames(t *testing.T) {
 		},
 		{
 			name: "multi-dot conflict",
-			input: []models.PathInfo{
+			input: []models.DirEntry{
 				{Path: "/Dev/..foo"},
 				{Path: "/Work/..foo"},
 			},
@@ -189,7 +189,7 @@ func TestDeduplicateDisplayNames(t *testing.T) {
 		},
 		{
 			name: "root level paths",
-			input: []models.PathInfo{
+			input: []models.DirEntry{
 				{Path: "/muxly"},
 				{Path: "/other"},
 			},
@@ -200,7 +200,7 @@ func TestDeduplicateDisplayNames(t *testing.T) {
 		},
 		{
 			name: "path with spaces",
-			input: []models.PathInfo{
+			input: []models.DirEntry{
 				{Path: "/My Projects/muxly"},
 				{Path: "/Dev/muxly"},
 			},

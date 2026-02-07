@@ -10,7 +10,7 @@ import (
 )
 
 type dedupeEntry struct {
-	info     models.PathInfo
+	info     models.DirEntry
 	dotCount int
 }
 
@@ -20,7 +20,7 @@ type dedupeEntry struct {
 // this function finds the minimum path suffix needed to make them distinguishable.
 // Aliases are only applied when deduplication is needed.
 // Dotfiles always get a [dotdir] suffix (with count for multiple leading dots).
-func DeduplicateDisplayNames(allPaths []models.PathInfo) map[string]string {
+func DeduplicateDisplayNames(allPaths []models.DirEntry) map[string]string {
 	if len(allPaths) == 0 {
 		return make(map[string]string)
 	}
@@ -42,7 +42,7 @@ func DeduplicateDisplayNames(allPaths []models.PathInfo) map[string]string {
 	return result
 }
 
-func buildDedupeEntries(allPaths []models.PathInfo) []dedupeEntry {
+func buildDedupeEntries(allPaths []models.DirEntry) []dedupeEntry {
 	entries := make([]dedupeEntry, len(allPaths))
 	for i, info := range allPaths {
 		basename := filepath.Base(info.Path)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/Pairadux/muxly/internal/models"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -36,18 +37,17 @@ Examples:
 			return err
 		}
 
-		// Check if path exists in entry_dirs
-		idx := slices.Index(cfg.EntryDirs, resolvedPath)
+		idx := slices.IndexFunc(cfg.EntryDirs, func(ed models.EntryDir) bool {
+			return ed.Path == resolvedPath
+		})
 		if idx == -1 {
 			return fmt.Errorf("path %q is not in entry_dirs", resolvedPath)
 		}
 
-		// Handle .muxly file deletion
 		if err := handleMuxlyFile(cmd, resolvedPath); err != nil {
 			return err
 		}
 
-		// Remove from entry_dirs by creating a new slice without the element
 		updatedEntryDirs := slices.Delete(cfg.EntryDirs, idx, idx+1)
 		viper.Set("entry_dirs", updatedEntryDirs)
 
