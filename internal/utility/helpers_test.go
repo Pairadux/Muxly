@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/Pairadux/muxly/internal/models"
 )
 
 func TestResolvePath(t *testing.T) {
@@ -170,7 +172,7 @@ func TestGetSubDirs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dirs, err := GetSubDirs(tt.maxDepth, tempDir)
+			dirs, err := GetSubDirs(tt.maxDepth, tempDir, nil)
 			if err != nil {
 				t.Fatalf("GetSubDirs(%d, %q) unexpected error: %v", tt.maxDepth, tempDir, err)
 			}
@@ -210,7 +212,7 @@ func TestGetSubDirsExcludesFiles(t *testing.T) {
 	os.WriteFile(filepath.Join(tempDir, "file1.txt"), []byte("test"), 0644)
 	os.WriteFile(filepath.Join(tempDir, "file2.go"), []byte("test"), 0644)
 
-	dirs, err := GetSubDirs(1, tempDir)
+	dirs, err := GetSubDirs(1, tempDir, nil)
 	if err != nil {
 		t.Fatalf("GetSubDirs unexpected error: %v", err)
 	}
@@ -225,12 +227,62 @@ func TestGetSubDirsExcludesFiles(t *testing.T) {
 func TestGetSubDirsEmptyDir(t *testing.T) {
 	tempDir := t.TempDir()
 
-	dirs, err := GetSubDirs(1, tempDir)
+	dirs, err := GetSubDirs(1, tempDir, nil)
 	if err != nil {
 		t.Fatalf("GetSubDirs unexpected error: %v", err)
 	}
 
 	if len(dirs) != 0 {
 		t.Errorf("GetSubDirs on empty dir should return empty slice, got %d dirs", len(dirs))
+	}
+}
+
+func TestGetSubDirsIgnoreNames(t *testing.T) {
+	tempDir := t.TempDir()
+
+	os.MkdirAll(filepath.Join(tempDir, "project1"), 0755)
+	os.MkdirAll(filepath.Join(tempDir, "project1", ".git"), 0755)
+	os.MkdirAll(filepath.Join(tempDir, "project1", ".git", "objects"), 0755)
+	os.MkdirAll(filepath.Join(tempDir, "project1", "node_modules"), 0755)
+	os.MkdirAll(filepath.Join(tempDir, "project1", "node_modules", "lodash"), 0755)
+	os.MkdirAll(filepath.Join(tempDir, "project1", "src"), 0755)
+	os.MkdirAll(filepath.Join(tempDir, "project2"), 0755)
+
+	ignoreNames := models.StringSet{
+		".git":         {},
+		"node_modules": {},
+	}
+
+	dirs, err := GetSubDirs(3, tempDir, ignoreNames)
+	if err != nil {
+		t.Fatalf("GetSubDirs unexpected error: %v", err)
+	}
+
+	dirSet := make(map[string]bool)
+	for _, d := range dirs {
+		dirSet[d] = true
+	}
+
+	// Should include non-ignored dirs
+	for _, expected := range []string{
+		filepath.Join(tempDir, "project1"),
+		filepath.Join(tempDir, "project1", "src"),
+		filepath.Join(tempDir, "project2"),
+	} {
+		if !dirSet[expected] {
+			t.Errorf("GetSubDirs should contain %q", expected)
+		}
+	}
+
+	// Should exclude ignored dirs and their children
+	for _, excluded := range []string{
+		filepath.Join(tempDir, "project1", ".git"),
+		filepath.Join(tempDir, "project1", ".git", "objects"),
+		filepath.Join(tempDir, "project1", "node_modules"),
+		filepath.Join(tempDir, "project1", "node_modules", "lodash"),
+	} {
+		if dirSet[excluded] {
+			t.Errorf("GetSubDirs should not contain ignored dir %q", excluded)
+		}
 	}
 }

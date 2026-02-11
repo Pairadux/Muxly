@@ -281,14 +281,16 @@ entry_dirs:
   - ~/Documents
   - ~/notes
 
-# Directory paths to exclude from scanning
+# Directories to exclude from scanning
+# Bare names match any directory with that name at any depth
+# Paths match only that specific resolved directory
 # Note: Specifying ignore_dirs replaces the defaults (.git, node_modules)
 ignore_dirs:
-  - .git
-  - node_modules
-  - .vscode
-  - .idea
-  - ~/projects/archived
+  - .git                  # bare name — skips all .git dirs
+  - node_modules          # bare name — skips all node_modules dirs
+  - .vscode               # bare name — skips all .vscode dirs
+  - .idea                 # bare name — skips all .idea dirs
+  - ~/projects/archived   # path — skips only this specific directory
 
 # Session to create when killing the last tmux session
 fallback_session:
@@ -358,6 +360,25 @@ When you create a session for `~/my-project`, Muxly will use this layout instead
 - `.muxly` files are not scanned/discovered automatically - they only apply when you select that specific directory
 - When removing an entry directory with `muxly remove entry`, you'll be prompted about deleting its `.muxly` file (use `--keep` or `--delete` flags for non-interactive use)
 
+#### Ignore Rules
+
+The `ignore_dirs` list supports two matching styles, determined automatically by the entry format:
+
+| Entry format | Example | Behavior |
+|---|---|---|
+| **Bare name** (no `/` or `~`) | `.git`, `node_modules` | Matches any directory with that exact name at any depth during scanning. The directory and its contents are skipped entirely. |
+| **Path** (contains `/` or `~`) | `~/projects/archived` | Resolved to an absolute path and matches only that specific directory. |
+
+**Defaults:** When `ignore_dirs` is not specified, Muxly ignores `.git` and `node_modules`. Specifying `ignore_dirs` in your config replaces these defaults entirely.
+
+```yaml
+ignore_dirs:
+  - .git                  # bare name — skips all .git dirs
+  - node_modules          # bare name — skips all node_modules dirs
+  - target                # bare name — skips all target dirs (e.g. Rust builds)
+  - ~/projects/archived   # path — skips only this specific directory
+```
+
 ### Configuration Options Reference
 
 | Option | Type | Required | Description |
@@ -367,7 +388,7 @@ When you create a session for `~/my-project`, Muxly will use this layout instead
 | `scan_dirs[].depth` | int | no | Scan depth for this directory (overrides `settings.default_depth`) |
 | `scan_dirs[].alias` | string | no | Display prefix in selector (e.g., "dev" shows as "dev/project-name") |
 | `entry_dirs` | array | yes* | Directories always included without scanning |
-| `ignore_dirs` | array | no | Paths to exclude from scanning |
+| `ignore_dirs` | array | no | Directories to exclude from scanning (see [Ignore Rules](#ignore-rules)) |
 | `fallback_session` | object | no | Session created when killing the last tmux session |
 | `fallback_session.name` | string | no | Session name (default: `"Default"`) |
 | `fallback_session.path` | string | no | Working directory (default: `"~/"`) |
