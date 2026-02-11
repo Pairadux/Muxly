@@ -76,7 +76,9 @@ func generateConfigYAML(cfg models.Config) string {
 #   Example: - path: ~/special-project
 #              template: "Single Window"
 #
-# ignore_dirs: Directory paths to exclude from scanning
+# ignore_dirs: Directories to exclude from scanning
+#   Bare names (e.g. ".git") match any directory with that name at any depth
+#   Paths (e.g. "~/projects/old") match only that specific resolved directory
 #
 # primary_template: The default template used for new sessions
 #   name: Template name (required)

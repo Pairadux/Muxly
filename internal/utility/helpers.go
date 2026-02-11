@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Pairadux/muxly/internal/constants"
+	"github.com/Pairadux/muxly/internal/models"
 	"github.com/charlievieth/fastwalk"
 	"github.com/mitchellh/go-homedir"
 )
@@ -50,13 +51,16 @@ func ResolvePath(p string) (string, error) {
 //	maxDepth = 1: /home/user/Dev/project1, /home/user/Dev/project2
 //	maxDepth = 2: above + /home/user/Dev/project1/src, /home/user/Dev/project2/src
 //
+// Directories whose base names appear in ignoreDirNames are skipped entirely
+// (not descended into), providing both correct filtering and a performance benefit.
+//
 // Uses fastwalk for efficient concurrent traversal. The root directory itself is
 // always excluded from results. Individual path errors are logged to stderr but
 // don't stop the scan or cause an error return.
 //
 // Performance: Results are collected concurrently via a buffered channel
 // (size: constants.DefaultChannelBufferSize).
-func GetSubDirs(maxDepth int, root string) ([]string, error) {
+func GetSubDirs(maxDepth int, root string, ignoreDirNames models.StringSet) ([]string, error) {
 	// PERF: Channel buffer size may be too small for large directory trees, consider making it configurable
 	dirChan := make(chan string, constants.DefaultChannelBufferSize)
 	cfg := &fastwalk.Config{MaxDepth: maxDepth}
@@ -71,6 +75,9 @@ func GetSubDirs(maxDepth int, root string) ([]string, error) {
 			return nil
 		}
 		if d.IsDir() {
+			if _, ignored := ignoreDirNames[d.Name()]; ignored {
+				return fastwalk.SkipDir
+			}
 			dirChan <- path
 		}
 		return nil

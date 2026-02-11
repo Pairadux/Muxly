@@ -3,6 +3,7 @@ package selector
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/Pairadux/muxly/internal/tmux"
@@ -36,8 +37,8 @@ func (b *Builder) BuildEntries(flagDepth int) (map[string]models.DirEntry, error
 	existingSessions := tmux.GetTmuxSessionSet()
 	currentSession := tmux.GetCurrentTmuxSession()
 
-	ignoreSet := b.buildIgnoreSet()
-	allPaths := b.collectAllPaths(flagDepth, ignoreSet, currentSession)
+	ignorePaths, ignoreNames := b.buildIgnoreSets()
+	allPaths := b.collectAllPaths(flagDepth, ignorePaths, ignoreNames, currentSession)
 
 	entries := make(map[string]models.DirEntry, len(allPaths)+len(existingSessions))
 	b.addDirectoryEntries(entries, allPaths, currentSession, existingSessions)
@@ -46,24 +47,42 @@ func (b *Builder) BuildEntries(flagDepth int) (map[string]models.DirEntry, error
 	return entries, nil
 }
 
-// buildIgnoreSet creates a set of resolved paths from cfg.IgnoreDirs for O(1) lookup.
-func (b *Builder) buildIgnoreSet() models.StringSet {
-	ignoreSet := make(models.StringSet, len(b.cfg.IgnoreDirs))
+// buildIgnoreSets partitions cfg.IgnoreDirs into two sets for O(1) lookup:
+//   - ignorePaths: resolved absolute paths for entries that look like paths
+//     (contain "/" or start with "~"), e.g. "~/projects/archived"
+//   - ignoreNames: bare directory names matched against basenames during scanning,
+//     e.g. ".git", "node_modules"
+//
+// This allows ignore_dirs to support both styles:
+//
+//	ignore_dirs:
+//	  - .git              # bare name  — matches any directory named ".git" at any depth
+//	  - node_modules      # bare name  — matches any "node_modules" at any depth
+//	  - ~/projects/old    # path       — matches only that specific resolved directory
+func (b *Builder) buildIgnoreSets() (ignorePaths models.StringSet, ignoreNames models.StringSet) {
+	ignorePaths = make(models.StringSet)
+	ignoreNames = make(models.StringSet)
+
 	for _, dir := range b.cfg.IgnoreDirs {
-		resolved, err := utility.ResolvePath(dir)
-		if err == nil {
-			ignoreSet[resolved] = struct{}{}
+		if strings.Contains(dir, "/") || strings.HasPrefix(dir, "~") {
+			if resolved, err := utility.ResolvePath(dir); err == nil {
+				ignorePaths[resolved] = struct{}{}
+			}
+		} else {
+			ignoreNames[dir] = struct{}{}
 		}
 	}
-	return ignoreSet
+	return ignorePaths, ignoreNames
 }
 
 // collectAllPaths gathers all directory paths from scan_dirs and entry_dirs.
-func (b *Builder) collectAllPaths(flagDepth int, ignoreSet models.StringSet, currentSession string) []models.DirEntry {
+// ignorePaths filters by resolved absolute path; ignoreNames is passed to GetSubDirs
+// for basename-level filtering during the walk itself.
+func (b *Builder) collectAllPaths(flagDepth int, ignorePaths, ignoreNames models.StringSet, currentSession string) []models.DirEntry {
 	var allPaths []models.DirEntry
 
 	addPath := func(path, prefix, template string) error {
-		if _, ignored := ignoreSet[path]; ignored {
+		if _, ignored := ignorePaths[path]; ignored {
 			return nil
 		}
 
@@ -74,7 +93,7 @@ func (b *Builder) collectAllPaths(flagDepth int, ignoreSet models.StringSet, cur
 
 	for _, scanDir := range b.cfg.ScanDirs {
 		prefix := scanDir.Alias
-		if err := b.processScanDir(scanDir, flagDepth, prefix, addPath); err != nil {
+		if err := b.processScanDir(scanDir, flagDepth, prefix, ignoreNames, addPath); err != nil {
 			continue
 		}
 	}
@@ -121,7 +140,7 @@ func (b *Builder) addTmuxSessionEntries(entries map[string]models.DirEntry, exis
 }
 
 // processScanDir scans a single scan_dir entry and adds all discovered subdirectories.
-func (b *Builder) processScanDir(scanDir models.ScanDir, flagDepth int, prefix string, addEntry func(string, string, string) error) error {
+func (b *Builder) processScanDir(scanDir models.ScanDir, flagDepth int, prefix string, ignoreNames models.StringSet, addEntry func(string, string, string) error) error {
 	defaultDepth := b.cfg.Settings.DefaultDepth
 	effectiveDepth := scanDir.GetDepth(flagDepth, defaultDepth)
 
@@ -133,7 +152,7 @@ func (b *Builder) processScanDir(scanDir models.ScanDir, flagDepth int, prefix s
 		return nil
 	}
 
-	subDirs, err := utility.GetSubDirs(effectiveDepth, resolved)
+	subDirs, err := utility.GetSubDirs(effectiveDepth, resolved, ignoreNames)
 	if err != nil {
 		if b.verbose {
 			fmt.Fprintf(os.Stderr, "Warning: failed to scan directory %s: %v\n", resolved, err)
