@@ -11,18 +11,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var killServer bool
+
 // killCmd represents the kill command
 var killCmd = &cobra.Command{
-	Use:   "kill",
-	Short: "Kill the current session and replace with another",
-	Long: `Kill the current session and replace with another
+	Use:   "kill [SESSION]",
+	Short: "Kill a tmux session and switch to another",
+	Long: `Kill a tmux session and switch to another.
 
-A picker list of alternative sessions will be displayed to switch the current session.
-If there are no other sessions however, the default sessions configured in the config file will be used.`,
+If SESSION is provided, the current session is killed and the client switches to SESSION.
+Otherwise, a picker list of active sessions is displayed to choose a replacement.
+If no other sessions exist, a new session is created from the primary template or the tmux server is killed.`,
+	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		currentSession := tmux.GetCurrentTmuxSession()
 
-		if currentSession == "" {
+		if currentSession == "" || killServer {
 			var killServer bool
 			form := forms.ConfirmationForm("Kill tmux server?", "This will terminate all tmux sessions.", &killServer)
 
@@ -118,4 +122,6 @@ If there are no other sessions however, the default sessions configured in the c
 
 func init() {
 	rootCmd.AddCommand(killCmd)
+	rootCmd.PersistentFlags().BoolVarP(&killServer, "kill-server", "k", false, "Kill tmux server (rather than current session)")
 }
+
