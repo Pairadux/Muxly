@@ -22,7 +22,7 @@ var killCmd = &cobra.Command{
 If SESSION is provided, the current session is killed and the client switches to SESSION.
 Otherwise, a picker list of active sessions is displayed to choose a replacement.
 If no other sessions exist, a new session is created from the primary template or the tmux server is killed.`,
-	Args:    cobra.MaximumNArgs(1),
+	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if !tmux.IsTmuxServerRunning() {
 			fmt.Println("No tmux server running. No changes made.")
@@ -56,7 +56,7 @@ If no other sessions exist, a new session is created from the primary template o
 			if err := tmux.KillServer(); err != nil {
 				return fmt.Errorf("failed to kill tmux server: %w", err)
 			}
-			fmt.Println("tmux server killed.")
+			fmt.Println("Tmux server killed.")
 			return nil
 		}
 
@@ -69,12 +69,12 @@ If no other sessions exist, a new session is created from the primary template o
 
 			// IDEA: add config option to allow users to create new session rather than dropping back to existing one on kill
 			// might even just make this the default behavior...
-			if len(sessions) == 0 {
+			if len(otherSessions) == 0 {
 				if cfg.Settings.AlwaysKillOnLastSession {
 					if err := tmux.KillServer(); err != nil {
 						return fmt.Errorf("failed to kill tmux server: %w", err)
 					}
-					fmt.Println("tmux server killed.")
+					fmt.Println("Tmux server killed.")
 					return nil
 				}
 
@@ -99,14 +99,12 @@ If no other sessions exist, a new session is created from the primary template o
 					if err := tmux.KillServer(); err != nil {
 						return fmt.Errorf("failed to kill tmux server: %w", err)
 					}
-					fmt.Println("tmux server killed.")
+					fmt.Println("Tmux server killed.")
 				}
-
-				return nil
 			}
 
 			var err error
-			choiceStr, err = fzf.SelectWithFzf(sessions)
+			choiceStr, err = fzf.SelectWithFzf(otherSessions)
 			if err != nil {
 				if err.Error() == "user cancelled" {
 					return nil
@@ -138,4 +136,3 @@ func init() {
 	rootCmd.AddCommand(killCmd)
 	rootCmd.PersistentFlags().BoolVarP(&killServer, "kill-server", "k", false, "Kill tmux server (rather than current session)")
 }
-
