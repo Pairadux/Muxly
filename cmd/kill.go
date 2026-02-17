@@ -24,14 +24,28 @@ Otherwise, a picker list of active sessions is displayed to choose a replacement
 If no other sessions exist, a new session is created from the primary template or the tmux server is killed.`,
 	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if !tmux.IsTmuxServerRunning() {
+			fmt.Println("No tmux server running. No changes made.")
+			return nil
+		}
+
+		if killServer {
+			if err := tmux.KillServer(); err != nil {
+				return fmt.Errorf("failed to kill tmux server: %w", err)
+			}
+			fmt.Println("Tmux server killed.")
+			return nil
+		}
+
 		currentSession := tmux.GetCurrentTmuxSession()
+		if currentSession == "" {
+			if !killServer {
+				form := forms.ConfirmationForm("Kill tmux server?", "This will terminate all tmux sessions.", &killServer)
 
-		if currentSession == "" || killServer {
-			var killServer bool
-			form := forms.ConfirmationForm("Kill tmux server?", "This will terminate all tmux sessions.", &killServer)
+				if err := form.Run(); err != nil {
+					return fmt.Errorf("failed to run confirmation form: %w", err)
+				}
 
-			if err := form.Run(); err != nil {
-				return fmt.Errorf("failed to run confirmation form: %w", err)
 			}
 
 			if !killServer {
@@ -50,8 +64,8 @@ If no other sessions exist, a new session is created from the primary template o
 		if len(args) == 1 {
 			choiceStr = args[0]
 		}
-		if choiceStr == "" {
-			sessions := tmux.GetSessionsExceptCurrent(currentSession)
+		if choiceStr == "" && !killServer {
+			otherSessions := tmux.GetSessionsExceptCurrent(currentSession)
 
 			// IDEA: add config option to allow users to create new session rather than dropping back to existing one on kill
 			// might even just make this the default behavior...
