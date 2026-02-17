@@ -10,6 +10,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var skipEnter bool
+
 // switchCmd represents the switch command
 var switchCmd = &cobra.Command{
 	Use:   "switch [SESSION]",
@@ -34,7 +36,11 @@ If no other sessions found, exit.`,
 			sessions := tmux.GetSessionsExceptCurrent(currentSession)
 
 			if len(sessions) == 0 {
-				fmt.Println("No other sessions available. Use 'muxly' to start a new session.")
+				fmt.Println("No other sessions available. Press 'Enter' to continue...")
+				_, err := fmt.Scanln()
+				if err != nil {
+					return fmt.Errorf("input closed: %w", err)
+				}
 				return nil
 			}
 
@@ -65,4 +71,5 @@ If no other sessions found, exit.`,
 
 func init() {
 	rootCmd.AddCommand(switchCmd)
+	rootCmd.Flags().BoolVarP(&skipEnter, "skip-enter", "s", false, "Skip the 'press Enter' confirmation prompt when no other sessions found")
 }
