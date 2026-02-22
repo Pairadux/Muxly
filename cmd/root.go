@@ -53,7 +53,6 @@ var rootCmd = &cobra.Command{
 		if err := validateConfig(); err != nil {
 			return err
 		}
-		warnOnConfigIssues()
 
 		return nil
 	},
@@ -75,7 +74,6 @@ var rootCmd = &cobra.Command{
 			fmt.Printf("scan_dirs: %v\n", cfg.ScanDirs)
 			fmt.Printf("entry_dirs: %v\n", cfg.EntryDirs)
 			fmt.Printf("ignore_dirs: %v\n", cfg.IgnoreDirs)
-			fmt.Printf("primary_template: %v\n", cfg.PrimaryTemplate)
 			fmt.Printf("templates: %v\n", cfg.Templates)
 			fmt.Printf("tmux_base: %v\n", cfg.Settings.TmuxBase)
 			fmt.Printf("default_depth: %v\n", cfg.Settings.DefaultDepth)
@@ -138,7 +136,9 @@ var rootCmd = &cobra.Command{
 			}
 		}
 		if len(sessionLayout.Windows) == 0 {
-			sessionLayout = models.SessionLayout{Windows: cfg.PrimaryTemplate.Windows}
+			if dflt, found := config.DefaultTemplate(&cfg); found {
+				sessionLayout = models.SessionLayout{Windows: dflt.Windows}
+			}
 		}
 
 		sess := models.Session{
@@ -227,6 +227,8 @@ func initConfig() {
 		os.Exit(1)
 	}
 
+	config.ApplyDefaults(&cfg)
+
 	// Sync cfgFilePath with the actual config file that was loaded
 	// This ensures 'muxly config edit' opens the correct file
 	if viper.ConfigFileUsed() != "" {
@@ -257,10 +259,4 @@ func validateConfig() error {
 	}
 
 	return config.Validate(&cfg)
-}
-
-func warnOnConfigIssues() {
-	if cfg.Settings.Editor == "" {
-		fmt.Fprintf(os.Stderr, "Warning: editor not set, defaulting to '%s'\n", config.DefaultEditor)
-	}
 }

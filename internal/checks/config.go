@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Pairadux/muxly/internal/config"
 	"github.com/Pairadux/muxly/internal/models"
 )
 
@@ -84,38 +85,36 @@ func ValidateConfig(cfg *models.Config) []CheckResult {
 		})
 	}
 
-	if cfg.PrimaryTemplate.Name == "" {
+	dflt, hasDefault := config.DefaultTemplate(cfg)
+	if !hasDefault {
 		results = append(results, CheckResult{
-			Name:    "primary_template",
+			Name:    "default_template",
 			Status:  StatusError,
-			Message: "Primary template name not set",
-			Hint:    "Set primary_template.name in config",
+			Message: "No default template set",
+			Hint:    "Set default: true on one template in the templates list",
 		})
-	}
-
-	windowCount := len(cfg.PrimaryTemplate.Windows)
-	if windowCount == 0 {
+	} else if len(dflt.Windows) == 0 {
 		results = append(results, CheckResult{
-			Name:    "primary_template",
+			Name:    "default_template",
 			Status:  StatusError,
-			Message: "Primary template has no windows",
-			Hint:    "Add at least one window to primary_template.windows",
+			Message: "Default template has no windows",
+			Hint:    "Add at least one window to the default template",
 		})
 	} else {
 		results = append(results, CheckResult{
-			Name:    "primary_template",
+			Name:    "default_template",
 			Status:  StatusOK,
-			Message: "Primary template",
-			Detail:  fmt.Sprintf("(%d window(s))", windowCount),
+			Message: "Default template",
+			Detail:  fmt.Sprintf("(%d window(s))", len(dflt.Windows)),
 		})
 	}
 
-	if len(cfg.Templates) > 0 {
+	if len(cfg.Templates) > 1 {
 		results = append(results, CheckResult{
 			Name:    "templates",
 			Status:  StatusOK,
 			Message: "Additional templates",
-			Detail:  fmt.Sprintf("(%d)", len(cfg.Templates)),
+			Detail:  fmt.Sprintf("(%d)", len(cfg.Templates)-1),
 		})
 	}
 

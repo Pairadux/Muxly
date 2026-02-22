@@ -21,7 +21,7 @@ var killCmd = &cobra.Command{
 
 If SESSION is provided, the current session is killed and the client switches to SESSION.
 Otherwise, a picker list of active sessions is displayed to choose a replacement.
-If no other sessions exist, a new session is created from the primary template or the tmux server is killed.`,
+If no other sessions exist, a new session is created from the default template or the tmux server is killed.`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if !tmux.IsTmuxServerRunning() {
@@ -79,18 +79,18 @@ If no other sessions exist, a new session is created from the primary template o
 				}
 
 				var createFromTemplate bool
-				form := forms.ConfirmationForm("Create session from primary template?", "Declining will kill the tmux server.", &createFromTemplate)
+				form := forms.ConfirmationForm("Create session from default template?", "Declining will kill the tmux server.", &createFromTemplate)
 
 				if err := form.Run(); err != nil {
 					return fmt.Errorf("failed to run confirmation form: %w", err)
 				}
 
 				if createFromTemplate {
-					if err := tmux.CreateSessionFromPrimaryTemplate(&cfg); err != nil {
+					if err := tmux.CreateSessionFromDefaultTemplate(&cfg); err != nil {
 						if errors.Is(err, tmux.ErrGracefulExit) {
 							return nil
 						}
-						return fmt.Errorf("failed to create session from primary template: %w", err)
+						return fmt.Errorf("failed to create session from default template: %w", err)
 					}
 					if err := tmux.KillSession(currentSession); err != nil {
 						return fmt.Errorf("failed to kill session: %w", err)

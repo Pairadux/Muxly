@@ -42,10 +42,11 @@ scan_dirs:
   - path: $PWD/testdata/muxly-fixtures/deep-nesting/a/b/c
     depth: 1
 
-primary_template:
-  name: Test Default
-  windows:
-    - name: main
+templates:
+  - name: test-default
+    default: true
+    windows:
+      - name: main
 
 settings:
   editor: vi

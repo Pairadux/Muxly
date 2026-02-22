@@ -9,7 +9,6 @@ import (
 
 	"github.com/Pairadux/muxly/internal/forms"
 	"github.com/Pairadux/muxly/internal/fzf"
-	"github.com/Pairadux/muxly/internal/models"
 	"github.com/Pairadux/muxly/internal/selector"
 	"github.com/Pairadux/muxly/internal/tmux"
 	"github.com/Pairadux/muxly/internal/utility"
@@ -22,15 +21,13 @@ var createCmd = &cobra.Command{
 	Short: "Create a session from a template",
 	Long:  "Create a session from a template\n\nSelect a template, then choose a directory to create the session in.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		allTemplates := append([]models.SessionTemplate{cfg.PrimaryTemplate}, cfg.Templates...)
-
 		var selectedIdx int
-		form := forms.TemplateSelectForm(allTemplates, &selectedIdx)
+		form := forms.TemplateSelectForm(cfg.Templates, &selectedIdx)
 		if err := form.Run(); err != nil {
 			return fmt.Errorf("template selection failed: %w", err)
 		}
 
-		tmpl := allTemplates[selectedIdx]
+		tmpl := cfg.Templates[selectedIdx]
 
 		var sessionPath string
 		if tmpl.Path != "" {

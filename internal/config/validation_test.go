@@ -20,9 +20,8 @@ func TestValidate(t *testing.T) {
 			name: "valid scan_dirs only",
 			cfg: &models.Config{
 				ScanDirs: []models.ScanDir{{Path: "~/Dev"}},
-				PrimaryTemplate: models.SessionTemplate{
-					Name:    "Default",
-					Windows: []models.Window{{Name: "main"}},
+				Templates: []models.SessionTemplate{
+					{Name: "Default", Default: true, Windows: []models.Window{{Name: "main"}}},
 				},
 			},
 			expectError: false,
@@ -31,9 +30,8 @@ func TestValidate(t *testing.T) {
 			name: "valid entry_dirs only",
 			cfg: &models.Config{
 				EntryDirs: []models.EntryDir{{Path: "~/Documents"}},
-				PrimaryTemplate: models.SessionTemplate{
-					Name:    "Default",
-					Windows: []models.Window{{Name: "main"}},
+				Templates: []models.SessionTemplate{
+					{Name: "Default", Default: true, Windows: []models.Window{{Name: "main"}}},
 				},
 			},
 			expectError: false,
@@ -43,9 +41,8 @@ func TestValidate(t *testing.T) {
 			cfg: &models.Config{
 				ScanDirs:  []models.ScanDir{{Path: "~/Dev"}},
 				EntryDirs: []models.EntryDir{{Path: "~/Documents"}},
-				PrimaryTemplate: models.SessionTemplate{
-					Name:    "Default",
-					Windows: []models.Window{{Name: "main"}},
+				Templates: []models.SessionTemplate{
+					{Name: "Default", Default: true, Windows: []models.Window{{Name: "main"}}},
 				},
 			},
 			expectError: false,
@@ -53,46 +50,72 @@ func TestValidate(t *testing.T) {
 		{
 			name: "invalid no dirs",
 			cfg: &models.Config{
-				PrimaryTemplate: models.SessionTemplate{
-					Name:    "Default",
-					Windows: []models.Window{{Name: "main"}},
+				Templates: []models.SessionTemplate{
+					{Name: "Default", Default: true, Windows: []models.Window{{Name: "main"}}},
 				},
 			},
 			expectError: true,
 			errContains: "no directories",
 		},
 		{
-			name: "invalid primary template no windows",
+			name: "invalid no templates",
 			cfg: &models.Config{
 				ScanDirs: []models.ScanDir{{Path: "~/Dev"}},
-				PrimaryTemplate: models.SessionTemplate{
-					Name:    "Default",
-					Windows: []models.Window{},
+			},
+			expectError: true,
+			errContains: "at least one template is required",
+		},
+		{
+			name: "invalid default template no windows",
+			cfg: &models.Config{
+				ScanDirs: []models.ScanDir{{Path: "~/Dev"}},
+				Templates: []models.SessionTemplate{
+					{Name: "Default", Default: true, Windows: []models.Window{}},
 				},
 			},
 			expectError: true,
 			errContains: "at least one window",
 		},
 		{
-			name: "invalid primary template no name",
+			name: "invalid template no name",
 			cfg: &models.Config{
 				ScanDirs: []models.ScanDir{{Path: "~/Dev"}},
-				PrimaryTemplate: models.SessionTemplate{
-					Windows: []models.Window{{Name: "main"}},
+				Templates: []models.SessionTemplate{
+					{Default: true, Windows: []models.Window{{Name: "main"}}},
 				},
 			},
 			expectError: true,
-			errContains: "primary_template.name is required",
+			errContains: "all templates must have a name",
+		},
+		{
+			name: "invalid no default template",
+			cfg: &models.Config{
+				ScanDirs: []models.ScanDir{{Path: "~/Dev"}},
+				Templates: []models.SessionTemplate{
+					{Name: "Default", Windows: []models.Window{{Name: "main"}}},
+				},
+			},
+			expectError: true,
+			errContains: "exactly one template must have default: true",
+		},
+		{
+			name: "invalid multiple default templates",
+			cfg: &models.Config{
+				ScanDirs: []models.ScanDir{{Path: "~/Dev"}},
+				Templates: []models.SessionTemplate{
+					{Name: "First", Default: true, Windows: []models.Window{{Name: "main"}}},
+					{Name: "Second", Default: true, Windows: []models.Window{{Name: "main"}}},
+				},
+			},
+			expectError: true,
+			errContains: "only one template can have default: true",
 		},
 		{
 			name: "invalid duplicate template name",
 			cfg: &models.Config{
 				ScanDirs: []models.ScanDir{{Path: "~/Dev"}},
-				PrimaryTemplate: models.SessionTemplate{
-					Name:    "Default",
-					Windows: []models.Window{{Name: "main"}},
-				},
 				Templates: []models.SessionTemplate{
+					{Name: "Default", Default: true, Windows: []models.Window{{Name: "main"}}},
 					{Name: "Default", Windows: []models.Window{{Name: "main"}}},
 				},
 			},
@@ -103,11 +126,8 @@ func TestValidate(t *testing.T) {
 			name: "invalid template no windows",
 			cfg: &models.Config{
 				ScanDirs: []models.ScanDir{{Path: "~/Dev"}},
-				PrimaryTemplate: models.SessionTemplate{
-					Name:    "Default",
-					Windows: []models.Window{{Name: "main"}},
-				},
 				Templates: []models.SessionTemplate{
+					{Name: "Default", Default: true, Windows: []models.Window{{Name: "main"}}},
 					{Name: "Empty", Windows: []models.Window{}},
 				},
 			},
@@ -115,14 +135,11 @@ func TestValidate(t *testing.T) {
 			errContains: "must have at least one window",
 		},
 		{
-			name: "invalid template no name",
+			name: "invalid extra template no name",
 			cfg: &models.Config{
 				ScanDirs: []models.ScanDir{{Path: "~/Dev"}},
-				PrimaryTemplate: models.SessionTemplate{
-					Name:    "Default",
-					Windows: []models.Window{{Name: "main"}},
-				},
 				Templates: []models.SessionTemplate{
+					{Name: "Default", Default: true, Windows: []models.Window{{Name: "main"}}},
 					{Windows: []models.Window{{Name: "main"}}},
 				},
 			},
@@ -130,14 +147,11 @@ func TestValidate(t *testing.T) {
 			errContains: "all templates must have a name",
 		},
 		{
-			name: "valid with templates",
+			name: "valid with multiple templates",
 			cfg: &models.Config{
 				ScanDirs: []models.ScanDir{{Path: "~/Dev"}},
-				PrimaryTemplate: models.SessionTemplate{
-					Name:    "Default",
-					Windows: []models.Window{{Name: "main"}},
-				},
 				Templates: []models.SessionTemplate{
+					{Name: "Default", Default: true, Windows: []models.Window{{Name: "main"}}},
 					{Name: "Dev", Windows: []models.Window{{Name: "editor"}, {Name: "term"}}},
 				},
 			},
@@ -150,9 +164,8 @@ func TestValidate(t *testing.T) {
 					{Path: "~/Dev", Alias: "myalias"},
 					{Path: "~/Work", Alias: "myalias"},
 				},
-				PrimaryTemplate: models.SessionTemplate{
-					Name:    "Default",
-					Windows: []models.Window{{Name: "main"}},
+				Templates: []models.SessionTemplate{
+					{Name: "Default", Default: true, Windows: []models.Window{{Name: "main"}}},
 				},
 			},
 			expectError: true,
@@ -165,9 +178,8 @@ func TestValidate(t *testing.T) {
 					{Path: "~/Dev"},
 					{Path: "~/Dev"},
 				},
-				PrimaryTemplate: models.SessionTemplate{
-					Name:    "Default",
-					Windows: []models.Window{{Name: "main"}},
+				Templates: []models.SessionTemplate{
+					{Name: "Default", Default: true, Windows: []models.Window{{Name: "main"}}},
 				},
 			},
 			expectError: false,
@@ -179,9 +191,8 @@ func TestValidate(t *testing.T) {
 					{Path: "~/Dev", Alias: ""},
 					{Path: "~/Work", Alias: ""},
 				},
-				PrimaryTemplate: models.SessionTemplate{
-					Name:    "Default",
-					Windows: []models.Window{{Name: "main"}},
+				Templates: []models.SessionTemplate{
+					{Name: "Default", Default: true, Windows: []models.Window{{Name: "main"}}},
 				},
 			},
 			expectError: false,
@@ -193,9 +204,8 @@ func TestValidate(t *testing.T) {
 					{Path: "~/Dev", Alias: "dev"},
 					{Path: "~/Work", Alias: "work"},
 				},
-				PrimaryTemplate: models.SessionTemplate{
-					Name:    "Default",
-					Windows: []models.Window{{Name: "main"}},
+				Templates: []models.SessionTemplate{
+					{Name: "Default", Default: true, Windows: []models.Window{{Name: "main"}}},
 				},
 			},
 			expectError: false,
@@ -206,25 +216,21 @@ func TestValidate(t *testing.T) {
 				ScanDirs: []models.ScanDir{
 					{Path: "~/Dev", Template: "Dev"},
 				},
-				PrimaryTemplate: models.SessionTemplate{
-					Name:    "Default",
-					Windows: []models.Window{{Name: "main"}},
-				},
 				Templates: []models.SessionTemplate{
+					{Name: "Default", Default: true, Windows: []models.Window{{Name: "main"}}},
 					{Name: "Dev", Windows: []models.Window{{Name: "editor"}}},
 				},
 			},
 			expectError: false,
 		},
 		{
-			name: "valid scan_dir references primary template",
+			name: "valid scan_dir references default template",
 			cfg: &models.Config{
 				ScanDirs: []models.ScanDir{
 					{Path: "~/Dev", Template: "Default"},
 				},
-				PrimaryTemplate: models.SessionTemplate{
-					Name:    "Default",
-					Windows: []models.Window{{Name: "main"}},
+				Templates: []models.SessionTemplate{
+					{Name: "Default", Default: true, Windows: []models.Window{{Name: "main"}}},
 				},
 			},
 			expectError: false,
@@ -235,9 +241,8 @@ func TestValidate(t *testing.T) {
 				ScanDirs: []models.ScanDir{
 					{Path: "~/Dev", Template: "Nonexistent"},
 				},
-				PrimaryTemplate: models.SessionTemplate{
-					Name:    "Default",
-					Windows: []models.Window{{Name: "main"}},
+				Templates: []models.SessionTemplate{
+					{Name: "Default", Default: true, Windows: []models.Window{{Name: "main"}}},
 				},
 			},
 			expectError: true,
@@ -249,11 +254,8 @@ func TestValidate(t *testing.T) {
 				EntryDirs: []models.EntryDir{
 					{Path: "~/Documents", Template: "Dev"},
 				},
-				PrimaryTemplate: models.SessionTemplate{
-					Name:    "Default",
-					Windows: []models.Window{{Name: "main"}},
-				},
 				Templates: []models.SessionTemplate{
+					{Name: "Default", Default: true, Windows: []models.Window{{Name: "main"}}},
 					{Name: "Dev", Windows: []models.Window{{Name: "editor"}}},
 				},
 			},
@@ -265,9 +267,8 @@ func TestValidate(t *testing.T) {
 				EntryDirs: []models.EntryDir{
 					{Path: "~/Documents", Template: "Nonexistent"},
 				},
-				PrimaryTemplate: models.SessionTemplate{
-					Name:    "Default",
-					Windows: []models.Window{{Name: "main"}},
+				Templates: []models.SessionTemplate{
+					{Name: "Default", Default: true, Windows: []models.Window{{Name: "main"}}},
 				},
 			},
 			expectError: true,
@@ -309,10 +310,11 @@ func TestValidateConfigFile(t *testing.T) {
 				content := `
 scan_dirs:
   - path: ~/Dev
-primary_template:
-  name: Default
-  windows:
-    - name: main
+templates:
+  - name: Default
+    default: true
+    windows:
+      - name: main
 `
 				os.WriteFile(path, []byte(content), 0644)
 				return path
@@ -348,10 +350,11 @@ scan_dirs:
 			setup: func() string {
 				path := filepath.Join(tempDir, "invalid_config.yaml")
 				content := `
-primary_template:
-  name: Default
-  windows:
-    - name: main
+templates:
+  - name: Default
+    default: true
+    windows:
+      - name: main
 `
 				os.WriteFile(path, []byte(content), 0644)
 				return path

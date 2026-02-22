@@ -16,6 +16,8 @@ type SessionLayout struct {
 
 type SessionTemplate struct {
 	Name    string   `mapstructure:"name" yaml:"name"`
+	Label   string   `mapstructure:"label,omitempty" yaml:"label,omitempty"`
+	Default bool     `mapstructure:"default,omitempty" yaml:"default,omitempty"`
 	Path    string   `mapstructure:"path,omitempty" yaml:"path,omitempty"`
 	Windows []Window `mapstructure:"windows" yaml:"windows"`
 }
@@ -93,10 +95,9 @@ type Settings struct {
 
 // Config represents the full configuration structure
 type Config struct {
-	ScanDirs        []ScanDir         `mapstructure:"scan_dirs" yaml:"scan_dirs"`
-	EntryDirs       []EntryDir        `mapstructure:"entry_dirs" yaml:"entry_dirs"`
-	IgnoreDirs      []string          `mapstructure:"ignore_dirs" yaml:"ignore_dirs"`
-	PrimaryTemplate SessionTemplate   `mapstructure:"primary_template" yaml:"primary_template"`
-	Templates       []SessionTemplate `mapstructure:"templates,omitempty" yaml:"templates,omitempty"`
-	Settings        Settings          `mapstructure:"settings" yaml:"settings"`
+	ScanDirs   []ScanDir         `mapstructure:"scan_dirs" yaml:"scan_dirs"`
+	EntryDirs  []EntryDir        `mapstructure:"entry_dirs" yaml:"entry_dirs"`
+	IgnoreDirs []string          `mapstructure:"ignore_dirs" yaml:"ignore_dirs"`
+	Templates  []SessionTemplate `mapstructure:"templates" yaml:"templates"`
+	Settings   Settings          `mapstructure:"settings" yaml:"settings"`
 }

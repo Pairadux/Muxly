@@ -9,7 +9,11 @@ import (
 func TemplateSelectForm(templates []models.SessionTemplate, selectedIdx *int) *huh.Form {
 	options := make([]huh.Option[int], len(templates))
 	for i, tmpl := range templates {
-		options[i] = huh.NewOption(tmpl.Name, i)
+		displayName := tmpl.Name
+		if tmpl.Label != "" {
+			displayName = tmpl.Label
+		}
+		options[i] = huh.NewOption(displayName, i)
 	}
 
 	return huh.NewForm(

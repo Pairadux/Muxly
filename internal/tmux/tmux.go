@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Pairadux/muxly/internal/config"
 	"github.com/Pairadux/muxly/internal/constants"
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/mitchellh/go-homedir"
@@ -262,10 +263,13 @@ func KillServer() error {
 	return nil
 }
 
-// CreateSessionFromPrimaryTemplate creates and switches to a session using the primary template.
+// CreateSessionFromDefaultTemplate creates and switches to a session using the default template.
 // Used by the kill command when no other sessions exist.
-func CreateSessionFromPrimaryTemplate(cfg *models.Config) error {
-	tmpl := cfg.PrimaryTemplate
+func CreateSessionFromDefaultTemplate(cfg *models.Config) error {
+	tmpl, found := config.DefaultTemplate(cfg)
+	if !found {
+		return fmt.Errorf("no default template configured")
+	}
 
 	sessionName := tmpl.Name
 	if HasTmuxSession(sessionName) {

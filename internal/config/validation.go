@@ -10,20 +10,18 @@ import (
 
 // Validate ensures that the application configuration is valid and complete.
 // It checks that at least one directory is configured for scanning and that
-// the session layout has at least one window.
+// exactly one template is marked as default with at least one window.
 func Validate(cfg *models.Config) error {
 	if len(cfg.ScanDirs) == 0 && len(cfg.EntryDirs) == 0 {
 		return fmt.Errorf("no directories configured for scanning (scan_dirs or entry_dirs required)")
 	}
 
-	if cfg.PrimaryTemplate.Name == "" {
-		return fmt.Errorf("primary_template.name is required")
-	}
-	if len(cfg.PrimaryTemplate.Windows) == 0 {
-		return fmt.Errorf("primary_template must have at least one window")
+	if len(cfg.Templates) == 0 {
+		return fmt.Errorf("at least one template is required")
 	}
 
-	seenNames := map[string]bool{cfg.PrimaryTemplate.Name: true}
+	seenNames := make(map[string]bool)
+	defaultCount := 0
 	for _, tmpl := range cfg.Templates {
 		if tmpl.Name == "" {
 			return fmt.Errorf("all templates must have a name")
@@ -35,6 +33,16 @@ func Validate(cfg *models.Config) error {
 		if len(tmpl.Windows) == 0 {
 			return fmt.Errorf("template %q must have at least one window", tmpl.Name)
 		}
+		if tmpl.Default {
+			defaultCount++
+		}
+	}
+
+	if defaultCount == 0 {
+		return fmt.Errorf("exactly one template must have default: true")
+	}
+	if defaultCount > 1 {
+		return fmt.Errorf("only one template can have default: true, found %d", defaultCount)
 	}
 
 	seenAliases := make(map[string]string)
