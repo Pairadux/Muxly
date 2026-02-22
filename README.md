@@ -224,22 +224,25 @@ Running `muxly config init` creates this minimal config:
 ```yaml
 # Additional entry directories (included directly, not scanned)
 entry_dirs:
-  - ~
+  - path: ~
 
-# Fallback session for when killing the final session
-fallback_session:
-  name: Default
-  path: ~/
-  layout:
+# Session templates (one must have default: true)
+templates:
+  - name: default
+    label: Editor + Terminal
+    default: true
+    windows:
+      - name: editor
+      - name: term
+  - name: minimal
+    label: Single Window
     windows:
       - name: main
-        cmd: ""
-
-# Default layout for new tmux sessions
-session_layout:
-  windows:
-    - name: main
-      cmd: ""
+  - name: quick
+    label: Quick Session
+    path: ~/
+    windows:
+      - name: main
 
 # General settings
 settings:
@@ -247,7 +250,7 @@ settings:
   editor: vi
   # Base index for tmux windows (0 or 1)
   # See: https://www.man7.org/linux/man-pages/man1/tmux.1.html#OPTIONS (base-index)
-  tmux_base: 1
+  tmux_base: 0
   # Default scanning depth for directories
   default_depth: 1
   # Prefix for active tmux sessions in the selector
@@ -281,35 +284,32 @@ entry_dirs:
   - ~/Documents
   - ~/notes
 
-# Directories to exclude from scanning
+# Directories to exclude from scanning (additive)
+# .git and node_modules are always ignored — no need to list them
 # Bare names match any directory with that name at any depth
 # Paths match only that specific resolved directory
-# Note: Specifying ignore_dirs replaces the defaults (.git, node_modules)
 ignore_dirs:
-  - .git                  # bare name — skips all .git dirs
-  - node_modules          # bare name — skips all node_modules dirs
   - .vscode               # bare name — skips all .vscode dirs
   - .idea                 # bare name — skips all .idea dirs
+  - target                # bare name — skips all target dirs (e.g. Rust builds)
   - ~/projects/archived   # path — skips only this specific directory
 
-# Session to create when killing the last tmux session
-fallback_session:
-  name: Default
-  path: ~/
-  layout:
+# Session templates (one must have default: true)
+templates:
+  - name: dev
+    label: Dev Workflow
+    default: true
+    windows:
+      - name: edit
+        cmd: nvim        # Opens nvim in first window
+      - name: term
+        cmd: ""          # Empty command opens default shell
+      - name: git
+        cmd: lazygit     # Opens lazygit in third window
+  - name: minimal
+    label: Single Window
     windows:
       - name: main
-        cmd: ""
-
-# Default layout for new tmux sessions
-session_layout:
-  windows:
-    - name: edit
-      cmd: nvim        # Opens nvim in first window
-    - name: term
-      cmd: ""          # Empty command opens default shell
-    - name: git
-      cmd: lazygit     # Opens lazygit in third window
 
 # General settings
 settings:
@@ -352,11 +352,11 @@ windows:
     cmd: npm run test:watch
 ```
 
-When you create a session for `~/my-project`, Muxly will use this layout instead of the global `session_layout` from your config file. This is perfect for projects with unique workflows or specific commands.
+When you create a session for `~/my-project`, Muxly will use this layout instead of the default template's windows. This is perfect for projects with unique workflows or specific commands.
 
 **Notes:**
 - The `.muxly` file only needs a `windows` array - all other settings come from your global config
-- If no `.muxly` file exists, the global `session_layout` is used
+- If no `.muxly` file exists, the default template's windows are used
 - `.muxly` files are not scanned/discovered automatically - they only apply when you select that specific directory
 - When removing an entry directory with `muxly remove entry`, you'll be prompted about deleting its `.muxly` file (use `--keep` or `--delete` flags for non-interactive use)
 
@@ -366,16 +366,15 @@ The `ignore_dirs` list supports two matching styles, determined automatically by
 
 | Entry format | Example | Behavior |
 |---|---|---|
-| **Bare name** (no `/` or `~`) | `.git`, `node_modules` | Matches any directory with that exact name at any depth during scanning. The directory and its contents are skipped entirely. |
+| **Bare name** (no `/` or `~`) | `target`, `.vscode` | Matches any directory with that exact name at any depth during scanning. The directory and its contents are skipped entirely. |
 | **Path** (contains `/` or `~`) | `~/projects/archived` | Resolved to an absolute path and matches only that specific directory. |
 
-**Defaults:** When `ignore_dirs` is not specified, Muxly ignores `.git` and `node_modules`. Specifying `ignore_dirs` in your config replaces these defaults entirely.
+**Built-in filters:** `.git` and `node_modules` are always ignored and cannot be overridden. Any entries you add to `ignore_dirs` are **additive** on top of these built-in filters.
 
 ```yaml
 ignore_dirs:
-  - .git                  # bare name — skips all .git dirs
-  - node_modules          # bare name — skips all node_modules dirs
   - target                # bare name — skips all target dirs (e.g. Rust builds)
+  - .vscode               # bare name — skips all .vscode dirs
   - ~/projects/archived   # path — skips only this specific directory
 ```
 
@@ -387,16 +386,19 @@ ignore_dirs:
 | `scan_dirs[].path` | string | yes | Directory path to scan (supports `~` and environment variables) |
 | `scan_dirs[].depth` | int | no | Scan depth for this directory (overrides `settings.default_depth`) |
 | `scan_dirs[].alias` | string | no | Display prefix in selector (e.g., "dev" shows as "dev/project-name") |
+| `scan_dirs[].template` | string | no | Template name to use for sessions created from this scan directory |
 | `entry_dirs` | array | yes* | Directories always included without scanning |
-| `ignore_dirs` | array | no | Directories to exclude from scanning (see [Ignore Rules](#ignore-rules)) |
-| `fallback_session` | object | no | Session created when killing the last tmux session |
-| `fallback_session.name` | string | no | Session name (default: `"Default"`) |
-| `fallback_session.path` | string | no | Working directory (default: `"~/"`) |
-| `fallback_session.layout` | object | no | Window layout (defaults to `session_layout`) |
-| `session_layout` | object | yes | Default window layout for new sessions |
-| `session_layout.windows` | array | yes | List of windows to create (must have at least one) |
-| `session_layout.windows[].name` | string | yes | Window name |
-| `session_layout.windows[].cmd` | string | no | Command to run in window (empty string opens default shell) |
+| `entry_dirs[].path` | string | yes | Directory path (supports `~` and environment variables) |
+| `entry_dirs[].template` | string | no | Template name to use for sessions created from this directory |
+| `ignore_dirs` | array | no | Additional directories to exclude from scanning, additive to built-in `.git`/`node_modules` filters (see [Ignore Rules](#ignore-rules)) |
+| `templates` | array | yes | Session templates (exactly one must have `default: true`) |
+| `templates[].name` | string | yes | Short identifier used as the tmux session name |
+| `templates[].label` | string | no | Human-readable display name shown in `muxly create` TUI |
+| `templates[].default` | bool | no | Mark exactly one template as the default (required on one) |
+| `templates[].path` | string | no | Fixed working directory (uses fzf picker if omitted) |
+| `templates[].windows` | array | yes | List of windows to create (must have at least one) |
+| `templates[].windows[].name` | string | yes | Window name |
+| `templates[].windows[].cmd` | string | no | Command to run in window (empty string opens default shell) |
 | `settings` | object | no | General application settings |
 | `settings.editor` | string | no | Editor for config editing, falls back to `$EDITOR` (default: `"vi"`) |
 | `settings.tmux_base` | int | no | Tmux window [base index](https://www.man7.org/linux/man-pages/man1/tmux.1.html#OPTIONS) - 0 or 1, should match your tmux.conf (default: `1`) |

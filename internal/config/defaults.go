@@ -19,35 +19,42 @@ const (
 )
 
 var (
+	// BaseIgnoreDirs are always filtered during scanning and cannot be overridden by user config.
+	// There is no practical reason to scan inside these directories.
+	BaseIgnoreDirs = []string{
+		".git",
+		"node_modules",
+	}
+
 	DefaultScanDirs = []models.ScanDir{}
 
 	DefaultEntryDirs = []models.EntryDir{
 		{Path: "~"},
 	}
 
-	DefaultIgnoreDirs = []string{
-		".git",
-		"node_modules",
-	}
-
-	DefaultPrimaryTemplate = models.SessionTemplate{
-		Name: "Editor + Terminal",
-		Windows: []models.Window{
-			{Name: "editor"},
-			{Name: "term"},
-		},
-	}
+	DefaultIgnoreDirs = []string{}
 
 	DefaultTemplates = []models.SessionTemplate{
 		{
-			Name: "Single Window",
+			Name:    "default",
+			Label:   "Editor + Terminal",
+			Default: true,
+			Windows: []models.Window{
+				{Name: "editor"},
+				{Name: "term"},
+			},
+		},
+		{
+			Name:  "minimal",
+			Label: "Single Window",
 			Windows: []models.Window{
 				{Name: "main"},
 			},
 		},
 		{
-			Name: "Quick Session",
-			Path: "~/",
+			Name:  "quick",
+			Label: "Quick Session",
+			Path:  "~/",
 			Windows: []models.Window{
 				{Name: "main"},
 			},
@@ -57,11 +64,10 @@ var (
 
 func NewDefaultConfig() models.Config {
 	return models.Config{
-		ScanDirs:        DefaultScanDirs,
-		EntryDirs:       DefaultEntryDirs,
-		IgnoreDirs:      DefaultIgnoreDirs,
-		PrimaryTemplate: DefaultPrimaryTemplate,
-		Templates:       DefaultTemplates,
+		ScanDirs:   DefaultScanDirs,
+		EntryDirs:  DefaultEntryDirs,
+		IgnoreDirs: DefaultIgnoreDirs,
+		Templates:  DefaultTemplates,
 		Settings: models.Settings{
 			Editor:                  DefaultEditor,
 			TmuxBase:                DefaultTmuxBase,
@@ -72,12 +78,13 @@ func NewDefaultConfig() models.Config {
 	}
 }
 
+// ApplyDefaults fills in safe, mechanical settings defaults for fields
+// the user is unlikely to have opinions about. Structural config like
+// templates and directories are left alone — validation will catch
+// those so the user can fix them intentionally (or use config init).
 func ApplyDefaults(cfg *models.Config) {
 	if cfg.Settings.Editor == "" {
 		cfg.Settings.Editor = DefaultEditor
-	}
-	if cfg.PrimaryTemplate.Name == "" {
-		cfg.PrimaryTemplate = DefaultPrimaryTemplate
 	}
 	if cfg.Settings.TmuxSessionPrefix == "" {
 		cfg.Settings.TmuxSessionPrefix = DefaultTmuxSessionPrefix

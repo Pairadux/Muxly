@@ -69,23 +69,25 @@ func generateConfigYAML(cfg models.Config) string {
 #            - path: ~/.config
 #              depth: 2
 #              alias: config
-#              template: "Single Window"
+#              template: minimal
 #
 # entry_dirs: Additional directories always included (not scanned)
 #   Supports optional template assignment:
 #   Example: - path: ~/special-project
-#              template: "Single Window"
+#              template: minimal
 #
-# ignore_dirs: Directories to exclude from scanning
-#   Bare names (e.g. ".git") match any directory with that name at any depth
+# ignore_dirs: Directories to exclude from scanning (additive)
+#   .git and node_modules are always ignored and do not need to be listed.
+#   Entries here are added on top of those built-in filters.
+#   Bare names (e.g. "target") match any directory with that name at any depth
 #   Paths (e.g. "~/projects/old") match only that specific resolved directory
 #
-# primary_template: The default template used for new sessions
-#   name: Template name (required)
+# templates: Session templates (one must have default: true)
+#   name: Short identifier used as the tmux session name (required)
+#   label: Human-readable display name shown in the muxly create TUI (optional)
+#   default: Mark exactly one template as the default (required on one template)
 #   path: Fixed working directory (optional, uses fzf picker if omitted)
 #   windows: List of windows to create with optional commands
-#
-# templates: Additional templates to choose from (optional)
 #
 # settings: General application settings
 #   editor: Default editor for 'muxly config edit' (overrides $EDITOR)

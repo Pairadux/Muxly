@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Pairadux/muxly/internal/config"
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/Pairadux/muxly/internal/tmux"
 	"github.com/Pairadux/muxly/internal/utility"
@@ -47,21 +48,27 @@ func (b *Builder) BuildEntries(flagDepth int) (map[string]models.DirEntry, error
 	return entries, nil
 }
 
-// buildIgnoreSets partitions cfg.IgnoreDirs into two sets for O(1) lookup:
+// buildIgnoreSets partitions ignore directories into two sets for O(1) lookup:
 //   - ignorePaths: resolved absolute paths for entries that look like paths
 //     (contain "/" or start with "~"), e.g. "~/projects/archived"
 //   - ignoreNames: bare directory names matched against basenames during scanning,
 //     e.g. ".git", "node_modules"
 //
+// Base directories (config.BaseIgnoreDirs) are always included and cannot be
+// overridden. User-configured ignore_dirs entries are additive on top of these.
+//
 // This allows ignore_dirs to support both styles:
 //
 //	ignore_dirs:
-//	  - .git              # bare name  — matches any directory named ".git" at any depth
-//	  - node_modules      # bare name  — matches any "node_modules" at any depth
+//	  - target            # bare name  — matches any directory named "target" at any depth
 //	  - ~/projects/old    # path       — matches only that specific resolved directory
 func (b *Builder) buildIgnoreSets() (ignorePaths models.StringSet, ignoreNames models.StringSet) {
 	ignorePaths = make(models.StringSet)
 	ignoreNames = make(models.StringSet)
+
+	for _, dir := range config.BaseIgnoreDirs {
+		ignoreNames[dir] = struct{}{}
+	}
 
 	for _, dir := range b.cfg.IgnoreDirs {
 		if strings.Contains(dir, "/") || strings.HasPrefix(dir, "~") {
