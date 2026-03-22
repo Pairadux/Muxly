@@ -134,5 +134,5 @@ If no other sessions exist, a new session is created from the default template o
 
 func init() {
 	rootCmd.AddCommand(killCmd)
-	rootCmd.PersistentFlags().BoolVarP(&killServer, "kill-server", "k", false, "Kill tmux server (rather than current session)")
+	rootCmd.PersistentFlags().BoolVarP(&killServer, "kill-server", "s", false, "Kill tmux server (rather than current session)")
 }
