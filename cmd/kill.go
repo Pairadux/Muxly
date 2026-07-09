@@ -121,11 +121,11 @@ If no other sessions exist, a new session is created from the default template o
 			if errors.Is(err, tmux.ErrGracefulExit) {
 				return nil
 			}
-			return fmt.Errorf("Failed to switch session: %w", err)
+			return fmt.Errorf("failed to switch session: %w", err)
 		}
 
 		if err := tmux.KillSession(currentSession); err != nil {
-			return fmt.Errorf("Failed to kill session: %w", err)
+			return fmt.Errorf("failed to kill session: %w", err)
 		}
 
 		return nil

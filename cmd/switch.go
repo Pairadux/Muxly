@@ -25,7 +25,7 @@ If no other sessions found, exit.`,
 		currentSession := tmux.GetCurrentTmuxSession()
 
 		if currentSession == "" {
-			return fmt.Errorf("Not in Tmux, use 'muxly' to get started.")
+			return fmt.Errorf("not in Tmux, use 'muxly' to get started")
 		}
 
 		var choiceStr string
@@ -62,12 +62,11 @@ If no other sessions found, exit.`,
 			if errors.Is(err, tmux.ErrGracefulExit) {
 				return nil
 			}
-			return fmt.Errorf("Failed to switch session: %w", err)
+			return fmt.Errorf("failed to switch session: %w", err)
 		}
 
 		return nil
-	},
-}
+	}, }
 
 func init() {
 	rootCmd.AddCommand(switchCmd)

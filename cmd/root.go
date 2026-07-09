@@ -58,11 +58,12 @@ var rootCmd = &cobra.Command{
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 1 {
+			name := cmd.Name()
 			switch args[0] {
 			case "init":
-				return fmt.Errorf("unknown command %q for %q. Did you mean:\n  muxly config init?\n", args[0], cmd.Name())
+				return fmt.Errorf("unknown command %q for %q. Did you mean `%q config init`?", args[0], name, name)
 			case "edit":
-				return fmt.Errorf("unknown command %q for %q. Did you mean:\n  muxly config edit?\n", args[0], cmd.Name())
+				return fmt.Errorf("unknown command %q for %q. Did you mean `%q config edit`?", args[0], name, name)
 			default:
 				return nil
 			}
@@ -151,7 +152,7 @@ var rootCmd = &cobra.Command{
 			if errors.Is(err, tmux.ErrGracefulExit) {
 				return nil
 			}
-			return fmt.Errorf("Failed to switch session: %w", err)
+			return fmt.Errorf("failed to switch session: %w", err)
 		}
 
 		return nil
@@ -255,7 +256,7 @@ func bypassesStartupChecks(cmd *cobra.Command) bool {
 // Returns an error with helpful instructions if validation fails.
 func validateConfig() error {
 	if viper.ConfigFileUsed() == "" {
-		return fmt.Errorf("no config file found\nRun 'muxly config init' to create one, or use --config to specify a path\n")
+		return fmt.Errorf("no config file found\nRun 'muxly config init' to create one, or use --config to specify a path")
 	}
 
 	return config.Validate(&cfg)
