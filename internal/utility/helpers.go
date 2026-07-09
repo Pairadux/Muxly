@@ -61,7 +61,6 @@ func ResolvePath(p string) (string, error) {
 // Performance: Results are collected concurrently via a buffered channel
 // (size: constants.DefaultChannelBufferSize).
 func GetSubDirs(maxDepth int, root string, ignoreDirNames models.StringSet) ([]string, error) {
-	// PERF: Channel buffer size may be too small for large directory trees, consider making it configurable
 	dirChan := make(chan string, constants.DefaultChannelBufferSize)
 	cfg := &fastwalk.Config{MaxDepth: maxDepth}
 	walkFn := func(path string, d fs.DirEntry, err error) error {
@@ -82,8 +81,7 @@ func GetSubDirs(maxDepth int, root string, ignoreDirNames models.StringSet) ([]s
 		}
 		return nil
 	}
-	// PERF: Pre-allocate dirs slice with estimated capacity to reduce allocations
-	var dirs []string
+	dirs := make([]string, 0, constants.DefaultChannelBufferSize)
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
