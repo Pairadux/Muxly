@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 
+	cliconfig "github.com/Pairadux/muxly/cmd/config"
 	"github.com/Pairadux/muxly/internal/checks"
 	"github.com/Pairadux/muxly/internal/config"
 	"github.com/Pairadux/muxly/internal/constants"
@@ -15,18 +16,14 @@ import (
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/Pairadux/muxly/internal/selector"
 	"github.com/Pairadux/muxly/internal/session"
+	"github.com/Pairadux/muxly/internal/state"
 	"github.com/Pairadux/muxly/internal/tmux"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-var (
-	cfg         models.Config
-	cfgFileFlag string
-	cfgFilePath string
-	verbose     bool
-)
+var cfgFileFlag string
 
 // Version is set at build time via ldflags
 var Version = "dev"
@@ -71,17 +68,17 @@ var rootCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if verbose {
-			fmt.Printf("scan_dirs: %v\n", cfg.ScanDirs)
-			fmt.Printf("entry_dirs: %v\n", cfg.EntryDirs)
-			fmt.Printf("ignore_dirs: %v\n", cfg.IgnoreDirs)
-			fmt.Printf("templates: %v\n", cfg.Templates)
-			fmt.Printf("tmux_base: %v\n", cfg.Settings.TmuxBase)
-			fmt.Printf("default_depth: %v\n", cfg.Settings.DefaultDepth)
+		if state.Verbose {
+			fmt.Printf("scan_dirs: %v\n", state.Cfg.ScanDirs)
+			fmt.Printf("entry_dirs: %v\n", state.Cfg.EntryDirs)
+			fmt.Printf("ignore_dirs: %v\n", state.Cfg.IgnoreDirs)
+			fmt.Printf("templates: %v\n", state.Cfg.Templates)
+			fmt.Printf("tmux_base: %v\n", state.Cfg.Settings.TmuxBase)
+			fmt.Printf("default_depth: %v\n", state.Cfg.Settings.DefaultDepth)
 		}
 
 		flagDepth, _ := cmd.Flags().GetInt("depth")
-		builder := selector.NewBuilder(&cfg, verbose)
+		builder := selector.NewBuilder(&state.Cfg, state.Verbose)
 		entries, err := builder.BuildEntries(flagDepth)
 		if err != nil {
 			return fmt.Errorf("failed to build directory entries: %w", err)
@@ -99,8 +96,8 @@ var rootCmd = &cobra.Command{
 			}
 
 			slices.SortFunc(names, func(a, b string) int {
-				isTmuxA := strings.HasPrefix(a, cfg.Settings.TmuxSessionPrefix)
-				isTmuxB := strings.HasPrefix(b, cfg.Settings.TmuxSessionPrefix)
+				isTmuxA := strings.HasPrefix(a, state.Cfg.Settings.TmuxSessionPrefix)
+				isTmuxB := strings.HasPrefix(b, state.Cfg.Settings.TmuxSessionPrefix)
 				if isTmuxA && !isTmuxB {
 					return -1
 				}
@@ -123,7 +120,7 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
-		sessionName, _ := strings.CutPrefix(choiceStr, cfg.Settings.TmuxSessionPrefix)
+		sessionName, _ := strings.CutPrefix(choiceStr, state.Cfg.Settings.TmuxSessionPrefix)
 
 		selected, exists := entries[choiceStr]
 		if !exists && len(args) == 0 {
@@ -132,12 +129,12 @@ var rootCmd = &cobra.Command{
 
 		sessionLayout := session.LoadMuxlyFile(selected.Path)
 		if len(sessionLayout.Windows) == 0 && selected.Template != "" {
-			if tmpl, found := config.FindTemplateByName(&cfg, selected.Template); found {
+			if tmpl, found := config.FindTemplateByName(&state.Cfg, selected.Template); found {
 				sessionLayout = models.SessionLayout{Windows: tmpl.Windows}
 			}
 		}
 		if len(sessionLayout.Windows) == 0 {
-			if dflt, found := config.DefaultTemplate(&cfg); found {
+			if dflt, found := config.DefaultTemplate(&state.Cfg); found {
 				sessionLayout = models.SessionLayout{Windows: dflt.Windows}
 			}
 		}
@@ -148,7 +145,7 @@ var rootCmd = &cobra.Command{
 			Layout: sessionLayout,
 		}
 
-		if err := tmux.CreateAndSwitchSession(&cfg, sess); err != nil {
+		if err := tmux.CreateAndSwitchSession(&state.Cfg, sess); err != nil {
 			if errors.Is(err, tmux.ErrGracefulExit) {
 				return nil
 			}
@@ -170,16 +167,17 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
+	rootCmd.AddCommand(cliconfig.Cmd)
 	rootCmd.PersistentFlags().StringVar(&cfgFileFlag, "config", "", "config file (default $XDG_CONFIG_HOME/muxly/config.yaml)")
-	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "V", false, "Enable verbose output")
+	rootCmd.PersistentFlags().BoolVarP(&state.Verbose, "verbose", "V", false, "Enable verbose output")
 	rootCmd.Flags().IntP("depth", "d", 0, "Maximum traversal depth")
 }
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	if cfgFileFlag != "" {
-		cfgFilePath = cfgFileFlag
-		viper.SetConfigFile(cfgFilePath)
+		state.CfgFilePath = cfgFileFlag
+		viper.SetConfigFile(state.CfgFilePath)
 	} else {
 		var configDir string
 
@@ -199,7 +197,7 @@ func initConfig() {
 		viper.AddConfigPath(".")
 		viper.SetConfigType("yaml")
 		viper.SetConfigName("config")
-		cfgFilePath = filepath.Join(cfgDir, "config.yaml")
+		state.CfgFilePath = filepath.Join(cfgDir, "config.yaml")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
@@ -219,21 +217,21 @@ func initConfig() {
 			fmt.Fprintln(os.Stderr, "Config file is corrupted or unreadable:", err)
 			os.Exit(1)
 		}
-	} else if verbose {
+	} else if state.Verbose {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
 
-	if err := viper.Unmarshal(&cfg); err != nil {
+	if err := viper.Unmarshal(&state.Cfg); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to parse config file: %v\n", err)
 		os.Exit(1)
 	}
 
-	config.ApplyDefaults(&cfg)
+	config.ApplyDefaults(&state.Cfg)
 
 	// Sync cfgFilePath with the actual config file that was loaded
 	// This ensures 'muxly config edit' opens the correct file
 	if viper.ConfigFileUsed() != "" {
-		cfgFilePath = viper.ConfigFileUsed()
+		state.CfgFilePath = viper.ConfigFileUsed()
 	}
 }
 
@@ -259,5 +257,5 @@ func validateConfig() error {
 		return fmt.Errorf("no config file found\nRun 'muxly config init' to create one, or use --config to specify a path")
 	}
 
-	return config.Validate(&cfg)
+	return config.Validate(&state.Cfg)
 }

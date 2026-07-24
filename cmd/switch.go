@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Pairadux/muxly/internal/fzf"
+	"github.com/Pairadux/muxly/internal/state"
 	"github.com/Pairadux/muxly/internal/tmux"
 
 	"github.com/spf13/cobra"
@@ -58,7 +59,7 @@ If no other sessions found, exit.`,
 			}
 		}
 		sessionName := choiceStr
-		if err := tmux.SwitchToExistingSession(&cfg, sessionName); err != nil {
+		if err := tmux.SwitchToExistingSession(&state.Cfg, sessionName); err != nil {
 			if errors.Is(err, tmux.ErrGracefulExit) {
 				return nil
 			}
@@ -66,7 +67,7 @@ If no other sessions found, exit.`,
 		}
 
 		return nil
-	}, }
+	}}
 
 func init() {
 	rootCmd.AddCommand(switchCmd)

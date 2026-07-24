@@ -10,6 +10,7 @@ import (
 	"github.com/Pairadux/muxly/internal/forms"
 	"github.com/Pairadux/muxly/internal/fzf"
 	"github.com/Pairadux/muxly/internal/selector"
+	"github.com/Pairadux/muxly/internal/state"
 	"github.com/Pairadux/muxly/internal/tmux"
 	"github.com/Pairadux/muxly/internal/utility"
 
@@ -22,12 +23,12 @@ var createCmd = &cobra.Command{
 	Long:  "Create a session from a template\n\nSelect a template, then choose a directory to create the session in.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var selectedIdx int
-		form := forms.TemplateSelectForm(cfg.Templates, &selectedIdx)
+		form := forms.TemplateSelectForm(state.Cfg.Templates, &selectedIdx)
 		if err := form.Run(); err != nil {
 			return fmt.Errorf("template selection failed: %w", err)
 		}
 
-		tmpl := cfg.Templates[selectedIdx]
+		tmpl := state.Cfg.Templates[selectedIdx]
 
 		var sessionPath string
 		if tmpl.Path != "" {
@@ -37,7 +38,7 @@ var createCmd = &cobra.Command{
 			}
 			sessionPath = resolved
 		} else {
-			builder := selector.NewBuilder(&cfg, verbose)
+			builder := selector.NewBuilder(&state.Cfg, state.Verbose)
 			entries, err := builder.BuildEntries(0)
 			if err != nil {
 				return fmt.Errorf("failed to build directory entries: %w", err)
@@ -49,8 +50,8 @@ var createCmd = &cobra.Command{
 			}
 
 			slices.SortFunc(names, func(a, b string) int {
-				isTmuxA := strings.HasPrefix(a, cfg.Settings.TmuxSessionPrefix)
-				isTmuxB := strings.HasPrefix(b, cfg.Settings.TmuxSessionPrefix)
+				isTmuxA := strings.HasPrefix(a, state.Cfg.Settings.TmuxSessionPrefix)
+				isTmuxB := strings.HasPrefix(b, state.Cfg.Settings.TmuxSessionPrefix)
 				if isTmuxA && !isTmuxB {
 					return -1
 				}
@@ -80,7 +81,7 @@ var createCmd = &cobra.Command{
 
 		sessionName := filepath.Base(sessionPath)
 
-		if err := tmux.CreateSessionFromTemplate(&cfg, tmpl, sessionPath, sessionName); err != nil {
+		if err := tmux.CreateSessionFromTemplate(&state.Cfg, tmpl, sessionPath, sessionName); err != nil {
 			if errors.Is(err, tmux.ErrGracefulExit) {
 				return nil
 			}

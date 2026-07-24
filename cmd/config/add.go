@@ -1,4 +1,4 @@
-package cmd
+package config
 
 import (
 	"fmt"
@@ -6,7 +6,9 @@ import (
 	"strings"
 
 	"github.com/Pairadux/muxly/internal/models"
+	"github.com/Pairadux/muxly/internal/state"
 	"github.com/Pairadux/muxly/internal/utility"
+
 	"github.com/spf13/cobra"
 )
 
@@ -28,7 +30,7 @@ Examples:
 }
 
 func init() {
-	rootCmd.AddCommand(addCmd)
+	Cmd.AddCommand(addCmd)
 }
 
 // resolveInputPath handles path resolution including special handling for relative paths like "." and ".."
@@ -61,7 +63,7 @@ func wouldBeFoundByScanDirs(targetPath string, scanDirs []models.ScanDir) (*mode
 			continue
 		}
 
-		depth := scanDir.GetDepth(0, cfg.Settings.DefaultDepth)
+		depth := scanDir.GetDepth(0, state.Cfg.Settings.DefaultDepth)
 
 		if isWithinDepth(targetPath, resolvedScanPath, depth) {
 			return &scanDir, depth, true

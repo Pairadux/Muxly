@@ -1,8 +1,9 @@
-package cmd
+package config
 
 import (
 	"fmt"
 
+	"github.com/Pairadux/muxly/internal/state"
 	"github.com/Pairadux/muxly/internal/utility"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -33,7 +34,7 @@ Examples:
 
 		// Find the scan_dir entry
 		foundIdx := -1
-		for i, scanDir := range cfg.ScanDirs {
+		for i, scanDir := range state.Cfg.ScanDirs {
 			existingPath, err := utility.ResolvePath(scanDir.Path)
 			if err != nil {
 				continue
@@ -49,7 +50,7 @@ Examples:
 		}
 
 		// Remove from scan_dirs
-		updatedScanDirs := append(cfg.ScanDirs[:foundIdx], cfg.ScanDirs[foundIdx+1:]...)
+		updatedScanDirs := append(state.Cfg.ScanDirs[:foundIdx], state.Cfg.ScanDirs[foundIdx+1:]...)
 		viper.Set("scan_dirs", updatedScanDirs)
 
 		if err := viper.WriteConfig(); err != nil {
