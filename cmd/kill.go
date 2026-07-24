@@ -6,6 +6,7 @@ import (
 
 	"github.com/Pairadux/muxly/internal/forms"
 	"github.com/Pairadux/muxly/internal/fzf"
+	"github.com/Pairadux/muxly/internal/state"
 	"github.com/Pairadux/muxly/internal/tmux"
 
 	"github.com/spf13/cobra"
@@ -70,7 +71,7 @@ If no other sessions exist, a new session is created from the default template o
 			// IDEA: add config option to allow users to create new session rather than dropping back to existing one on kill
 			// might even just make this the default behavior...
 			if len(otherSessions) == 0 {
-				if cfg.Settings.AlwaysKillOnLastSession {
+				if state.Cfg.Settings.AlwaysKillOnLastSession {
 					if err := tmux.KillServer(); err != nil {
 						return fmt.Errorf("failed to kill tmux server: %w", err)
 					}
@@ -86,7 +87,7 @@ If no other sessions exist, a new session is created from the default template o
 				}
 
 				if createFromTemplate {
-					if err := tmux.CreateSessionFromDefaultTemplate(&cfg); err != nil {
+					if err := tmux.CreateSessionFromDefaultTemplate(&state.Cfg); err != nil {
 						if errors.Is(err, tmux.ErrGracefulExit) {
 							return nil
 						}
@@ -117,7 +118,7 @@ If no other sessions exist, a new session is created from the default template o
 			}
 		}
 		sessionName := choiceStr
-		if err := tmux.SwitchToExistingSession(&cfg, sessionName); err != nil {
+		if err := tmux.SwitchToExistingSession(&state.Cfg, sessionName); err != nil {
 			if errors.Is(err, tmux.ErrGracefulExit) {
 				return nil
 			}

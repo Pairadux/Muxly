@@ -1,4 +1,4 @@
-package cmd
+package config
 
 import (
 	"fmt"
@@ -28,7 +28,7 @@ Examples:
 }
 
 func init() {
-	rootCmd.AddCommand(removeCmd)
+	Cmd.AddCommand(removeCmd)
 }
 
 // handleMuxlyFile manages .muxly file deletion when removing an entry directory.

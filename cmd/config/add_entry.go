@@ -1,4 +1,4 @@
-package cmd
+package config
 
 import (
 	"fmt"
@@ -6,6 +6,8 @@ import (
 	"slices"
 
 	"github.com/Pairadux/muxly/internal/models"
+	"github.com/Pairadux/muxly/internal/state"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -45,18 +47,18 @@ Examples:
 
 		// Check if this path would already be discovered by a scan_dir
 		// This prevents redundant configuration
-		if matchedScanDir, depth, found := wouldBeFoundByScanDirs(resolvedPath, cfg.ScanDirs); found {
+		if matchedScanDir, depth, found := wouldBeFoundByScanDirs(resolvedPath, state.Cfg.ScanDirs); found {
 			return fmt.Errorf("path %q would already be found by scan_dir %s (depth: %d)\nNo need to add it to entry_dirs", resolvedPath, matchedScanDir.String(), depth)
 		}
 
-		if slices.ContainsFunc(cfg.EntryDirs, func(ed models.EntryDir) bool {
+		if slices.ContainsFunc(state.Cfg.EntryDirs, func(ed models.EntryDir) bool {
 			return ed.Path == resolvedPath
 		}) {
 			fmt.Printf("Path %q is already in entry_dirs\n", resolvedPath)
 			return nil
 		}
 
-		updatedEntryDirs := append(cfg.EntryDirs, models.EntryDir{Path: resolvedPath})
+		updatedEntryDirs := append(state.Cfg.EntryDirs, models.EntryDir{Path: resolvedPath})
 		viper.Set("entry_dirs", updatedEntryDirs)
 
 		if err := viper.WriteConfig(); err != nil {

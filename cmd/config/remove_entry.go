@@ -1,10 +1,11 @@
-package cmd
+package config
 
 import (
 	"fmt"
 	"slices"
 
 	"github.com/Pairadux/muxly/internal/models"
+	"github.com/Pairadux/muxly/internal/state"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -37,7 +38,7 @@ Examples:
 			return err
 		}
 
-		idx := slices.IndexFunc(cfg.EntryDirs, func(ed models.EntryDir) bool {
+		idx := slices.IndexFunc(state.Cfg.EntryDirs, func(ed models.EntryDir) bool {
 			return ed.Path == resolvedPath
 		})
 		if idx == -1 {
@@ -48,7 +49,7 @@ Examples:
 			return err
 		}
 
-		updatedEntryDirs := slices.Delete(cfg.EntryDirs, idx, idx+1)
+		updatedEntryDirs := slices.Delete(state.Cfg.EntryDirs, idx, idx+1)
 		viper.Set("entry_dirs", updatedEntryDirs)
 
 		if err := viper.WriteConfig(); err != nil {

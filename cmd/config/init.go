@@ -1,4 +1,4 @@
-package cmd
+package config
 
 import (
 	"fmt"
@@ -8,6 +8,7 @@ import (
 	"github.com/Pairadux/muxly/internal/config"
 	"github.com/Pairadux/muxly/internal/constants"
 	"github.com/Pairadux/muxly/internal/models"
+	"github.com/Pairadux/muxly/internal/state"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -35,15 +36,15 @@ Otherwise, the current config file is overwritten.`,
 
 		// IDEA: before finalizing the changes, maybe diff the current file or show the config options setup and validate that they are correct
 
-		parent := filepath.Dir(cfgFilePath)
+		parent := filepath.Dir(state.CfgFilePath)
 		_ = os.MkdirAll(parent, constants.DirectoryPermissions)
 
-		if err := os.WriteFile(cfgFilePath, []byte(configContent), constants.FilePermissions); err != nil {
+		if err := os.WriteFile(state.CfgFilePath, []byte(configContent), constants.FilePermissions); err != nil {
 			return fmt.Errorf("cannot write config: %w", err)
 		}
 
-		if verbose {
-			fmt.Println("Wrote config to", cfgFilePath)
+		if state.Verbose {
+			fmt.Println("Wrote config to", state.CfgFilePath)
 		}
 
 		return nil
@@ -51,7 +52,7 @@ Otherwise, the current config file is overwritten.`,
 }
 
 func init() {
-	configCmd.AddCommand(initCmd)
+	Cmd.AddCommand(initCmd)
 	// initCmd.Flags().IntP("tmux_base", "b", defaultTmuxBase, "What number your windows start ordering at.")
 	// initCmd.Flags().IntP("default_depth", "d", defaultDepth, "Default depth to scan.")
 	// initCmd.Flags().StringP("default_session", "D", defaultSession, "The name of the default session to fall back to.")

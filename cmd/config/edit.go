@@ -1,4 +1,4 @@
-package cmd
+package config
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"os/exec"
 
 	"github.com/Pairadux/muxly/internal/config"
+	"github.com/Pairadux/muxly/internal/state"
 	"github.com/spf13/cobra"
 )
 
@@ -21,7 +22,7 @@ You can also set the default editor in the config file that will always be used 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		editor := pickEditor(args)
 
-		editCmd := exec.Command(editor, cfgFilePath)
+		editCmd := exec.Command(editor, state.CfgFilePath)
 		editCmd.Stdin = os.Stdin
 		editCmd.Stdout = os.Stdout
 		editCmd.Stderr = os.Stderr
@@ -30,7 +31,7 @@ You can also set the default editor in the config file that will always be used 
 		}
 
 		// Validate the edited config file
-		if _, err := config.ValidateConfigFile(cfgFilePath); err != nil {
+		if _, err := config.ValidateConfigFile(state.CfgFilePath); err != nil {
 			fmt.Fprintf(os.Stderr, "\nWarning: Config validation failed: %v\n", err)
 			fmt.Fprintln(os.Stderr, "Please fix the issues above or your config may not work correctly.")
 			return fmt.Errorf("config validation failed")
@@ -42,17 +43,17 @@ You can also set the default editor in the config file that will always be used 
 }
 
 func init() {
-	configCmd.AddCommand(editCmd)
+	Cmd.AddCommand(editCmd)
 }
 
 func pickEditor(args []string) string {
-	// Precedence: CLI arg > cfg.Settings.Editor (from MUXLY_EDITOR/EDITOR env or config file) > default
+	// Precedence: CLI arg > state.Cfg.Settings.Editor (from MUXLY_EDITOR/EDITOR env or config file) > default
 	if len(args) > 0 {
 		return args[0]
 	}
 
-	if cfg.Settings.Editor != "" {
-		return cfg.Settings.Editor
+	if state.Cfg.Settings.Editor != "" {
+		return state.Cfg.Settings.Editor
 	}
 
 	return config.DefaultEditor

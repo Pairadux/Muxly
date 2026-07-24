@@ -1,10 +1,11 @@
-package cmd
+package config
 
 import (
 	"fmt"
 	"os"
 
 	"github.com/Pairadux/muxly/internal/models"
+	"github.com/Pairadux/muxly/internal/state"
 	"github.com/Pairadux/muxly/internal/utility"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -48,7 +49,7 @@ Examples:
 		alias, _ := cmd.Flags().GetString("alias")
 
 		// Check if already in scan_dirs
-		for _, scanDir := range cfg.ScanDirs {
+		for _, scanDir := range state.Cfg.ScanDirs {
 			existingPath, err := utility.ResolvePath(scanDir.Path)
 			if err != nil {
 				continue
@@ -75,7 +76,7 @@ Examples:
 		}
 
 		// Add to scan_dirs and write config using viper
-		updatedScanDirs := append(cfg.ScanDirs, newScanDir)
+		updatedScanDirs := append(state.Cfg.ScanDirs, newScanDir)
 		viper.Set("scan_dirs", updatedScanDirs)
 
 		if err := viper.WriteConfig(); err != nil {

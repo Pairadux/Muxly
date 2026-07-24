@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/Pairadux/muxly/internal/checks"
+	"github.com/Pairadux/muxly/internal/state"
 	"github.com/spf13/cobra"
 )
 
@@ -35,17 +36,17 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 	var allResults []checks.CheckResult
 
 	externalResults := checks.CheckExternalUtils()
-	externalResults = append(externalResults, checks.CheckEditor(cfg.Settings.Editor))
+	externalResults = append(externalResults, checks.CheckEditor(state.Cfg.Settings.Editor))
 	allResults = append(allResults, externalResults...)
 	fmt.Print(checks.FormatSection("External Dependencies", externalResults, doctorQuiet))
 
 	var configResults []checks.CheckResult
-	configResults = append(configResults, checks.CheckConfigFile(cfgFilePath))
-	configResults = append(configResults, checks.ValidateConfig(&cfg)...)
+	configResults = append(configResults, checks.CheckConfigFile(state.CfgFilePath))
+	configResults = append(configResults, checks.ValidateConfig(&state.Cfg)...)
 	allResults = append(allResults, configResults...)
 	fmt.Print(checks.FormatSection("Configuration", configResults, doctorQuiet))
 
-	dirResults := checks.ValidateDirectories(&cfg)
+	dirResults := checks.ValidateDirectories(&state.Cfg)
 	allResults = append(allResults, dirResults...)
 	if len(dirResults) > 0 {
 		fmt.Print(checks.FormatSection("Directories", dirResults, doctorQuiet))
