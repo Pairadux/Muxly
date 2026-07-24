@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/Pairadux/muxly/internal/checks"
+	"github.com/Pairadux/muxly/internal/constants"
 	"github.com/Pairadux/muxly/internal/state"
 	"github.com/spf13/cobra"
 )
@@ -24,6 +25,10 @@ Checks performed:
 Exit codes:
   0 - All checks pass (warnings allowed)
   1 - One or more errors found`,
+	Annotations: map[string]string{
+		constants.AnnotationSkipUtilsCheck:  "true",
+		constants.AnnotationSkipConfigCheck: "true",
+	},
 	RunE: runDoctor,
 }
 
