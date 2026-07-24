@@ -21,6 +21,9 @@ var initCmd = &cobra.Command{
 
 Creates a config file at the specified location (default location if no argument passed) if no config file exists.
 Otherwise, the current config file is overwritten.`,
+	Annotations: map[string]string{
+		constants.AnnotationSkipConfigCheck: "true",
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// TODO: make an interactive menu for assigning these values
 		var configContent string

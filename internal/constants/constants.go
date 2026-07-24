@@ -22,4 +22,11 @@ const (
 
 	// Common strings
 	UserCancelledMsg = "user cancelled"
+
+	// Command annotation keys.
+	// These mark cobra commands so root's PersistentPreRunE can skip startup
+	// checks a given command does not need. Presence of the key is what matters;
+	// the value is informational.
+	AnnotationSkipUtilsCheck  = "muxly/skip_utils_check"
+	AnnotationSkipConfigCheck = "muxly/skip_config_check"
 )

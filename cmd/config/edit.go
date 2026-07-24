@@ -6,6 +6,7 @@ import (
 	"os/exec"
 
 	"github.com/Pairadux/muxly/internal/config"
+	"github.com/Pairadux/muxly/internal/constants"
 	"github.com/Pairadux/muxly/internal/state"
 	"github.com/spf13/cobra"
 )
@@ -19,6 +20,9 @@ var editCmd = &cobra.Command{
 If you pass an optional [editor] it'll be used instead of the default $EDITOR.
 You can also set the default editor in the config file that will always be used instead of $EDITOR.`,
 	Args: cobra.MaximumNArgs(1),
+	Annotations: map[string]string{
+		constants.AnnotationSkipConfigCheck: "true",
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		editor := pickEditor(args)
 

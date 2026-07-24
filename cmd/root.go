@@ -40,15 +40,15 @@ var rootCmd = &cobra.Command{
 		HiddenDefaultCmd: true,
 	},
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if bypassesStartupChecks(cmd) {
-			return nil
+		if !hasAnnotation(cmd, constants.AnnotationSkipUtilsCheck) {
+			if err := checks.VerifyExternalUtils(); err != nil {
+				return err
+			}
 		}
-
-		if err := checks.VerifyExternalUtils(); err != nil {
-			return err
-		}
-		if err := validateConfig(); err != nil {
-			return err
+		if !hasAnnotation(cmd, constants.AnnotationSkipConfigCheck) {
+			if err := validateConfig(); err != nil {
+				return err
+			}
 		}
 
 		return nil
@@ -235,13 +235,13 @@ func initConfig() {
 	}
 }
 
-// bypassesStartupChecks checks if the given command should skip the standard
-// startup validation (external utils and config). Commands like "config" and
-// "doctor" need to run even when the environment isn't fully configured.
-func bypassesStartupChecks(cmd *cobra.Command) bool {
+// hasAnnotation reports whether cmd or any of its ancestors carries the given
+// annotation key. Cobra does not propagate annotations to child commands, so
+// setting a key on a parent (e.g. the "config" command) applies it to the whole
+// subtree, while leaf commands can opt in individually.
+func hasAnnotation(cmd *cobra.Command, key string) bool {
 	for c := cmd; c != nil; c = c.Parent() {
-		switch c.Name() {
-		case "config", "doctor":
+		if _, ok := c.Annotations[key]; ok {
 			return true
 		}
 	}
