@@ -17,6 +17,7 @@ func SanitizeSessionName(name string) (string, int) {
 	sanitized := name[dotCount:]
 	sanitized = strings.ReplaceAll(sanitized, ".", "_")
 	sanitized = strings.ReplaceAll(sanitized, ":", "-")
+	sanitized = strings.ToLower(sanitized)
 	return sanitized, dotCount
 }
 
