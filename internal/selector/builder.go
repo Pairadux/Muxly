@@ -2,7 +2,9 @@ package selector
 
 import (
 	"fmt"
+	"maps"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/Pairadux/muxly/internal/config"
@@ -46,6 +48,24 @@ func (b *Builder) BuildEntries(flagDepth int) (map[string]models.DirEntry, error
 	b.addTmuxSessionEntries(entries, existingSessions, currentSession)
 
 	return entries, nil
+}
+
+// SortedNames returns the entry names in picker order: active tmux sessions
+// first, then directories, each sorted alphabetically ignoring case.
+func SortedNames(entries map[string]models.DirEntry, sessionPrefix string) []string {
+	names := slices.Collect(maps.Keys(entries))
+	slices.SortFunc(names, func(a, b string) int {
+		isSessionA := strings.HasPrefix(a, sessionPrefix)
+		isSessionB := strings.HasPrefix(b, sessionPrefix)
+		if isSessionA != isSessionB {
+			if isSessionA {
+				return -1
+			}
+			return 1
+		}
+		return strings.Compare(strings.ToLower(a), strings.ToLower(b))
+	})
+	return names
 }
 
 // buildIgnoreSets partitions ignore directories into two sets for O(1) lookup:

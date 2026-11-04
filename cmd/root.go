@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	cliconfig "github.com/Pairadux/muxly/cmd/config"
@@ -89,24 +88,7 @@ var rootCmd = &cobra.Command{
 			choiceStr = args[0]
 		}
 		if choiceStr == "" {
-			// Build list of all entry names for fzf selection
-			names := make([]string, 0, len(entries))
-			for name := range entries {
-				names = append(names, name)
-			}
-
-			slices.SortFunc(names, func(a, b string) int {
-				isTmuxA := strings.HasPrefix(a, state.Cfg.Settings.TmuxSessionPrefix)
-				isTmuxB := strings.HasPrefix(b, state.Cfg.Settings.TmuxSessionPrefix)
-				if isTmuxA && !isTmuxB {
-					return -1
-				}
-				if !isTmuxA && isTmuxB {
-					return 1
-				}
-				return strings.Compare(strings.ToLower(a), strings.ToLower(b))
-			})
-
+			names := selector.SortedNames(entries, state.Cfg.Settings.TmuxSessionPrefix)
 			choiceStr, err = fzf.SelectWithFzf(names)
 			if err != nil {
 				if errors.Is(err, fzf.ErrCancelled) {
