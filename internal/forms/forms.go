@@ -7,6 +7,10 @@ import (
 	"github.com/charmbracelet/huh"
 )
 
+// ErrCancelled is what a form's Run returns when the user presses Ctrl-C.
+// Callers should treat it as a normal exit, not a failure.
+var ErrCancelled = huh.ErrUserAborted
+
 // TemplateSelectForm builds a prompt that stores the chosen template's index in selectedIdx.
 func TemplateSelectForm(templates []models.SessionTemplate, selectedIdx *int) *huh.Form {
 	options := make([]huh.Option[int], len(templates))

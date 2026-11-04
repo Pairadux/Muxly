@@ -44,6 +44,7 @@ const validConfig = "entry_dirs:\n  - path: /tmp\n" + validTemplates
 // fakeTmuxScript logs each call and answers the few queries muxly makes. Sessions come
 // from FAKE_SESSIONS (comma separated), and an empty list behaves like no server.
 const fakeTmuxScript = `#!/bin/sh
+PATH=/usr/bin:/bin
 printf '%s\n' "$*" >> "$FAKE_LOG_DIR/tmux"
 case "$1" in
   list-sessions)
@@ -58,6 +59,7 @@ exit 0
 
 // fakeFzfScript logs each call, prints FAKE_PICK and exits with FAKE_FZF_EXIT.
 const fakeFzfScript = `#!/bin/sh
+PATH=/usr/bin:/bin
 cat > "$FAKE_LOG_DIR/fzf"
 [ -z "$FAKE_PICK" ] || printf '%s\n' "$FAKE_PICK"
 exit "${FAKE_FZF_EXIT:-0}"
@@ -179,6 +181,8 @@ func (c *cli) run(args ...string) result {
 		"HOME=" + c.home,
 		"XDG_CONFIG_HOME=" + filepath.Join(c.home, ".config"),
 		"FAKE_LOG_DIR=" + c.logDir,
+		// With -race, each process otherwise sleeps a second as it exits.
+		"GORACE=atexit_sleep_ms=0",
 	}, c.env...)
 	// A new session has no controlling terminal, so an unexpected prompt fails at once
 	// instead of waiting on the developer's real terminal.

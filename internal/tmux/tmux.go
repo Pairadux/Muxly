@@ -265,17 +265,17 @@ func KillServer() error {
 	return nil
 }
 
-// CreateSessionFromDefaultTemplate creates and switches to a session using the default template.
-// Used by the kill command when no other sessions exist.
-func CreateSessionFromDefaultTemplate(cfg *models.Config) error {
+// ReplaceLastSession swaps current, the only session left on the server, for a fresh
+// session from the default template, and moves the client to it.
+//
+// The old session is killed last, because that also ends this process when it runs in
+// one of the old session's panes. Until then any failure leaves the old session as it
+// was. It never asks tmux whether the new name exists: the only session is the current
+// one, and tmux would match its name by prefix.
+func ReplaceLastSession(cfg *models.Config, current string) error {
 	tmpl, found := config.DefaultTemplate(cfg)
 	if !found {
-		return fmt.Errorf("no default template configured")
-	}
-
-	sessionName := tmpl.Name
-	if HasTmuxSession(sessionName) {
-		return SwitchToExistingSession(cfg, sessionName)
+		return errors.New("no default template configured")
 	}
 
 	sessionPath := tmpl.Path
@@ -288,12 +288,50 @@ func CreateSessionFromDefaultTemplate(cfg *models.Config) error {
 	}
 
 	session := models.Session{
-		Name:   sessionName,
+		Name:   tmpl.Name,
 		Path:   sessionPath,
 		Layout: models.SessionLayout{Windows: tmpl.Windows},
 	}
 
-	return CreateAndSwitchSession(cfg, session)
+	// tmux refuses duplicate names, so the old session gives up the name first.
+	old := current
+	if current == session.Name {
+		old = fmt.Sprintf("muxly-replaced-%d", os.Getpid())
+		if err := renameSession(current, old); err != nil {
+			return err
+		}
+	}
+
+	err := CreateSession(session)
+	if err == nil {
+		err = SwitchToExistingSession(cfg, session.Name)
+	}
+	if err != nil {
+		return errors.Join(err, undoReplace(session.Name, old, current))
+	}
+
+	return KillSession(old)
+}
+
+// undoReplace removes what a failed ReplaceLastSession created and gives the old
+// session its name back. The "=" makes tmux match the name exactly, so this can't
+// reach the old session by prefix.
+func undoReplace(newName, old, original string) error {
+	// The new session may never have been created, so failing to kill it means nothing.
+	_ = exec.Command("tmux", "kill-session", "-t", "="+newName).Run()
+
+	if old == original {
+		return nil
+	}
+	return renameSession(old, original)
+}
+
+// renameSession renames the session with exactly the name from.
+func renameSession(from, to string) error {
+	if err := exec.Command("tmux", "rename-session", "-t", "="+from, to).Run(); err != nil {
+		return fmt.Errorf("renaming session %q to %q: %w", from, to, err)
+	}
+	return nil
 }
 
 // CreateSessionFromTemplate creates and switches to a session from a given template and path.
