@@ -125,3 +125,29 @@ func TestCurrentFolderIsNeverSearchedForConfig(t *testing.T) {
 		}
 	})
 }
+
+func TestConfigList(t *testing.T) {
+	for _, args := range [][]string{{"config", "list"}, {"config", "l"}} {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			c := newCLI(t).writeConfig("scan_dirs:\n  - path: ~/Dev\n    depth: 2\nentry_dirs:\n  - path: ~/notes\nignore_dirs:\n  - target\n" + validTemplates)
+
+			got := c.run(args...)
+
+			if got.code != 0 {
+				t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
+			}
+			want := "scan_dirs:\n  ~/Dev (depth 2)\nentry_dirs:\n  ~/notes\nignore_dirs:\n  target\n"
+			if got.stdout != want {
+				t.Errorf("stdout:\n%s\nwant:\n%s", got.stdout, want)
+			}
+		})
+	}
+}
+
+func TestConfigListNeedsAConfig(t *testing.T) {
+	got := newCLI(t).run("config", "list")
+
+	if got.code == 0 || !strings.Contains(got.stderr, "no config file found") {
+		t.Errorf("exit %d, stderr %q", got.code, got.stderr)
+	}
+}

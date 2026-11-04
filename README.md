@@ -44,6 +44,7 @@ Muxly is a highly configurable Tmux Session Manager based on ThePrimeagen's tmux
 - `muxly config remove` - Remove directories from configuration
 - `muxly config init` - Create initial configuration file (use `--force` to replace an existing one)
 - `muxly config edit` - Edit configuration file
+- `muxly config list` - List the directories in the configuration
 - `muxly doctor` - Validate environment and configuration
 - `muxly completion <shell>` - Generate shell completion scripts (hidden command)
 
@@ -434,6 +435,9 @@ muxly config init
 
 # Edit config file
 muxly config edit
+
+# List the configured directories
+muxly config list
 
 # Add directories to scan_dirs
 muxly config add scan ~/Dev --depth 2 --alias dev
