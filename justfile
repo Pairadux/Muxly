@@ -22,12 +22,20 @@ fmt:
 vet:
     go vet ./...
 
+# Run golangci-lint
+lint:
+    golangci-lint run
+
+# Scan for known vulnerabilities
+vuln:
+    govulncheck ./...
+
 # Clean up module dependencies
 tidy:
     go mod tidy
 
-# Run formatting, vet, and tests
-check: fmt vet test
+# Format, then run everything CI runs
+check: fmt vet (test "-race") lint vuln
 
 # Cut a release. Version comes from the git tag (goreleaser injects it via
 # ldflags), so there is no file to edit: this tags HEAD and pushes, which triggers
