@@ -45,6 +45,10 @@ var rootCmd = &cobra.Command{
 		// usage mistake and shouldn't print usage. Earlier failures still do.
 		cmd.SilenceUsage = true
 
+		if isCompletionCommand(cmd) {
+			return nil
+		}
+
 		if !hasAnnotation(cmd, constants.AnnotationSkipUtilsCheck) {
 			if err := checks.VerifyExternalUtils(); err != nil {
 				return err
@@ -229,6 +233,20 @@ func initConfig() {
 	if viper.ConfigFileUsed() != "" {
 		state.CfgFilePath = viper.ConfigFileUsed()
 	}
+}
+
+// isCompletionCommand reports whether cmd is one of cobra's shell completion commands.
+// They need no config or tools, but cobra creates them as the program runs, so they
+// can't carry annotations like muxly's own commands. That covers "completion" and the
+// hidden commands shells call on each Tab press.
+func isCompletionCommand(cmd *cobra.Command) bool {
+	for c := cmd; c != nil; c = c.Parent() {
+		switch c.Name() {
+		case "completion", cobra.ShellCompRequestCmd, cobra.ShellCompNoDescRequestCmd:
+			return true
+		}
+	}
+	return false
 }
 
 // hasAnnotation reports whether cmd or any of its ancestors carries the given
