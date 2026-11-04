@@ -42,7 +42,7 @@ Muxly is a highly configurable Tmux Session Manager based on ThePrimeagen's tmux
 - `muxly kill` - Kill current session and switch to another
 - `muxly add` - Add directories to configuration (entry or scan)
 - `muxly remove` - Remove directories from configuration
-- `muxly config init` - Create initial configuration file
+- `muxly config init` - Create initial configuration file (use `--force` to replace an existing one)
 - `muxly config edit` - Edit configuration file
 - `muxly doctor` - Validate environment and configuration
 - `muxly completion <shell>` - Generate shell completion scripts (hidden command)
@@ -219,7 +219,7 @@ EDITOR=nano muxly config edit
 
 #### Default Configuration
 
-Running `muxly config init` creates this minimal config:
+Running `muxly config init` creates this minimal config and prints where it wrote it. It won't replace an existing file unless you pass `--force`:
 
 ```yaml
 # Additional entry directories (included directly, not scanned)

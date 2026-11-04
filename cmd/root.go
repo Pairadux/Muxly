@@ -178,7 +178,6 @@ func initConfig() {
 
 		cfgDir := filepath.Join(configDir, "muxly")
 		viper.AddConfigPath(cfgDir)
-		viper.AddConfigPath(".")
 		viper.SetConfigType("yaml")
 		viper.SetConfigName("config")
 		state.CfgFilePath = filepath.Join(cfgDir, "config.yaml")
