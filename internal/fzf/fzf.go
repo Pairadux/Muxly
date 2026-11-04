@@ -10,7 +10,8 @@ import (
 	"github.com/Pairadux/muxly/internal/constants"
 )
 
-// ErrCancelled reports that the user closed the picker without choosing anything.
+// ErrCancelled reports that the picker closed without a choice: the user pressed Esc or
+// Ctrl-C, or pressed Enter with nothing matching.
 // Callers should treat it as a normal exit, not a failure.
 var ErrCancelled = errors.New("selection cancelled")
 
@@ -18,8 +19,8 @@ var ErrCancelled = errors.New("selection cancelled")
 // and returns the selected option. The options are passed as stdin to the fzf
 // command, allowing the user to interactively filter and select from them.
 //
-// Returns ErrCancelled if the user cancels the selection (Esc or Ctrl+C), or
-// another error if fzf is not available or fails.
+// Returns ErrCancelled if the picker closes without a choice, or another error if
+// fzf is not available or fails.
 func SelectWithFzf(options []string) (string, error) {
 	fzf := exec.Command("fzf")
 	fzf.Stdin = strings.NewReader(strings.Join(options, "\n"))
@@ -27,8 +28,11 @@ func SelectWithFzf(options []string) (string, error) {
 	choice, err := fzf.Output()
 	if err != nil {
 		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) && exitErr.ExitCode() == constants.FzfUserCancelExitCode {
-			return "", ErrCancelled
+		if errors.As(err, &exitErr) {
+			switch exitErr.ExitCode() {
+			case constants.FzfNoMatchExitCode, constants.FzfUserCancelExitCode:
+				return "", ErrCancelled
+			}
 		}
 		return "", err
 	}

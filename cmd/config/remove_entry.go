@@ -1,9 +1,11 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 
+	"github.com/Pairadux/muxly/internal/forms"
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/Pairadux/muxly/internal/state"
 	"github.com/Pairadux/muxly/internal/utility"
@@ -48,6 +50,9 @@ Examples:
 		}
 
 		if err := handleMuxlyFile(cmd, resolvedPath); err != nil {
+			if errors.Is(err, forms.ErrCancelled) {
+				return nil
+			}
 			return err
 		}
 

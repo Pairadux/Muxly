@@ -41,6 +41,10 @@ var rootCmd = &cobra.Command{
 		HiddenDefaultCmd: true,
 	},
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Flags and arguments are parsed by now, so any failure from here on isn't a
+		// usage mistake and shouldn't print usage. Earlier failures still do.
+		cmd.SilenceUsage = true
+
 		if !hasAnnotation(cmd, constants.AnnotationSkipUtilsCheck) {
 			if err := checks.VerifyExternalUtils(); err != nil {
 				return err

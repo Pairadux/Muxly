@@ -30,6 +30,7 @@ func TestSelectWithFzf(t *testing.T) {
 	}{
 		{name: "selection is returned trimmed", output: "chosen", code: 0, want: "chosen"},
 		{name: "ctrl-c or esc is a cancel", code: 130, wantCancelled: true},
+		{name: "enter with no match is a cancel", code: 1, wantCancelled: true},
 		{name: "fzf failing is a real error", code: 2, wantErr: true},
 	}
 

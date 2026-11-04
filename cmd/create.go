@@ -23,6 +23,9 @@ var createCmd = &cobra.Command{
 		var selectedIdx int
 		form := forms.TemplateSelectForm(state.Cfg.Templates, &selectedIdx)
 		if err := form.Run(); err != nil {
+			if errors.Is(err, forms.ErrCancelled) {
+				return nil
+			}
 			return fmt.Errorf("template selection failed: %w", err)
 		}
 
