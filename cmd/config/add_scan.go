@@ -25,9 +25,9 @@ The path can be absolute, relative, or use tilde expansion.
 Relative paths (like . or ..) will be converted to absolute paths.
 
 Examples:
-  muxly add scan ~/Dev                      # Add with default depth
-  muxly add s ~/projects --depth 2          # Scan 2 levels deep
-  muxly add scan ~/.config --depth 1 --alias config`,
+  muxly config add scan ~/Dev                      # Add with default depth
+  muxly config add s ~/projects --depth 2          # Scan 2 levels deep
+  muxly config add scan ~/.config --depth 1 --alias config`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		inputPath := args[0]

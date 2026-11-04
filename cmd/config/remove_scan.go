@@ -20,9 +20,9 @@ The path can be absolute, relative, or use tilde expansion.
 Relative paths (like . or ..) will be converted to absolute paths.
 
 Examples:
-  muxly remove scan ~/Dev          # Remove from scan_dirs
-  muxly remove s ~/projects        # Short form
-  muxly remove scan ~/.config      # Remove config directory`,
+  muxly config remove scan ~/Dev          # Remove from scan_dirs
+  muxly config remove s ~/projects        # Short form
+  muxly config remove scan ~/.config      # Remove config directory`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		inputPath := args[0]

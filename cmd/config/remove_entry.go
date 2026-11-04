@@ -28,10 +28,10 @@ in interactive mode. In non-interactive environments, you must explicitly
 choose to keep (-k) or delete (-d) the .muxly file.
 
 Examples:
-  muxly remove entry .                      # Remove current directory (interactive)
-  muxly remove e ~/Dev/my-project           # Remove project (interactive)
-  muxly remove entry -k /path/to/directory  # Remove, keep .muxly (non-interactive)
-  muxly remove entry -d ~/old-project       # Remove, delete .muxly (non-interactive)`,
+  muxly config remove entry .                      # Remove current directory (interactive)
+  muxly config remove e ~/Dev/my-project           # Remove project (interactive)
+  muxly config remove entry -k /path/to/directory  # Remove, keep .muxly (non-interactive)
+  muxly config remove entry -d ~/old-project       # Remove, delete .muxly (non-interactive)`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		inputPath := args[0]
