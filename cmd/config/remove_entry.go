@@ -6,6 +6,7 @@ import (
 
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/Pairadux/muxly/internal/state"
+	"github.com/Pairadux/muxly/internal/utility"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -39,7 +40,8 @@ Examples:
 		}
 
 		idx := slices.IndexFunc(state.Cfg.EntryDirs, func(ed models.EntryDir) bool {
-			return ed.Path == resolvedPath
+			existingPath, err := utility.ResolvePath(ed.Path)
+			return err == nil && existingPath == resolvedPath
 		})
 		if idx == -1 {
 			return fmt.Errorf("path %q is not in entry_dirs", resolvedPath)
