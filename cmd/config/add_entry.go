@@ -26,9 +26,9 @@ The path can be absolute, relative, or use tilde expansion.
 Relative paths (like . or ..) will be converted to absolute paths.
 
 Examples:
-  muxly add entry .                    # Add current directory
-  muxly add e ~/Dev/my-project         # Add a specific project
-  muxly add entry /path/to/directory   # Add absolute path`,
+  muxly config add entry .                    # Add current directory
+  muxly config add e ~/Dev/my-project         # Add a specific project
+  muxly config add entry /path/to/directory   # Add absolute path`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		inputPath := args[0]

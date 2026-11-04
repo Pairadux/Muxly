@@ -21,6 +21,7 @@ const (
 	symbolError   = "✗"
 )
 
+// FormatResult renders one check as a status symbol, message and optional hint.
 func FormatResult(r CheckResult) string {
 	var symbol, message string
 
@@ -47,6 +48,8 @@ func FormatResult(r CheckResult) string {
 	return result
 }
 
+// FormatSection renders a titled group of checks. With quiet set, passing checks are
+// left out, and a section with nothing left renders as an empty string.
 func FormatSection(title string, results []CheckResult, quiet bool) string {
 	var sb strings.Builder
 
@@ -74,6 +77,7 @@ func FormatSection(title string, results []CheckResult, quiet bool) string {
 	return sb.String()
 }
 
+// FormatSummary renders a one-line count of the errors and warnings in results.
 func FormatSummary(results []CheckResult) string {
 	errors, warnings := CountByStatus(results)
 

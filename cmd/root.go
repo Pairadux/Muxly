@@ -1,3 +1,5 @@
+// Package cmd defines muxly's command line: the root picker and the kill, switch,
+// create and doctor commands.
 package cmd
 
 import (
@@ -5,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	cliconfig "github.com/Pairadux/muxly/cmd/config"
@@ -40,6 +41,14 @@ var rootCmd = &cobra.Command{
 		HiddenDefaultCmd: true,
 	},
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Flags and arguments are parsed by now, so any failure from here on isn't a
+		// usage mistake and shouldn't print usage. Earlier failures still do.
+		cmd.SilenceUsage = true
+
+		if isCompletionCommand(cmd) {
+			return nil
+		}
+
 		if !hasAnnotation(cmd, constants.AnnotationSkipUtilsCheck) {
 			if err := checks.VerifyExternalUtils(); err != nil {
 				return err
@@ -51,20 +60,6 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
-		return nil
-	},
-	PreRunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 1 {
-			name := cmd.Name()
-			switch args[0] {
-			case "init":
-				return fmt.Errorf("unknown command %q for %q. Did you mean `%q config init`?", args[0], name, name)
-			case "edit":
-				return fmt.Errorf("unknown command %q for %q. Did you mean `%q config edit`?", args[0], name, name)
-			default:
-				return nil
-			}
-		}
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -89,27 +84,10 @@ var rootCmd = &cobra.Command{
 			choiceStr = args[0]
 		}
 		if choiceStr == "" {
-			// Build list of all entry names for fzf selection
-			names := make([]string, 0, len(entries))
-			for name := range entries {
-				names = append(names, name)
-			}
-
-			slices.SortFunc(names, func(a, b string) int {
-				isTmuxA := strings.HasPrefix(a, state.Cfg.Settings.TmuxSessionPrefix)
-				isTmuxB := strings.HasPrefix(b, state.Cfg.Settings.TmuxSessionPrefix)
-				if isTmuxA && !isTmuxB {
-					return -1
-				}
-				if !isTmuxA && isTmuxB {
-					return 1
-				}
-				return strings.Compare(strings.ToLower(a), strings.ToLower(b))
-			})
-
+			names := selector.SortedNames(entries, state.Cfg.Settings.TmuxSessionPrefix)
 			choiceStr, err = fzf.SelectWithFzf(names)
 			if err != nil {
-				if err.Error() == "user cancelled" {
+				if errors.Is(err, fzf.ErrCancelled) {
 					return nil
 				}
 				return fmt.Errorf("selecting with fzf failed: %w", err)
@@ -168,9 +146,31 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.AddCommand(cliconfig.Cmd)
+	for _, name := range []string{"add", "edit", "init", "remove"} {
+		rootCmd.AddCommand(configCommandPointer(name))
+	}
 	rootCmd.PersistentFlags().StringVar(&cfgFileFlag, "config", "", "config file (default $XDG_CONFIG_HOME/muxly/config.yaml)")
 	rootCmd.PersistentFlags().BoolVarP(&state.Verbose, "verbose", "V", false, "Enable verbose output")
 	rootCmd.Flags().IntP("depth", "d", 0, "Maximum traversal depth")
+}
+
+// configCommandPointer stops a command that lives under "muxly config" from being
+// taken as a session name when typed at the top level. It's a hidden command rather
+// than a check in root, because root would reject the flags and extra arguments of
+// something like "muxly add scan ~/Dev --alias dev" before any check ran.
+func configCommandPointer(name string) *cobra.Command {
+	return &cobra.Command{
+		Use:                name,
+		Hidden:             true,
+		DisableFlagParsing: true,
+		Annotations: map[string]string{
+			constants.AnnotationSkipUtilsCheck:  "true",
+			constants.AnnotationSkipConfigCheck: "true",
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return fmt.Errorf("unknown command %q\nDid you mean 'muxly config %s'?", name, name)
+		},
+	}
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -194,7 +194,6 @@ func initConfig() {
 
 		cfgDir := filepath.Join(configDir, "muxly")
 		viper.AddConfigPath(cfgDir)
-		viper.AddConfigPath(".")
 		viper.SetConfigType("yaml")
 		viper.SetConfigName("config")
 		state.CfgFilePath = filepath.Join(cfgDir, "config.yaml")
@@ -204,12 +203,13 @@ func initConfig() {
 
 	// Bind environment variables for config overrides
 	// Allows MUXLY_* environment variables to override config file values
+	// BindEnv only fails when called with no arguments, so its error can't occur here.
 	viper.SetEnvPrefix("MUXLY")
-	viper.BindEnv("settings.editor", "MUXLY_EDITOR", "EDITOR") // Support both MUXLY_EDITOR and standard $EDITOR
-	viper.BindEnv("settings.default_depth")                    // MUXLY_DEFAULT_DEPTH
-	viper.BindEnv("settings.tmux_base")                        // MUXLY_TMUX_BASE
-	viper.BindEnv("settings.tmux_session_prefix")              // MUXLY_TMUX_SESSION_PREFIX
-	viper.BindEnv("settings.always_kill_on_last_session")      // MUXLY_ALWAYS_KILL_ON_LAST_SESSION
+	_ = viper.BindEnv("settings.editor", "MUXLY_EDITOR", "EDITOR") // Support both MUXLY_EDITOR and standard $EDITOR
+	_ = viper.BindEnv("settings.default_depth")                    // MUXLY_DEFAULT_DEPTH
+	_ = viper.BindEnv("settings.tmux_base")                        // MUXLY_TMUX_BASE
+	_ = viper.BindEnv("settings.tmux_session_prefix")              // MUXLY_TMUX_SESSION_PREFIX
+	_ = viper.BindEnv("settings.always_kill_on_last_session")      // MUXLY_ALWAYS_KILL_ON_LAST_SESSION
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err != nil {
@@ -233,6 +233,20 @@ func initConfig() {
 	if viper.ConfigFileUsed() != "" {
 		state.CfgFilePath = viper.ConfigFileUsed()
 	}
+}
+
+// isCompletionCommand reports whether cmd is one of cobra's shell completion commands.
+// They need no config or tools, but cobra creates them as the program runs, so they
+// can't carry annotations like muxly's own commands. That covers "completion" and the
+// hidden commands shells call on each Tab press.
+func isCompletionCommand(cmd *cobra.Command) bool {
+	for c := cmd; c != nil; c = c.Parent() {
+		switch c.Name() {
+		case "completion", cobra.ShellCompRequestCmd, cobra.ShellCompNoDescRequestCmd:
+			return true
+		}
+	}
+	return false
 }
 
 // hasAnnotation reports whether cmd or any of its ancestors carries the given

@@ -21,10 +21,10 @@ Use subcommands to specify where to remove the directory from:
   scan (s)  - Remove from scan_dirs
 
 Examples:
-  muxly remove entry ~/Dev/my-project
-  muxly remove e .
-  muxly remove scan ~/Dev
-  muxly remove s ~/projects`,
+  muxly config remove entry ~/Dev/my-project
+  muxly config remove e .
+  muxly config remove scan ~/Dev
+  muxly config remove s ~/projects`,
 }
 
 func init() {

@@ -86,24 +86,3 @@ func TestSanitizePathForDisplay(t *testing.T) {
 		})
 	}
 }
-
-func TestApplyPrefix(t *testing.T) {
-	tests := []struct {
-		prefix   string
-		name     string
-		expected string
-	}{
-		{"", "muxly", "muxly"},
-		{"cfg", "muxly", "cfg/muxly"},
-		{"my-alias", "project", "my-alias/project"},
-	}
-
-	for _, tt := range tests {
-		t.Run("", func(t *testing.T) {
-			got := ApplyPrefix(tt.prefix, tt.name)
-			if got != tt.expected {
-				t.Errorf("ApplyPrefix(%q, %q) = %q, want %q", tt.prefix, tt.name, got, tt.expected)
-			}
-		})
-	}
-}

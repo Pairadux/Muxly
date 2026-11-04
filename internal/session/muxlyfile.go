@@ -1,3 +1,4 @@
+// Package session loads per-project .muxly layout files.
 package session
 
 import (

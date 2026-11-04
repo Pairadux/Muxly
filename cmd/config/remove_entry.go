@@ -1,11 +1,14 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 
+	"github.com/Pairadux/muxly/internal/forms"
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/Pairadux/muxly/internal/state"
+	"github.com/Pairadux/muxly/internal/utility"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -25,10 +28,10 @@ in interactive mode. In non-interactive environments, you must explicitly
 choose to keep (-k) or delete (-d) the .muxly file.
 
 Examples:
-  muxly remove entry .                      # Remove current directory (interactive)
-  muxly remove e ~/Dev/my-project           # Remove project (interactive)
-  muxly remove entry -k /path/to/directory  # Remove, keep .muxly (non-interactive)
-  muxly remove entry -d ~/old-project       # Remove, delete .muxly (non-interactive)`,
+  muxly config remove entry .                      # Remove current directory (interactive)
+  muxly config remove e ~/Dev/my-project           # Remove project (interactive)
+  muxly config remove entry -k /path/to/directory  # Remove, keep .muxly (non-interactive)
+  muxly config remove entry -d ~/old-project       # Remove, delete .muxly (non-interactive)`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		inputPath := args[0]
@@ -39,13 +42,17 @@ Examples:
 		}
 
 		idx := slices.IndexFunc(state.Cfg.EntryDirs, func(ed models.EntryDir) bool {
-			return ed.Path == resolvedPath
+			existingPath, err := utility.ResolvePath(ed.Path)
+			return err == nil && existingPath == resolvedPath
 		})
 		if idx == -1 {
 			return fmt.Errorf("path %q is not in entry_dirs", resolvedPath)
 		}
 
 		if err := handleMuxlyFile(cmd, resolvedPath); err != nil {
+			if errors.Is(err, forms.ErrCancelled) {
+				return nil
+			}
 			return err
 		}
 

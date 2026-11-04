@@ -1,8 +1,12 @@
+// Package selector builds the picker's entries: it scans directories, resolves
+// duplicate names and adds active tmux sessions.
 package selector
 
 import (
 	"fmt"
+	"maps"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/Pairadux/muxly/internal/config"
@@ -39,13 +43,31 @@ func (b *Builder) BuildEntries(flagDepth int) (map[string]models.DirEntry, error
 	currentSession := tmux.GetCurrentTmuxSession()
 
 	ignorePaths, ignoreNames := b.buildIgnoreSets()
-	allPaths := b.collectAllPaths(flagDepth, ignorePaths, ignoreNames, currentSession)
+	allPaths := b.collectAllPaths(flagDepth, ignorePaths, ignoreNames)
 
 	entries := make(map[string]models.DirEntry, len(allPaths)+len(existingSessions))
 	b.addDirectoryEntries(entries, allPaths, currentSession, existingSessions)
 	b.addTmuxSessionEntries(entries, existingSessions, currentSession)
 
 	return entries, nil
+}
+
+// SortedNames returns the entry names in picker order: active tmux sessions
+// first, then directories, each sorted alphabetically ignoring case.
+func SortedNames(entries map[string]models.DirEntry, sessionPrefix string) []string {
+	names := slices.Collect(maps.Keys(entries))
+	slices.SortFunc(names, func(a, b string) int {
+		isSessionA := strings.HasPrefix(a, sessionPrefix)
+		isSessionB := strings.HasPrefix(b, sessionPrefix)
+		if isSessionA != isSessionB {
+			if isSessionA {
+				return -1
+			}
+			return 1
+		}
+		return strings.Compare(strings.ToLower(a), strings.ToLower(b))
+	})
+	return names
 }
 
 // buildIgnoreSets partitions ignore directories into two sets for O(1) lookup:
@@ -85,7 +107,7 @@ func (b *Builder) buildIgnoreSets() (ignorePaths models.StringSet, ignoreNames m
 // collectAllPaths gathers all directory paths from scan_dirs and entry_dirs.
 // ignorePaths filters by resolved absolute path; ignoreNames is passed to GetSubDirs
 // for basename-level filtering during the walk itself.
-func (b *Builder) collectAllPaths(flagDepth int, ignorePaths, ignoreNames models.StringSet, currentSession string) []models.DirEntry {
+func (b *Builder) collectAllPaths(flagDepth int, ignorePaths, ignoreNames models.StringSet) []models.DirEntry {
 	var allPaths []models.DirEntry
 
 	addPath := func(path, prefix, template string) error {
@@ -113,7 +135,8 @@ func (b *Builder) collectAllPaths(flagDepth int, ignorePaths, ignoreNames models
 			}
 			continue
 		}
-		addPath(resolved, "", entryDir.Template)
+		// addPath always returns nil; the error only exists to match processScanDir's callback.
+		_ = addPath(resolved, "", entryDir.Template)
 	}
 
 	return allPaths

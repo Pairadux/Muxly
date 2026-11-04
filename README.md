@@ -1,10 +1,10 @@
 <div align="center">
   <img src="./assets/muxly.png" alt="fzf - a command-line fuzzy finder">
-  <a href="http://github.com/Pairadux/Muxly/releases"><img src="https://img.shields.io/github/v/tag/Pairadux/Muxly" alt="Version"></a>
-  <a href="https://github.com/Pairadux/Muxly/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Pairadux/Muxly" alt="License"></a>
-  <a href="https://github.com/Pairadux/Muxly/graphs/contributors"><img src="https://img.shields.io/github/contributors/Pairadux/Muxly" alt="Contributors"></a>
-  <a href="https://github.com/Pairadux/Muxly/actions/workflows/test.yml"><img src="https://img.shields.io/github/actions/workflow/status/Pairadux/Muxly/test.yml?branch=main&label=tests" alt="Tests"></a>
-  <a href="https://github.com/Pairadux/Muxly/stargazers"><img src="https://img.shields.io/github/stars/Pairadux/Muxly?style=flat" alt="Stars"></a>
+  <a href="http://github.com/Pairadux/muxly/releases"><img src="https://img.shields.io/github/v/tag/Pairadux/muxly" alt="Version"></a>
+  <a href="https://github.com/Pairadux/muxly/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Pairadux/muxly" alt="License"></a>
+  <a href="https://github.com/Pairadux/muxly/graphs/contributors"><img src="https://img.shields.io/github/contributors/Pairadux/muxly" alt="Contributors"></a>
+  <a href="https://github.com/Pairadux/muxly/actions/workflows/test.yml"><img src="https://img.shields.io/github/actions/workflow/status/Pairadux/muxly/test.yml?branch=main&label=tests" alt="Tests"></a>
+  <a href="https://github.com/Pairadux/muxly/stargazers"><img src="https://img.shields.io/github/stars/Pairadux/muxly?style=flat" alt="Stars"></a>
 </div>
 
 ---
@@ -40,10 +40,11 @@ Muxly is a highly configurable Tmux Session Manager based on ThePrimeagen's tmux
 - `muxly create` - Interactive TUI for creating new sessions
 - `muxly switch` - Switch between active tmux sessions
 - `muxly kill` - Kill current session and switch to another
-- `muxly add` - Add directories to configuration (entry or scan)
-- `muxly remove` - Remove directories from configuration
-- `muxly config init` - Create initial configuration file
+- `muxly config add` - Add directories to configuration (entry or scan)
+- `muxly config remove` - Remove directories from configuration
+- `muxly config init` - Create initial configuration file (use `--force` to replace an existing one)
 - `muxly config edit` - Edit configuration file
+- `muxly config list` - List the directories in the configuration
 - `muxly doctor` - Validate environment and configuration
 - `muxly completion <shell>` - Generate shell completion scripts (hidden command)
 
@@ -102,7 +103,7 @@ muxly
 That's it! Muxly will show you your home directory by default. Use the arrow keys or fuzzy search to select a directory, then press Enter to create or switch to that session.
 
 **Next Steps:**
-- Add your project directories with `muxly add scan ~/Dev` or edit the config manually
+- Add your project directories with `muxly config add scan ~/Dev` or edit the config manually
 - Customize your `session_layout` with windows and commands you use frequently
 - Try `muxly create` for an interactive TUI to create sessions on the fly
 
@@ -219,7 +220,7 @@ EDITOR=nano muxly config edit
 
 #### Default Configuration
 
-Running `muxly config init` creates this minimal config:
+Running `muxly config init` creates this minimal config and prints where it wrote it. It won't replace an existing file unless you pass `--force`:
 
 ```yaml
 # Additional entry directories (included directly, not scanned)
@@ -261,7 +262,7 @@ settings:
 
 This works immediately - no customization needed! But you'll probably want to add your project directories...
 
-**Tip:** Use `muxly add scan ~/your-projects` to add directories, or `muxly config edit` to edit the config file manually.
+**Tip:** Use `muxly config add scan ~/your-projects` to add directories, or `muxly config edit` to edit the config file manually.
 
 #### Advanced Configuration Example
 
@@ -327,10 +328,10 @@ settings:
 ```
 
 **Note:** You can also manage these directories using commands instead of manual editing:
-- `muxly add scan ~/Dev --depth 2 --alias dev` - Add to scan_dirs
-- `muxly add entry ~/Documents` - Add to entry_dirs
-- `muxly remove scan ~/Dev` - Remove from scan_dirs
-- `muxly remove entry ~/Documents` - Remove from entry_dirs
+- `muxly config add scan ~/Dev --depth 2 --alias dev` - Add to scan_dirs
+- `muxly config add entry ~/Documents` - Add to entry_dirs
+- `muxly config remove scan ~/Dev` - Remove from scan_dirs
+- `muxly config remove entry ~/Documents` - Remove from entry_dirs
 
 See [Configuration Management](#configuration-management) examples below.
 
@@ -358,7 +359,7 @@ When you create a session for `~/my-project`, Muxly will use this layout instead
 - The `.muxly` file only needs a `windows` array - all other settings come from your global config
 - If no `.muxly` file exists, the default template's windows are used
 - `.muxly` files are not scanned/discovered automatically - they only apply when you select that specific directory
-- When removing an entry directory with `muxly remove entry`, you'll be prompted about deleting its `.muxly` file (use `--keep` or `--delete` flags for non-interactive use)
+- When removing an entry directory with `muxly config remove entry`, you'll be prompted about deleting its `.muxly` file (use `--keep` or `--delete` flags for non-interactive use)
 
 #### Ignore Rules
 
@@ -435,17 +436,20 @@ muxly config init
 # Edit config file
 muxly config edit
 
+# List the configured directories
+muxly config list
+
 # Add directories to scan_dirs
-muxly add scan ~/Dev --depth 2 --alias dev
-muxly add scan ~/projects
+muxly config add scan ~/Dev --depth 2 --alias dev
+muxly config add scan ~/projects
 
 # Add directories to entry_dirs
-muxly add entry ~/Documents
-muxly add entry .
+muxly config add entry ~/Documents
+muxly config add entry .
 
 # Remove directories
-muxly remove scan ~/projects
-muxly remove entry ~/Documents
+muxly config remove scan ~/projects
+muxly config remove entry ~/Documents
 ```
 
 ### Direct Session Creation

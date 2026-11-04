@@ -1,32 +1,32 @@
+// Package constants holds values shared across muxly's packages.
 package constants
 
 const (
-	// File permissions
+	// DirectoryPermissions is the mode for directories muxly creates.
 	DirectoryPermissions = 0o755
-	FilePermissions      = 0o644
+	// FilePermissions is the mode for files muxly creates.
+	FilePermissions = 0o644
 
-	// Channel buffer sizes
+	// DefaultChannelBufferSize sizes the buffer that collects directory scan results.
 	DefaultChannelBufferSize = 100
 
-	// Exit codes
-	FzfUserCancelExitCode = 130 // SIGINT (Ctrl+C)
+	// FzfNoMatchExitCode is fzf's exit code when Enter is pressed with nothing matching.
+	FzfNoMatchExitCode = 1
+	// FzfUserCancelExitCode is fzf's exit code when the user presses Esc or Ctrl-C.
+	FzfUserCancelExitCode = 130
 
-	// Conflict resolution
-	MaxConflictResolutionDepth = 10
-
-	// Environment variables
-	EnvTmux          = "TMUX"
-	EnvShell         = "SHELL"
+	// EnvTmux is set by tmux inside its panes, so it tells muxly it's running in tmux.
+	EnvTmux = "TMUX"
+	// EnvShell names the shell that runs window commands.
+	EnvShell = "SHELL"
+	// EnvXdgConfigHome overrides the directory that holds muxly's config directory.
 	EnvXdgConfigHome = "XDG_CONFIG_HOME"
-	EnvEditor        = "EDITOR"
 
-	// Common strings
-	UserCancelledMsg = "user cancelled"
-
-	// Command annotation keys.
-	// These mark cobra commands so root's PersistentPreRunE can skip startup
-	// checks a given command does not need. Presence of the key is what matters;
-	// the value is informational.
-	AnnotationSkipUtilsCheck  = "muxly/skip_utils_check"
+	// AnnotationSkipUtilsCheck marks a cobra command, and everything under it, as not
+	// needing tmux or fzf. Root's PersistentPreRunE checks for the key; its value is
+	// only informational.
+	AnnotationSkipUtilsCheck = "muxly/skip_utils_check"
+	// AnnotationSkipConfigCheck marks a cobra command, and everything under it, as not
+	// needing a valid config. It works like AnnotationSkipUtilsCheck.
 	AnnotationSkipConfigCheck = "muxly/skip_config_check"
 )

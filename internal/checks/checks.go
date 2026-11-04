@@ -1,11 +1,15 @@
+// Package checks implements the checks behind "muxly doctor" and formats their results.
 package checks
 
 // CheckStatus represents the result status of a check
 type CheckStatus int
 
 const (
+	// StatusOK means the check passed.
 	StatusOK CheckStatus = iota
+	// StatusWarning means muxly can run, but something looks wrong.
 	StatusWarning
+	// StatusError means muxly can't run correctly until this is fixed.
 	StatusError
 )
 

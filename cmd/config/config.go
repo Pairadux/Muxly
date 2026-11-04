@@ -1,3 +1,5 @@
+// Package config defines the "muxly config" subcommands, which create, show, edit
+// and change the config file.
 package config
 
 import (

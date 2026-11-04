@@ -23,10 +23,10 @@ Use subcommands to specify where to add the directory:
   scan (s)  - Add to scan_dirs (scanned recursively with depth)
 
 Examples:
-  muxly add entry ~/Dev/my-project
-  muxly add e .
-  muxly add scan ~/Dev --depth 2 --alias dev
-  muxly add s ~/projects`,
+  muxly config add entry ~/Dev/my-project
+  muxly config add e .
+  muxly config add scan ~/Dev --depth 2 --alias dev
+  muxly config add s ~/projects`,
 }
 
 func init() {

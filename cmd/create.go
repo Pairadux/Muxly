@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"slices"
-	"strings"
 
 	"github.com/Pairadux/muxly/internal/forms"
 	"github.com/Pairadux/muxly/internal/fzf"
@@ -25,6 +23,9 @@ var createCmd = &cobra.Command{
 		var selectedIdx int
 		form := forms.TemplateSelectForm(state.Cfg.Templates, &selectedIdx)
 		if err := form.Run(); err != nil {
+			if errors.Is(err, forms.ErrCancelled) {
+				return nil
+			}
 			return fmt.Errorf("template selection failed: %w", err)
 		}
 
@@ -44,26 +45,10 @@ var createCmd = &cobra.Command{
 				return fmt.Errorf("failed to build directory entries: %w", err)
 			}
 
-			names := make([]string, 0, len(entries))
-			for name := range entries {
-				names = append(names, name)
-			}
-
-			slices.SortFunc(names, func(a, b string) int {
-				isTmuxA := strings.HasPrefix(a, state.Cfg.Settings.TmuxSessionPrefix)
-				isTmuxB := strings.HasPrefix(b, state.Cfg.Settings.TmuxSessionPrefix)
-				if isTmuxA && !isTmuxB {
-					return -1
-				}
-				if !isTmuxA && isTmuxB {
-					return 1
-				}
-				return strings.Compare(strings.ToLower(a), strings.ToLower(b))
-			})
-
+			names := selector.SortedNames(entries, state.Cfg.Settings.TmuxSessionPrefix)
 			choiceStr, err := fzf.SelectWithFzf(names)
 			if err != nil {
-				if err.Error() == "user cancelled" {
+				if errors.Is(err, fzf.ErrCancelled) {
 					return nil
 				}
 				return fmt.Errorf("selecting with fzf failed: %w", err)

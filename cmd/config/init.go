@@ -1,7 +1,9 @@
 package config
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -19,53 +21,57 @@ var initCmd = &cobra.Command{
 	Short: "Create a new config file",
 	Long: `Create a new config file
 
-Creates a config file at the specified location (default location if no argument passed) if no config file exists.
-Otherwise, the current config file is overwritten.`,
+Writes a default config to the config path and prints where it wrote it.
+If a file already exists there, it is left alone unless you pass --force.`,
 	Annotations: map[string]string{
 		constants.AnnotationSkipConfigCheck: "true",
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// TODO: make an interactive menu for assigning these values
-		var configContent string
-
-		useDefaults, err := cmd.Flags().GetBool("Defaults")
+		force, err := cmd.Flags().GetBool("force")
 		if err != nil {
-			return fmt.Errorf("failed to get Defaults flag: %w", err)
+			return fmt.Errorf("reading --force: %w", err)
 		}
 
-		if useDefaults {
-			configContent = generateConfigYAML(config.NewDefaultConfig())
+		content, err := generateConfigYAML(config.NewDefaultConfig())
+		if err != nil {
+			return fmt.Errorf("generating config: %w", err)
 		}
 
-		// IDEA: before finalizing the changes, maybe diff the current file or show the config options setup and validate that they are correct
-
-		parent := filepath.Dir(state.CfgFilePath)
-		_ = os.MkdirAll(parent, constants.DirectoryPermissions)
-
-		if err := os.WriteFile(state.CfgFilePath, []byte(configContent), constants.FilePermissions); err != nil {
-			return fmt.Errorf("cannot write config: %w", err)
+		if err := writeNewConfig(state.CfgFilePath, content, force); err != nil {
+			return err
 		}
 
-		if state.Verbose {
-			fmt.Println("Wrote config to", state.CfgFilePath)
-		}
-
+		fmt.Println("Wrote config to", state.CfgFilePath)
 		return nil
 	},
 }
 
 func init() {
 	Cmd.AddCommand(initCmd)
-	// initCmd.Flags().IntP("tmux_base", "b", defaultTmuxBase, "What number your windows start ordering at.")
-	// initCmd.Flags().IntP("default_depth", "d", defaultDepth, "Default depth to scan.")
-	// initCmd.Flags().StringP("default_session", "D", defaultSession, "The name of the default session to fall back to.")
-	// initCmd.Flags().StringArrayP("scan_dirs", "s", scanDirsToStringArray(defaultScanDirs), "A list of paths that should always be scanned.\nConcat with :int for depth.")
-	// initCmd.Flags().StringArrayP("entry_dirs", "e", defaultEntryDirs, "A list of paths that are entries themselves.")
-	// initCmd.Flags().StringArrayP("ignore_dirs", "i", defaultIgnoreDirs, "A list of paths that should be removed.")
-	initCmd.Flags().BoolP("Defaults", "D", true /* FIXME: change to false once interactive prompt is completed */, "Accept all defaults. (No interactive prompt)")
+	initCmd.Flags().BoolP("force", "f", false, "Overwrite an existing config file")
 }
 
-func generateConfigYAML(cfg models.Config) string {
+// writeNewConfig writes content to path, creating its directory if needed.
+// Unless force is set, it refuses to replace a file that's already there.
+func writeNewConfig(path, content string, force bool) error {
+	if !force {
+		if _, err := os.Stat(path); err == nil {
+			return fmt.Errorf("config file already exists: %s\nUse --force to overwrite it, or 'muxly config edit' to change it", path)
+		} else if !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("checking for an existing config: %w", err)
+		}
+	}
+
+	if err := os.MkdirAll(filepath.Dir(path), constants.DirectoryPermissions); err != nil {
+		return fmt.Errorf("creating config directory: %w", err)
+	}
+	if err := os.WriteFile(path, []byte(content), constants.FilePermissions); err != nil {
+		return fmt.Errorf("writing config: %w", err)
+	}
+	return nil
+}
+
+func generateConfigYAML(cfg models.Config) (string, error) {
 	header := `# Configuration for muxly
 #
 # scan_dirs: Directories to scan for projects (supports depth, alias, and template per directory)
@@ -103,8 +109,8 @@ func generateConfigYAML(cfg models.Config) string {
 `
 	yamlData, err := yaml.Marshal(cfg)
 	if err != nil {
-		return header + "# Error generating config: " + err.Error()
+		return "", err
 	}
 
-	return header + string(yamlData)
+	return header + string(yamlData), nil
 }
