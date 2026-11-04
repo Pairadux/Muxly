@@ -316,7 +316,9 @@ templates:
     windows:
       - name: main
 `
-				os.WriteFile(path, []byte(content), 0644)
+				if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+					t.Fatal(err)
+				}
 				return path
 			},
 			expectError: false,
@@ -339,7 +341,9 @@ scan_dirs:
   invalid yaml content here
     - this: is broken
 `
-				os.WriteFile(path, []byte(content), 0644)
+				if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+					t.Fatal(err)
+				}
 				return path
 			},
 			expectError: true,
@@ -356,7 +360,9 @@ templates:
     windows:
       - name: main
 `
-				os.WriteFile(path, []byte(content), 0644)
+				if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+					t.Fatal(err)
+				}
 				return path
 			},
 			expectError: true,

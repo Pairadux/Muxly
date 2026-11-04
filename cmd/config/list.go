@@ -28,7 +28,6 @@ Examples:
   muxly config l      # Same, using the alias`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		
 
 		// if err := viper.WriteConfig(); err != nil {
 		// 	return fmt.Errorf("failed to write config: %w", err)

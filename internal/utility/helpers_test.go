@@ -106,8 +106,7 @@ func TestResolvePath(t *testing.T) {
 func TestResolvePathEnvExpansion(t *testing.T) {
 	testVar := "MUXLY_TEST_VAR"
 	testValue := "/custom/path"
-	os.Setenv(testVar, testValue)
-	defer os.Unsetenv(testVar)
+	t.Setenv(testVar, testValue)
 
 	input := "$" + testVar + "/subdir"
 	expected := testValue + "/subdir"
@@ -125,11 +124,11 @@ func TestResolvePathEnvExpansion(t *testing.T) {
 func TestGetSubDirs(t *testing.T) {
 	tempDir := t.TempDir()
 
-	os.MkdirAll(filepath.Join(tempDir, "project1"), 0755)
-	os.MkdirAll(filepath.Join(tempDir, "project2"), 0755)
-	os.MkdirAll(filepath.Join(tempDir, "project1", "src"), 0755)
-	os.MkdirAll(filepath.Join(tempDir, "project2", "src", "lib"), 0755)
-	os.WriteFile(filepath.Join(tempDir, "file.txt"), []byte("test"), 0644)
+	mustMkdirAll(t, filepath.Join(tempDir, "project1"))
+	mustMkdirAll(t, filepath.Join(tempDir, "project2"))
+	mustMkdirAll(t, filepath.Join(tempDir, "project1", "src"))
+	mustMkdirAll(t, filepath.Join(tempDir, "project2", "src", "lib"))
+	mustWriteFile(t, filepath.Join(tempDir, "file.txt"))
 
 	tests := []struct {
 		name          string
@@ -208,9 +207,9 @@ func TestGetSubDirs(t *testing.T) {
 func TestGetSubDirsExcludesFiles(t *testing.T) {
 	tempDir := t.TempDir()
 
-	os.MkdirAll(filepath.Join(tempDir, "dir1"), 0755)
-	os.WriteFile(filepath.Join(tempDir, "file1.txt"), []byte("test"), 0644)
-	os.WriteFile(filepath.Join(tempDir, "file2.go"), []byte("test"), 0644)
+	mustMkdirAll(t, filepath.Join(tempDir, "dir1"))
+	mustWriteFile(t, filepath.Join(tempDir, "file1.txt"))
+	mustWriteFile(t, filepath.Join(tempDir, "file2.go"))
 
 	dirs, err := GetSubDirs(1, tempDir, nil)
 	if err != nil {
@@ -240,13 +239,13 @@ func TestGetSubDirsEmptyDir(t *testing.T) {
 func TestGetSubDirsIgnoreNames(t *testing.T) {
 	tempDir := t.TempDir()
 
-	os.MkdirAll(filepath.Join(tempDir, "project1"), 0755)
-	os.MkdirAll(filepath.Join(tempDir, "project1", ".git"), 0755)
-	os.MkdirAll(filepath.Join(tempDir, "project1", ".git", "objects"), 0755)
-	os.MkdirAll(filepath.Join(tempDir, "project1", "node_modules"), 0755)
-	os.MkdirAll(filepath.Join(tempDir, "project1", "node_modules", "lodash"), 0755)
-	os.MkdirAll(filepath.Join(tempDir, "project1", "src"), 0755)
-	os.MkdirAll(filepath.Join(tempDir, "project2"), 0755)
+	mustMkdirAll(t, filepath.Join(tempDir, "project1"))
+	mustMkdirAll(t, filepath.Join(tempDir, "project1", ".git"))
+	mustMkdirAll(t, filepath.Join(tempDir, "project1", ".git", "objects"))
+	mustMkdirAll(t, filepath.Join(tempDir, "project1", "node_modules"))
+	mustMkdirAll(t, filepath.Join(tempDir, "project1", "node_modules", "lodash"))
+	mustMkdirAll(t, filepath.Join(tempDir, "project1", "src"))
+	mustMkdirAll(t, filepath.Join(tempDir, "project2"))
 
 	ignoreNames := models.StringSet{
 		".git":         {},
@@ -284,5 +283,19 @@ func TestGetSubDirsIgnoreNames(t *testing.T) {
 		if dirSet[excluded] {
 			t.Errorf("GetSubDirs should not contain ignored dir %q", excluded)
 		}
+	}
+}
+
+func mustMkdirAll(t *testing.T, path string) {
+	t.Helper()
+	if err := os.MkdirAll(path, 0o755); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func mustWriteFile(t *testing.T, path string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte("test"), 0o644); err != nil {
+		t.Fatal(err)
 	}
 }

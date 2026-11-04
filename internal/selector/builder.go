@@ -113,7 +113,8 @@ func (b *Builder) collectAllPaths(flagDepth int, ignorePaths, ignoreNames models
 			}
 			continue
 		}
-		addPath(resolved, "", entryDir.Template)
+		// addPath always returns nil; the error only exists to match processScanDir's callback.
+		_ = addPath(resolved, "", entryDir.Template)
 	}
 
 	return allPaths

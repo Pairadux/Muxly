@@ -1,7 +1,6 @@
 package tmux
 
 import (
-	"os"
 	"reflect"
 	"testing"
 
@@ -9,10 +8,7 @@ import (
 )
 
 func TestBuildWindowArgs(t *testing.T) {
-	originalShell := os.Getenv("SHELL")
-	defer os.Setenv("SHELL", originalShell)
-
-	os.Setenv("SHELL", "/bin/zsh")
+	t.Setenv("SHELL", "/bin/zsh")
 
 	tests := []struct {
 		name        string
@@ -72,9 +68,7 @@ func TestBuildWindowArgs(t *testing.T) {
 }
 
 func TestBuildWindowArgsDefaultShell(t *testing.T) {
-	originalShell := os.Getenv("SHELL")
-	os.Unsetenv("SHELL")
-	defer os.Setenv("SHELL", originalShell)
+	t.Setenv("SHELL", "")
 
 	got := buildWindowArgs(true, "test", "main", "/tmp", "echo hello")
 

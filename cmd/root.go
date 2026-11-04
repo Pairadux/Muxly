@@ -204,12 +204,13 @@ func initConfig() {
 
 	// Bind environment variables for config overrides
 	// Allows MUXLY_* environment variables to override config file values
+	// BindEnv only fails when called with no arguments, so its error can't occur here.
 	viper.SetEnvPrefix("MUXLY")
-	viper.BindEnv("settings.editor", "MUXLY_EDITOR", "EDITOR") // Support both MUXLY_EDITOR and standard $EDITOR
-	viper.BindEnv("settings.default_depth")                    // MUXLY_DEFAULT_DEPTH
-	viper.BindEnv("settings.tmux_base")                        // MUXLY_TMUX_BASE
-	viper.BindEnv("settings.tmux_session_prefix")              // MUXLY_TMUX_SESSION_PREFIX
-	viper.BindEnv("settings.always_kill_on_last_session")      // MUXLY_ALWAYS_KILL_ON_LAST_SESSION
+	_ = viper.BindEnv("settings.editor", "MUXLY_EDITOR", "EDITOR") // Support both MUXLY_EDITOR and standard $EDITOR
+	_ = viper.BindEnv("settings.default_depth")                    // MUXLY_DEFAULT_DEPTH
+	_ = viper.BindEnv("settings.tmux_base")                        // MUXLY_TMUX_BASE
+	_ = viper.BindEnv("settings.tmux_session_prefix")              // MUXLY_TMUX_SESSION_PREFIX
+	_ = viper.BindEnv("settings.always_kill_on_last_session")      // MUXLY_ALWAYS_KILL_ON_LAST_SESSION
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err != nil {

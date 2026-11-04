@@ -69,7 +69,8 @@ func checkDirectory(path, source string) CheckResult {
 			Hint:    "Check directory permissions",
 		}
 	}
-	f.Close()
+	// Only opened to prove it's readable, and nothing was written, so a close error changes nothing.
+	_ = f.Close()
 
 	return CheckResult{
 		Name:    "directory",
