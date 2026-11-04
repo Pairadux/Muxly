@@ -63,7 +63,7 @@ var createCmd = &cobra.Command{
 
 			choiceStr, err := fzf.SelectWithFzf(names)
 			if err != nil {
-				if err.Error() == "user cancelled" {
+				if errors.Is(err, fzf.ErrCancelled) {
 					return nil
 				}
 				return fmt.Errorf("selecting with fzf failed: %w", err)

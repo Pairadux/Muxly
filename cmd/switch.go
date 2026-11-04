@@ -48,7 +48,7 @@ If no other sessions found, exit.`,
 			var err error
 			choiceStr, err = fzf.SelectWithFzf(sessions)
 			if err != nil {
-				if err.Error() == "user cancelled" {
+				if errors.Is(err, fzf.ErrCancelled) {
 					return nil
 				}
 				return fmt.Errorf("selecting with fzf failed: %w", err)

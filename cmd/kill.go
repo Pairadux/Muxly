@@ -107,7 +107,7 @@ If no other sessions exist, a new session is created from the default template o
 			var err error
 			choiceStr, err = fzf.SelectWithFzf(otherSessions)
 			if err != nil {
-				if err.Error() == "user cancelled" {
+				if errors.Is(err, fzf.ErrCancelled) {
 					return nil
 				}
 				return fmt.Errorf("selecting with fzf failed: %w", err)
