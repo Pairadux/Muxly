@@ -1,12 +1,18 @@
+// Package config holds muxly's config defaults, validation and template lookup.
 package config
 
 import "github.com/Pairadux/muxly/internal/models"
 
 const (
-	DefaultEditor                  = "vi"
-	DefaultTmuxSessionPrefix       = "[TMUX] "
-	DefaultTmuxBase                = 0
-	DefaultScanDepth               = 1
+	// DefaultEditor is the editor for "muxly config edit" when nothing else sets one.
+	DefaultEditor = "vi"
+	// DefaultTmuxSessionPrefix marks active sessions in the picker.
+	DefaultTmuxSessionPrefix = "[TMUX] "
+	// DefaultTmuxBase is the window index that session targets assume.
+	DefaultTmuxBase = 0
+	// DefaultScanDepth is how deep scan_dirs are searched when no depth is set.
+	DefaultScanDepth = 1
+	// DefaultAlwaysKillOnLastSession keeps the prompt when killing the last session.
 	DefaultAlwaysKillOnLastSession = false
 )
 
@@ -18,14 +24,18 @@ var (
 		"node_modules",
 	}
 
+	// DefaultScanDirs is the scan_dirs value in a new config.
 	DefaultScanDirs = []models.ScanDir{}
 
+	// DefaultEntryDirs is the entry_dirs value in a new config.
 	DefaultEntryDirs = []models.EntryDir{
 		{Path: "~"},
 	}
 
+	// DefaultIgnoreDirs is the ignore_dirs value in a new config.
 	DefaultIgnoreDirs = []string{}
 
+	// DefaultTemplates is the templates value in a new config.
 	DefaultTemplates = []models.SessionTemplate{
 		{
 			Name:    "default",
@@ -54,6 +64,7 @@ var (
 	}
 )
 
+// NewDefaultConfig returns the config that "muxly config init" writes.
 func NewDefaultConfig() models.Config {
 	return models.Config{
 		ScanDirs:   DefaultScanDirs,

@@ -1,3 +1,5 @@
+// Package selector builds the picker's entries: it scans directories, resolves
+// duplicate names and adds active tmux sessions.
 package selector
 
 import (

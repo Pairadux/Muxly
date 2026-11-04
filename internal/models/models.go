@@ -1,3 +1,4 @@
+// Package models defines muxly's config and session types.
 package models
 
 import "fmt"
@@ -5,15 +6,18 @@ import "fmt"
 // StringSet represents a set of strings using a map with empty struct values for memory efficiency
 type StringSet map[string]struct{}
 
+// Window is one tmux window in a layout, with an optional command to run in it.
 type Window struct {
 	Name string `mapstructure:"name" yaml:"name"`
 	Cmd  string `mapstructure:"cmd,omitempty" yaml:"cmd,omitempty"`
 }
 
+// SessionLayout is the set of windows to create in a new session.
 type SessionLayout struct {
 	Windows []Window `mapstructure:"windows" yaml:"windows"`
 }
 
+// SessionTemplate is a named layout from the config, with an optional fixed path.
 type SessionTemplate struct {
 	Name    string   `mapstructure:"name" yaml:"name"`
 	Label   string   `mapstructure:"label,omitempty" yaml:"label,omitempty"`
@@ -22,6 +26,7 @@ type SessionTemplate struct {
 	Windows []Window `mapstructure:"windows" yaml:"windows"`
 }
 
+// ScanDir is a directory from scan_dirs, whose subdirectories become picker entries.
 type ScanDir struct {
 	Path     string `mapstructure:"path" yaml:"path"`
 	Depth    *int   `mapstructure:"depth,omitempty" yaml:"depth,omitempty"`
@@ -29,11 +34,13 @@ type ScanDir struct {
 	Template string `mapstructure:"template,omitempty" yaml:"template,omitempty"`
 }
 
+// EntryDir is a directory from entry_dirs, which becomes a picker entry itself.
 type EntryDir struct {
 	Path     string `mapstructure:"path" yaml:"path"`
 	Template string `mapstructure:"template,omitempty" yaml:"template,omitempty"`
 }
 
+// Session is everything needed to create one tmux session.
 type Session struct {
 	Name   string        `mapstructure:"name"`
 	Path   string        `mapstructure:"path"`
@@ -69,6 +76,7 @@ func (s ScanDir) String() string {
 	return result
 }
 
+// String returns the string representation
 func (e EntryDir) String() string {
 	result := e.Path
 	if e.Template != "" {

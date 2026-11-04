@@ -1,3 +1,5 @@
+// Package cmd defines muxly's command line: the root picker and the kill, switch,
+// create and doctor commands.
 package cmd
 
 import (

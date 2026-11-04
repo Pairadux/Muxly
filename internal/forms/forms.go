@@ -1,3 +1,4 @@
+// Package forms builds muxly's interactive prompts.
 package forms
 
 import (
@@ -6,6 +7,7 @@ import (
 	"github.com/charmbracelet/huh"
 )
 
+// TemplateSelectForm builds a prompt that stores the chosen template's index in selectedIdx.
 func TemplateSelectForm(templates []models.SessionTemplate, selectedIdx *int) *huh.Form {
 	options := make([]huh.Option[int], len(templates))
 	for i, tmpl := range templates {
@@ -26,6 +28,7 @@ func TemplateSelectForm(templates []models.SessionTemplate, selectedIdx *int) *h
 	)
 }
 
+// ConfirmationForm builds a yes/no prompt that stores the answer in confirm.
 func ConfirmationForm(title, description string, confirm *bool) *huh.Form {
 	return huh.NewForm(
 		huh.NewGroup(

@@ -1,3 +1,4 @@
+// Package tmux runs all of muxly's tmux commands.
 package tmux
 
 import (
@@ -19,6 +20,7 @@ import (
 // operation takes over the terminal and the Go program should terminate.
 var ErrGracefulExit = errors.New("graceful exit")
 
+// DefaultShell runs window commands when $SHELL isn't set.
 const DefaultShell = "/bin/bash"
 
 // GetTmuxSessionNames returns a slice of all active tmux session names.

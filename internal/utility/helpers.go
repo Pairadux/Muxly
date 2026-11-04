@@ -1,3 +1,4 @@
+// Package utility provides path resolution and directory walking.
 package utility
 
 import (

@@ -1,3 +1,4 @@
+// Package fzf runs the fzf picker.
 package fzf
 
 import (
