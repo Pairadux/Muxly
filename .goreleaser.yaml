@@ -8,6 +8,10 @@
 
 version: 2
 
+# Without this the name comes from the git remote, so a remote spelled Muxly
+# produces a Muxly binary and Muxly_* archives.
+project_name: muxly
+
 before:
   hooks:
     # You may remove this if you don't use go modules.
