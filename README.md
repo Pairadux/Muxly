@@ -1,10 +1,10 @@
 <div align="center">
   <img src="./assets/muxly.png" alt="fzf - a command-line fuzzy finder">
-  <a href="http://github.com/Pairadux/Muxly/releases"><img src="https://img.shields.io/github/v/tag/Pairadux/Muxly" alt="Version"></a>
-  <a href="https://github.com/Pairadux/Muxly/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Pairadux/Muxly" alt="License"></a>
-  <a href="https://github.com/Pairadux/Muxly/graphs/contributors"><img src="https://img.shields.io/github/contributors/Pairadux/Muxly" alt="Contributors"></a>
-  <a href="https://github.com/Pairadux/Muxly/actions/workflows/test.yml"><img src="https://img.shields.io/github/actions/workflow/status/Pairadux/Muxly/test.yml?branch=main&label=tests" alt="Tests"></a>
-  <a href="https://github.com/Pairadux/Muxly/stargazers"><img src="https://img.shields.io/github/stars/Pairadux/Muxly?style=flat" alt="Stars"></a>
+  <a href="http://github.com/Pairadux/muxly/releases"><img src="https://img.shields.io/github/v/tag/Pairadux/muxly" alt="Version"></a>
+  <a href="https://github.com/Pairadux/muxly/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Pairadux/muxly" alt="License"></a>
+  <a href="https://github.com/Pairadux/muxly/graphs/contributors"><img src="https://img.shields.io/github/contributors/Pairadux/muxly" alt="Contributors"></a>
+  <a href="https://github.com/Pairadux/muxly/actions/workflows/test.yml"><img src="https://img.shields.io/github/actions/workflow/status/Pairadux/muxly/test.yml?branch=main&label=tests" alt="Tests"></a>
+  <a href="https://github.com/Pairadux/muxly/stargazers"><img src="https://img.shields.io/github/stars/Pairadux/muxly?style=flat" alt="Stars"></a>
 </div>
 
 ---
