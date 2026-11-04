@@ -56,12 +56,6 @@ Otherwise, the current config file is overwritten.`,
 
 func init() {
 	Cmd.AddCommand(initCmd)
-	// initCmd.Flags().IntP("tmux_base", "b", defaultTmuxBase, "What number your windows start ordering at.")
-	// initCmd.Flags().IntP("default_depth", "d", defaultDepth, "Default depth to scan.")
-	// initCmd.Flags().StringP("default_session", "D", defaultSession, "The name of the default session to fall back to.")
-	// initCmd.Flags().StringArrayP("scan_dirs", "s", scanDirsToStringArray(defaultScanDirs), "A list of paths that should always be scanned.\nConcat with :int for depth.")
-	// initCmd.Flags().StringArrayP("entry_dirs", "e", defaultEntryDirs, "A list of paths that are entries themselves.")
-	// initCmd.Flags().StringArrayP("ignore_dirs", "i", defaultIgnoreDirs, "A list of paths that should be removed.")
 	initCmd.Flags().BoolP("Defaults", "D", true /* FIXME: change to false once interactive prompt is completed */, "Accept all defaults. (No interactive prompt)")
 }
 

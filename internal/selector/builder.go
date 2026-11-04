@@ -39,7 +39,7 @@ func (b *Builder) BuildEntries(flagDepth int) (map[string]models.DirEntry, error
 	currentSession := tmux.GetCurrentTmuxSession()
 
 	ignorePaths, ignoreNames := b.buildIgnoreSets()
-	allPaths := b.collectAllPaths(flagDepth, ignorePaths, ignoreNames, currentSession)
+	allPaths := b.collectAllPaths(flagDepth, ignorePaths, ignoreNames)
 
 	entries := make(map[string]models.DirEntry, len(allPaths)+len(existingSessions))
 	b.addDirectoryEntries(entries, allPaths, currentSession, existingSessions)
@@ -85,7 +85,7 @@ func (b *Builder) buildIgnoreSets() (ignorePaths models.StringSet, ignoreNames m
 // collectAllPaths gathers all directory paths from scan_dirs and entry_dirs.
 // ignorePaths filters by resolved absolute path; ignoreNames is passed to GetSubDirs
 // for basename-level filtering during the walk itself.
-func (b *Builder) collectAllPaths(flagDepth int, ignorePaths, ignoreNames models.StringSet, currentSession string) []models.DirEntry {
+func (b *Builder) collectAllPaths(flagDepth int, ignorePaths, ignoreNames models.StringSet) []models.DirEntry {
 	var allPaths []models.DirEntry
 
 	addPath := func(path, prefix, template string) error {

@@ -1,16 +1,6 @@
 package config
 
-import (
-	// "fmt"
-	// "os"
-	// "slices"
-	//
-	// "github.com/Pairadux/muxly/internal/models"
-	// "github.com/Pairadux/muxly/internal/state"
-	//
-	"github.com/spf13/cobra"
-	// "github.com/spf13/viper"
-)
+import "github.com/spf13/cobra"
 
 // listCmd lists all scan_dirs and entry_dirs in config
 var listCmd = &cobra.Command{
@@ -28,11 +18,6 @@ Examples:
   muxly config l      # Same, using the alias`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-
-		// if err := viper.WriteConfig(); err != nil {
-		// 	return fmt.Errorf("failed to write config: %w", err)
-		// }
-
 		return nil
 	},
 }

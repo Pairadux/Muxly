@@ -49,11 +49,3 @@ func SanitizePathForDisplay(path string) string {
 	}
 	return strings.Join(parts, string(filepath.Separator))
 }
-
-// ApplyPrefix adds an alias prefix to a display name if one is configured.
-func ApplyPrefix(prefix, name string) string {
-	if prefix != "" {
-		return prefix + "/" + name
-	}
-	return name
-}
