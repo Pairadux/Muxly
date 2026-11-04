@@ -183,6 +183,8 @@ func (c *cli) run(args ...string) result {
 		"FAKE_LOG_DIR=" + c.logDir,
 		// With -race, each process otherwise sleeps a second as it exits.
 		"GORACE=atexit_sleep_ms=0",
+		// With -cover, each process otherwise prints a warning to stderr as it exits.
+		"GOCOVERDIR=" + c.logDir,
 	}, c.env...)
 	// A new session has no controlling terminal, so an unexpected prompt fails at once
 	// instead of waiting on the developer's real terminal.
