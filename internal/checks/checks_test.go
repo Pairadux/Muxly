@@ -1,6 +1,10 @@
 package checks
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func TestCountByStatus(t *testing.T) {
 	tests := []struct {
@@ -155,6 +159,48 @@ func TestHasErrors(t *testing.T) {
 			got := HasErrors(tt.results)
 			if got != tt.expected {
 				t.Errorf("HasErrors() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestCheckEditor(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "myeditor"), []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir)
+
+	tests := []struct {
+		name       string
+		config     string
+		editorEnv  string
+		visualEnv  string
+		wantStatus CheckStatus
+		wantDetail string
+	}{
+		{name: "nothing set", wantStatus: StatusWarning},
+		{name: "blank config", config: " ", wantStatus: StatusWarning},
+		{name: "blank everywhere", config: "\t", editorEnv: " ", visualEnv: "  ", wantStatus: StatusWarning},
+		{name: "config wins", config: "myeditor", editorEnv: "other", wantStatus: StatusOK, wantDetail: "(myeditor)"},
+		{name: "blank config falls back to EDITOR", config: " ", editorEnv: "myeditor", wantStatus: StatusOK, wantDetail: "(myeditor)"},
+		{name: "blank EDITOR falls back to VISUAL", editorEnv: " ", visualEnv: "myeditor", wantStatus: StatusOK, wantDetail: "(myeditor)"},
+		{name: "arguments are allowed", config: "myeditor --wait", wantStatus: StatusOK, wantDetail: "(myeditor --wait)"},
+		{name: "editor not installed", config: "nope", wantStatus: StatusWarning},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("EDITOR", tt.editorEnv)
+			t.Setenv("VISUAL", tt.visualEnv)
+
+			got := CheckEditor(tt.config)
+
+			if got.Status != tt.wantStatus {
+				t.Errorf("status = %v, want %v (%+v)", got.Status, tt.wantStatus, got)
+			}
+			if got.Detail != tt.wantDetail {
+				t.Errorf("detail = %q, want %q", got.Detail, tt.wantDetail)
 			}
 		})
 	}

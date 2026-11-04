@@ -71,16 +71,19 @@ func CheckExternalUtils() []CheckResult {
 	}
 }
 
+// firstNonBlank returns the first value that has something besides whitespace, or "".
+func firstNonBlank(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
+}
+
 // CheckEditor validates the configured editor or falls back to environment.
 func CheckEditor(configEditor string) CheckResult {
-	editor := configEditor
-	if editor == "" {
-		editor = os.Getenv("EDITOR")
-	}
-	if editor == "" {
-		editor = os.Getenv("VISUAL")
-	}
-
+	editor := firstNonBlank(configEditor, os.Getenv("EDITOR"), os.Getenv("VISUAL"))
 	if editor == "" {
 		return CheckResult{
 			Name:    "editor",
