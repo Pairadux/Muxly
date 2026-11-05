@@ -83,8 +83,9 @@ func generateConfigYAML(cfg models.Config) (string, error) {
 #              template: minimal
 #
 # entry_dirs: Additional directories always included (not scanned)
-#   Supports optional template assignment:
-#   Example: - path: ~/special-project
+#   Each is a path, or a path with a template:
+#   Example: - ~/notes
+#            - path: ~/special-project
 #              template: minimal
 #
 # ignore_dirs: Directories to exclude from scanning (additive)

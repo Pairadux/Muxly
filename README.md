@@ -401,7 +401,7 @@ ignore_dirs:
 | `scan_dirs[].depth` | int | no | Scan depth for this directory, at least 1 (overrides `settings.default_depth`) |
 | `scan_dirs[].alias` | string | no | Prefix for directories from here, in the picker and in session names (e.g., "dev" shows as "dev/project-name" and names the session "dev-project-name") |
 | `scan_dirs[].template` | string | no | Template name to use for sessions created from this scan directory |
-| `entry_dirs` | array | yes* | Directories always included without scanning |
+| `entry_dirs` | array | yes* | Directories always included without scanning. Each is a mapping like the ones below, or just the path: `- ~/notes`, or `- "~"` for your home directory |
 | `entry_dirs[].path` | string | yes | Directory path (supports `~` and environment variables) |
 | `entry_dirs[].template` | string | no | Template name to use for sessions created from this directory |
 | `ignore_dirs` | array | no | Additional directories to exclude from scanning, additive to built-in `.git`/`node_modules` filters (see [Ignore Rules](#ignore-rules)) |

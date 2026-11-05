@@ -465,3 +465,46 @@ func TestDoctorReportsTheEditorThatWouldRun(t *testing.T) {
 		t.Errorf("exit %d, stdout:\n%s", got.code, got.stdout)
 	}
 }
+
+func TestShortFormEntryDirs(t *testing.T) {
+	c := newCLI(t).withFakes().setEnv("FAKE_FZF_EXIT=130")
+	c.mkdirs("notes", "docs", "new")
+	c.writeConfig("entry_dirs:\n  - ~/notes\n  - path: ~/docs\n" + validTemplates)
+
+	if got := c.run(); got.code != 0 {
+		t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
+	}
+	if labels, want := c.pickerLabels(), []string{"docs", "notes"}; !slices.Equal(labels, want) {
+		t.Errorf("the picker offered %q, want %q", labels, want)
+	}
+
+	if got := c.run("config", "list"); !strings.Contains(got.stdout, "  ~/notes\n") {
+		t.Errorf("config list: exit %d, stdout %q", got.code, got.stdout)
+	}
+
+	if got := c.run("config", "add", "entry", "~/notes"); !strings.Contains(got.stdout, "already in") {
+		t.Errorf("adding it again: exit %d, stdout %q, stderr %q", got.code, got.stdout, got.stderr)
+	}
+	if got := c.run("config", "add", "entry", "~/new"); got.code != 0 {
+		t.Errorf("adding another: exit %d, stderr %q", got.code, got.stderr)
+	}
+	if got := c.run("config", "remove", "entry", "~/notes"); got.code != 0 {
+		t.Errorf("removing it: exit %d, stderr %q", got.code, got.stderr)
+	}
+
+	want := "entry_dirs:\n  - path: ~/docs\n  - path: ~/new\n" + validTemplates
+	if config := c.readConfig(); config != want {
+		t.Errorf("got:\n%s\nwant:\n%s", config, want)
+	}
+}
+
+// README's own example writes "- path: ~", which yaml reads as null.
+func TestConfigListShowsAnUnquotedTilde(t *testing.T) {
+	c := newCLI(t).writeConfig("entry_dirs:\n  - path: ~\n" + validTemplates)
+
+	got := c.run("config", "list")
+
+	if got.code != 0 || !strings.Contains(got.stdout, "entry_dirs:\n  ~\n") {
+		t.Errorf("exit %d, stdout %q", got.code, got.stdout)
+	}
+}

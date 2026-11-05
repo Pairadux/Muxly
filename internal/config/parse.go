@@ -35,29 +35,78 @@ func (e *ParseError) Error() string {
 // loads but should be changed. After an error, the config holds whatever could be read.
 func Parse(data []byte) (models.Config, []string, error) {
 	var cfg models.Config
+	err := decodeStrict(data, &cfg)
+	spellOutHomePaths(&cfg)
+	return cfg, removedKeyWarnings(&cfg), err
+}
+
+func decodeStrict(data []byte, cfg *models.Config) error {
 	decoder := yaml.NewDecoder(bytes.NewReader(data))
 	decoder.KnownFields(true)
 
-	err := decoder.Decode(&cfg)
+	var problems []string
+	err := decoder.Decode(cfg)
 	if errors.Is(err, io.EOF) {
 		// Nothing but comments, if that. Validate explains what's missing.
-		return cfg, nil, nil
+		return nil
 	}
 	if err != nil {
-		return cfg, removedKeyWarnings(&cfg), newParseError(err)
+		parseErr := newParseError(err)
+		if !parseErr.Partial {
+			return parseErr
+		}
+		problems = parseErr.Problems
 	}
+
+	var doc yaml.Node
+	if err := yaml.Unmarshal(data, &doc); err != nil {
+		return newParseError(err)
+	}
+	problems = append(problems, emptyListItems(&doc)...)
 
 	var extra yaml.Node
 	err = decoder.Decode(&extra)
 	switch {
 	case errors.Is(err, io.EOF):
-		return cfg, removedKeyWarnings(&cfg), nil
 	case err != nil:
-		return cfg, removedKeyWarnings(&cfg), newParseError(err)
+		return newParseError(err)
+	default:
+		problems = append(problems, fmt.Sprintf("line %d: a second YAML document, which muxly would ignore", extra.Line))
 	}
-	return cfg, removedKeyWarnings(&cfg), &ParseError{
-		Problems: []string{fmt.Sprintf("line %d: a second YAML document, which muxly would ignore", extra.Line)},
-		Partial:  true,
+
+	if len(problems) > 0 {
+		return &ParseError{Problems: problems, Partial: true}
+	}
+	return nil
+}
+
+// emptyListItems finds list items with nothing in them, which the decoder drops without a
+// word. "- ~" is the likely one, because an unquoted "~" means null in YAML, and it would
+// lose someone's home directory from the picker.
+func emptyListItems(node *yaml.Node) []string {
+	var problems []string
+	for _, child := range node.Content {
+		if node.Kind == yaml.SequenceNode && child.ShortTag() == "!!null" {
+			problems = append(problems, fmt.Sprintf(`line %d: an empty list item, which would be ignored. An unquoted ~ counts as empty, so write "~" for your home directory`, child.Line))
+		}
+		problems = append(problems, emptyListItems(child)...)
+	}
+	return problems
+}
+
+// spellOutHomePaths undoes a YAML surprise: an unquoted "~" means null, so "path: ~" decodes
+// to an empty path. That still opens the home directory, but anything showing the path
+// would show nothing.
+func spellOutHomePaths(cfg *models.Config) {
+	for i := range cfg.ScanDirs {
+		if cfg.ScanDirs[i].Path == "" {
+			cfg.ScanDirs[i].Path = "~"
+		}
+	}
+	for i := range cfg.EntryDirs {
+		if cfg.EntryDirs[i].Path == "" {
+			cfg.EntryDirs[i].Path = "~"
+		}
 	}
 }
 

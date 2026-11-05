@@ -121,6 +121,18 @@ entry_dirs:
 			want: "entry_dirs:\n  - path: ~/a\n  - path: \"~\"\n" + editTemplates,
 		},
 		{
+			name: "after a short-form item",
+			path: "~/new",
+			text: "entry_dirs:\n  - ~/a\n  - ~/b\n" + editTemplates,
+			want: "entry_dirs:\n  - ~/a\n  - ~/b\n  - path: ~/new\n" + editTemplates,
+		},
+		{
+			name: "after a path of an unquoted tilde, which means null to yaml",
+			path: "~/new",
+			text: "entry_dirs:\n  - path: ~\n" + editTemplates,
+			want: "entry_dirs:\n  - path: ~\n  - path: ~/new\n" + editTemplates,
+		},
+		{
 			name: "a tmux_base line stays",
 			path: "~/new",
 			text: "entry_dirs:\n  - path: ~/a\n" + editTemplates + "settings:\n  tmux_base: 1\n",
@@ -175,6 +187,12 @@ func TestRemoveEntryDir(t *testing.T) {
 			text:  "entry_dirs:\n    # about a\n    - path: ~/a\n      template: default # gone with it\n\n    # about b\n    - path: ~/b\n" + editTemplates,
 			index: 0,
 			want:  "entry_dirs:\n    # about a\n\n    # about b\n    - path: ~/b\n" + editTemplates,
+		},
+		{
+			name:  "a short-form item",
+			text:  "entry_dirs:\n  - ~/a\n  - ~/b\n" + editTemplates,
+			index: 0,
+			want:  "entry_dirs:\n  - ~/b\n" + editTemplates,
 		},
 		{
 			name:  "the last item of a list when another list still has some",
