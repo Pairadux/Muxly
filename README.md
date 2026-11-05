@@ -161,12 +161,18 @@ After adding the completion script, restart your shell or source your config fil
 
 ## Directory Naming Notes
 
-Muxly gives each new session a short, safe name, so it can always find the session again:
+The picker shows each directory's real name. Directories with the same name add parent folders until they differ, as with `Dev/src` and `Work/src`, and a scan directory's `alias` always comes first, as in `proj/unique`.
+
+A running session replaces its directory in the picker, however the session got its name. Sessions belong to a directory by path, so a session called `foo` in another folder doesn't hide your `foo` directory. If a session's name doesn't resemble its directory, the picker adds the directory: `[TMUX] api (Dev/backend)`. A session you started by hand in a directory counts too.
+
+Muxly gives each new session a short, safe name based on that label, so it can always find the session again:
 
 - **Lowercase, with only letters, digits, `-` and `_`**. `MyProject` becomes `myproject`, and `my project` becomes `my-project`
 - **Dots**: Replaced with underscores. `my.project` becomes `my_project`
 - **Anything else**: Replaced with dashes. `project:v2` becomes `project-v2`
 - **Symbols at either end**: Removed. `.config` becomes `config`, and `$dollar` becomes `dollar`
+- **Folders and aliases**: Joined with dashes. `Dev/src` becomes `dev-src`, and `proj/unique` becomes `proj-unique`
+- **Name already taken**: A session elsewhere with the same name means this one adds its parent folder, then a number: `dev-foo`, then `foo-2`
 - **Names you type**: `muxly foo.bar` opens a session called `foo_bar`, and finds it again next time. Names must match exactly, so `muxly foo` won't open a running `foobar`
 
 Accents and other alphabets are kept. If nothing is left, as with `🚀`, the session is called `session`.
@@ -381,7 +387,7 @@ ignore_dirs:
 | `scan_dirs` | array | yes* | Directories to scan for projects |
 | `scan_dirs[].path` | string | yes | Directory path to scan (supports `~` and environment variables) |
 | `scan_dirs[].depth` | int | no | Scan depth for this directory, at least 1 (overrides `settings.default_depth`) |
-| `scan_dirs[].alias` | string | no | Display prefix in selector (e.g., "dev" shows as "dev/project-name") |
+| `scan_dirs[].alias` | string | no | Prefix for directories from here, in the picker and in session names (e.g., "dev" shows as "dev/project-name" and names the session "dev-project-name") |
 | `scan_dirs[].template` | string | no | Template name to use for sessions created from this scan directory |
 | `entry_dirs` | array | yes* | Directories always included without scanning |
 | `entry_dirs[].path` | string | yes | Directory path (supports `~` and environment variables) |

@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strings"
 	"unicode"
@@ -83,12 +84,20 @@ func noServer(err error) bool {
 
 // parseSessions reads tmux's output in sessionFormat. It skips any line that doesn't fit,
 // which takes a newline in a session's path.
+//
+// tmux stores a path exactly as it was given, with any trailing slash or "..", and a
+// session started with no path at all has an empty one. Cleaning them here means a path
+// can simply be compared, and an empty one matches nothing.
 func parseSessions(output string) []Session {
 	var sessions []Session
 	for line := range strings.SplitSeq(output, "\n") {
 		fields := strings.SplitN(line, "\t", 3)
 		if len(fields) == 3 && strings.HasPrefix(fields[0], "$") {
-			sessions = append(sessions, Session{ID: fields[0], Name: fields[1], Path: fields[2]})
+			path := fields[2]
+			if path != "" {
+				path = filepath.Clean(path)
+			}
+			sessions = append(sessions, Session{ID: fields[0], Name: fields[1], Path: path})
 		}
 	}
 	return sessions
@@ -113,6 +122,47 @@ func FindSession(sessions []Session, name string) (Session, bool) {
 		return Session{}, false
 	}
 	return sessions[i], true
+}
+
+// FindSessionAt returns the session started in the given clean, absolute path. If there
+// are several, it returns the oldest. tmux lists sessions by name, and numbers them in
+// order, so a shorter id is always older, and ids of one length sort as text.
+func FindSessionAt(sessions []Session, path string) (Session, bool) {
+	var oldest Session
+	found := false
+	for _, s := range sessions {
+		if s.Path != path {
+			continue
+		}
+		older := len(s.ID) < len(oldest.ID) || (len(s.ID) == len(oldest.ID) && s.ID < oldest.ID)
+		if !found || older {
+			oldest, found = s, true
+		}
+	}
+	return oldest, found
+}
+
+// FreeSessionName returns a name no session has for a new session in path with the given
+// label. If the label's name is taken, it adds the parent folder, and then a number.
+func FreeSessionName(sessions []Session, label, path string) string {
+	isFree := func(name string) bool {
+		_, taken := FindSession(sessions, name)
+		return !taken
+	}
+
+	name := SessionName(label)
+	if isFree(name) {
+		return name
+	}
+	withParent := SessionName(filepath.Base(filepath.Dir(path)) + "/" + label)
+	if isFree(withParent) {
+		return withParent
+	}
+	for n := 2; ; n++ {
+		if numbered := fmt.Sprintf("%s-%d", name, n); isFree(numbered) {
+			return numbered
+		}
+	}
 }
 
 // Without returns sessions, leaving out one session.

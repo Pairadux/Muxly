@@ -32,47 +32,31 @@ var createCmd = &cobra.Command{
 
 		tmpl := state.Cfg.Templates[selectedIdx]
 
-		var sessionPath string
+		var dir selector.Directory
 		if tmpl.Path != "" {
 			resolved, err := utility.ResolvePath(tmpl.Path)
 			if err != nil {
 				return fmt.Errorf("failed to resolve template path: %w", err)
 			}
-			sessionPath = resolved
+			dir = selector.Directory{Path: resolved, Label: filepath.Base(resolved)}
 		} else {
-			builder := selector.NewBuilder(&state.Cfg, state.Verbose)
-			entries, err := builder.BuildEntries(0)
-			if err != nil {
-				return fmt.Errorf("failed to build directory entries: %w", err)
-			}
-
-			names := selector.SortedNames(entries, state.Cfg.Settings.TmuxSessionPrefix)
-			choiceStr, err := fzf.SelectWithFzf(names)
+			dirs := selector.Directories(&state.Cfg, 0, state.Verbose)
+			entries := selector.Entries(dirs, nil, tmux.Session{}, "")
+			choice, err := fzf.Pick(selector.Labels(entries))
 			if err != nil {
 				if errors.Is(err, fzf.ErrCancelled) {
 					return nil
 				}
 				return fmt.Errorf("selecting with fzf failed: %w", err)
 			}
-			if choiceStr == "" {
-				return nil
-			}
-
-			selected, exists := entries[choiceStr]
-			if !exists {
-				return fmt.Errorf("selected entry not found: %s", choiceStr)
-			}
-			sessionPath = selected.Path
+			dir = *entries[choice].Directory
 		}
 
-		sessionName := filepath.Base(sessionPath)
-
-		sess := models.Session{
-			Name:   sessionName,
-			Path:   sessionPath,
-			Layout: models.SessionLayout{Windows: tmpl.Windows},
+		sessions, err := tmux.ListSessions()
+		if err != nil {
+			return fmt.Errorf("failed to list sessions: %w", err)
 		}
-		return tmux.CreateAndSwitchSession(sess)
+		return openDirectory(dir, models.SessionLayout{Windows: tmpl.Windows}, sessions)
 	},
 }
 

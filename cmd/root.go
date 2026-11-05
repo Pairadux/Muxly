@@ -7,16 +7,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	cliconfig "github.com/Pairadux/muxly/cmd/config"
 	"github.com/Pairadux/muxly/internal/checks"
 	"github.com/Pairadux/muxly/internal/config"
 	"github.com/Pairadux/muxly/internal/constants"
 	"github.com/Pairadux/muxly/internal/fzf"
-	"github.com/Pairadux/muxly/internal/models"
 	"github.com/Pairadux/muxly/internal/selector"
-	"github.com/Pairadux/muxly/internal/session"
 	"github.com/Pairadux/muxly/internal/state"
 	"github.com/Pairadux/muxly/internal/tmux"
 
@@ -75,61 +72,37 @@ var rootCmd = &cobra.Command{
 		if cmd.Flags().Changed("depth") && flagDepth < 1 {
 			return fmt.Errorf("--depth must be at least 1, got %d", flagDepth)
 		}
-		builder := selector.NewBuilder(&state.Cfg, state.Verbose)
-		entries, err := builder.BuildEntries(flagDepth)
+
+		sessions, err := tmux.ListSessions()
 		if err != nil {
-			return fmt.Errorf("failed to build directory entries: %w", err)
+			return fmt.Errorf("failed to list sessions: %w", err)
+		}
+		dirs := selector.Directories(&state.Cfg, flagDepth, state.Verbose)
+
+		if len(args) == 1 && args[0] != "" {
+			return openName(args[0], dirs, sessions)
 		}
 
-		var choiceStr string
-		if len(args) == 1 {
-			choiceStr = args[0]
-		}
-		if choiceStr == "" {
-			names := selector.SortedNames(entries, state.Cfg.Settings.TmuxSessionPrefix)
-			choiceStr, err = fzf.SelectWithFzf(names)
-			if err != nil {
-				if errors.Is(err, fzf.ErrCancelled) {
-					return nil
-				}
-				return fmt.Errorf("selecting with fzf failed: %w", err)
-			}
-
-			if choiceStr == "" {
+		// Outside tmux this is the zero value, which matches no session.
+		current, _ := tmux.CurrentSession()
+		entries := selector.Entries(dirs, sessions, current, state.Cfg.Settings.TmuxSessionPrefix)
+		choice, err := fzf.Pick(selector.Labels(entries))
+		if err != nil {
+			if errors.Is(err, fzf.ErrCancelled) {
 				return nil
 			}
+			return fmt.Errorf("selecting with fzf failed: %w", err)
 		}
 
-		sessionName, _ := strings.CutPrefix(choiceStr, state.Cfg.Settings.TmuxSessionPrefix)
-
-		selected, exists := entries[choiceStr]
-		if !exists && len(args) == 0 {
-			return fmt.Errorf("the name must match an existing directory entry: %s", choiceStr)
-		}
-
-		sessionLayout := session.LoadMuxlyFile(selected.Path)
-		if len(sessionLayout.Windows) == 0 && selected.Template != "" {
-			if tmpl, found := config.FindTemplateByName(&state.Cfg, selected.Template); found {
-				sessionLayout = models.SessionLayout{Windows: tmpl.Windows}
+		if chosen := entries[choice].Session; chosen != nil {
+			if err := tmux.SwitchToSession(*chosen); err != nil {
+				return fmt.Errorf("failed to switch session: %w", err)
 			}
-		}
-		if len(sessionLayout.Windows) == 0 {
-			if dflt, found := config.DefaultTemplate(&state.Cfg); found {
-				sessionLayout = models.SessionLayout{Windows: dflt.Windows}
-			}
+			return nil
 		}
 
-		sess := models.Session{
-			Name:   sessionName,
-			Path:   selected.Path,
-			Layout: sessionLayout,
-		}
-
-		if err := tmux.CreateAndSwitchSession(sess); err != nil {
-			return fmt.Errorf("failed to switch session: %w", err)
-		}
-
-		return nil
+		dir := *entries[choice].Directory
+		return openDirectory(dir, directoryLayout(dir), sessions)
 	},
 }
 

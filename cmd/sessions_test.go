@@ -82,23 +82,23 @@ func TestPickingADirectoryOpensItRatherThanASessionItPrefixes(t *testing.T) {
 	targetsOnlyByID(t, srv)
 }
 
-// Each directory gets a picker name that tmux can't target by name. Picking it must open
-// one session, and picking that session from the picker must then return to it. A name
-// that muxly had to change also stays listed under the original, which must find it too.
+// Each of these has a label tmux can't target by name, and a session name that differs
+// from it. Picking it opens one session, and that session then replaces it in the picker.
 func TestPickingAwkwardNamesOpensOneSessionAndFindsItAgain(t *testing.T) {
 	tests := []struct {
 		name   string
 		dirs   []string
 		pick   string
 		stored string
-		repick bool
 	}{
-		{name: "dot in a parent", dirs: []string{"x.y/src", "other/src"}, pick: "x.y/src", stored: "x_y-src", repick: true},
-		{name: "leading dot in a parent", dirs: []string{".conf/app", "other/app"}, pick: ".conf/app", stored: "conf-app", repick: true},
-		{name: "dollar", dirs: []string{"$dollar"}, pick: "$dollar", stored: "dollar", repick: true},
-		{name: "percent", dirs: []string{"%pct"}, pick: "%pct", stored: "pct", repick: true},
-		{name: "equals", dirs: []string{"=eq"}, pick: "=eq", stored: "eq", repick: true},
-		{name: "at", dirs: []string{"@at"}, pick: "@at", stored: "at", repick: true},
+		{name: "dot in a parent", dirs: []string{"x.y/src", "other/src"}, pick: "x.y/src", stored: "x_y-src"},
+		{name: "leading dot in a parent", dirs: []string{".conf/app", "other/app"}, pick: ".conf/app", stored: "conf-app"},
+		{name: "dollar", dirs: []string{"$dollar"}, pick: "$dollar", stored: "dollar"},
+		{name: "percent", dirs: []string{"%pct"}, pick: "%pct", stored: "pct"},
+		{name: "equals", dirs: []string{"=eq"}, pick: "=eq", stored: "eq"},
+		{name: "at", dirs: []string{"@at"}, pick: "@at", stored: "at"},
+		{name: "a format", dirs: []string{"a#{session_id}b"}, pick: "a#{session_id}b", stored: "a-session_id-b"},
+		{name: "only a format", dirs: []string{"#(true)"}, pick: "#(true)", stored: "true"},
 	}
 
 	for _, tt := range tests {
@@ -116,11 +116,7 @@ func TestPickingAwkwardNamesOpensOneSessionAndFindsItAgain(t *testing.T) {
 			want := []string{"shell", tt.stored}
 			slices.Sort(want)
 
-			picks := []string{tt.pick, "[TMUX] " + tt.stored}
-			if tt.repick {
-				picks = append(picks, tt.pick)
-			}
-			for _, pick := range picks {
+			for _, pick := range []string{tt.pick, "[TMUX] " + tt.stored} {
 				c.setEnv("FAKE_PICK=" + pick)
 
 				got := c.run()
@@ -134,6 +130,14 @@ func TestPickingAwkwardNamesOpensOneSessionAndFindsItAgain(t *testing.T) {
 				srv.Eventually("the client to arrive", func() bool { return srv.ClientSession() == tt.stored })
 				srv.Run("switch-client", "-t", shell)
 				srv.Eventually("the client to return", func() bool { return srv.ClientSession() == "shell" })
+			}
+
+			path := filepath.Join(c.home, "root", tt.dirs[0])
+			if got := srv.Run("display-message", "-p", "-t", "="+tt.stored+":", "#{session_path}"); got != path {
+				t.Errorf("the session is at %q, want %q", got, path)
+			}
+			if labels := c.pickerLabels(); slices.Contains(labels, tt.pick) {
+				t.Errorf("the directory is still listed beside its session: %q", labels)
 			}
 			targetsOnlyByID(t, srv)
 		})
