@@ -46,6 +46,30 @@ func ResolvePath(p string) (string, error) {
 	return filepath.Clean(filepath.Join(home, p)), nil
 }
 
+// IsExplicitPath reports whether a command line argument can only be a path, and not a
+// name: ".", "..", or anything starting with "/", "./", "../" or "~/".
+func IsExplicitPath(arg string) bool {
+	if arg == "." || arg == ".." || arg == "~" {
+		return true
+	}
+	for _, prefix := range []string{"/", "./", "../", "~/"} {
+		if strings.HasPrefix(arg, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// ResolveArgumentPath returns the clean absolute path for a path typed on the command
+// line. Unlike a path in the config, a relative one starts from the current folder, as it
+// would in a shell. The shell has also already expanded it, so a "$" in it is a real "$".
+func ResolveArgumentPath(arg string) (string, error) {
+	if arg == "~" || strings.HasPrefix(arg, "~/") {
+		return homedir.Expand(arg)
+	}
+	return filepath.Abs(arg)
+}
+
 // IsWithin reports whether path is one of paths, or inside one of them.
 func IsWithin(path string, paths models.StringSet) bool {
 	for {

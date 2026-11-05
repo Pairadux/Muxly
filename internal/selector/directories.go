@@ -4,11 +4,13 @@ package selector
 
 import (
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strings"
 
 	"github.com/Pairadux/muxly/internal/config"
 	"github.com/Pairadux/muxly/internal/models"
+	"github.com/Pairadux/muxly/internal/tmux"
 	"github.com/Pairadux/muxly/internal/utility"
 )
 
@@ -85,6 +87,36 @@ func Directories(cfg *models.Config, flagDepth int) ([]Directory, []string) {
 	slices.SortFunc(dirs, func(a, b Directory) int { return strings.Compare(a.Path, b.Path) })
 	assignLabels(dirs)
 	return dirs, warnings
+}
+
+// Find returns the directories a typed name could mean. A directory with exactly that
+// label is the only match. Otherwise a name matches a label or folder name if both make
+// the same session name, so case and symbols don't matter: "myproject" finds "MyProject",
+// "config" finds ".config" and "dev-src" finds "Dev/src".
+func Find(dirs []Directory, name string) []Directory {
+	for _, dir := range dirs {
+		if dir.Label == name {
+			return []Directory{dir}
+		}
+	}
+
+	wanted := tmux.SessionName(name)
+	var matches []Directory
+	for _, dir := range dirs {
+		if wanted == tmux.SessionName(dir.Label) || wanted == tmux.SessionName(filepath.Base(dir.Path)) {
+			matches = append(matches, dir)
+		}
+	}
+	return matches
+}
+
+// FindPath returns the directory with the given clean, absolute path.
+func FindPath(dirs []Directory, path string) (Directory, bool) {
+	i := slices.IndexFunc(dirs, func(dir Directory) bool { return dir.Path == path })
+	if i < 0 {
+		return Directory{}, false
+	}
+	return dirs[i], true
 }
 
 // buildIgnoreSets partitions ignore directories into two sets for O(1) lookup:

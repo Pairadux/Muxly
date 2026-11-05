@@ -28,12 +28,30 @@ var Version = "dev"
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:     "muxly [SESSION]",
+	Use:     "muxly [SESSION | DIRECTORY]",
 	Version: Version,
-	Example: "",
-	Short:   "A tool for quickly opening tmux sessions",
-	Long:    "A tool for quickly opening tmux sessions\n\nBased on ThePrimeagen's tmux-sessionizer script.",
-	Args:    cobra.MaximumNArgs(1),
+	Example: `  muxly                pick from running sessions and configured directories
+  muxly .              open the current folder
+  muxly ~/Dev/project  open that directory, configured or not
+  muxly myproject      open a configured directory or running session by name
+  muxly scratch        anything else opens a new session with that name here`,
+	Short: "A tool for quickly opening tmux sessions",
+	Long: `A tool for quickly opening tmux sessions
+
+With no argument, muxly shows a picker of running sessions and configured directories.
+
+With an argument, the first of these that fits is what opens:
+  1. A path, if it's ".", "..", or starts with "/", "./", "../" or "~/"
+  2. The running session with exactly that name
+  3. A configured directory, by its label or folder name, ignoring case
+  4. A path from the current folder, if it contains a "/"
+  5. Otherwise, a new session with that name, in the current folder, from the default
+     template
+
+A directory that already has a session goes to that session.
+
+Based on ThePrimeagen's tmux-sessionizer script.`,
+	Args: cobra.MaximumNArgs(1),
 	CompletionOptions: cobra.CompletionOptions{
 		HiddenDefaultCmd: true,
 	},
@@ -81,7 +99,7 @@ var rootCmd = &cobra.Command{
 
 		if len(args) == 1 && args[0] != "" {
 			printWarnings(warnings)
-			return openName(args[0], dirs, sessions)
+			return openArgument(args[0], dirs, sessions)
 		}
 
 		// Outside tmux this is the zero value, which matches no session.

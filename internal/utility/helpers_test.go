@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/Pairadux/muxly/internal/models"
+	"github.com/mitchellh/go-homedir"
 )
 
 func TestResolvePath(t *testing.T) {
@@ -370,5 +371,114 @@ func TestGetSubDirsMissingRootIsAProblem(t *testing.T) {
 
 	if len(dirs) != 0 || len(problems) != 1 {
 		t.Errorf("GetSubDirs = %q, %v, want no dirs and one problem", dirs, problems)
+	}
+}
+
+func TestIsExplicitPath(t *testing.T) {
+	tests := map[string]bool{
+		".":        true,
+		"..":       true,
+		"~":        true,
+		"/abs":     true,
+		"./rel":    true,
+		"../rel":   true,
+		"~/rel":    true,
+		"name":     false,
+		"dev/src":  false,
+		".config":  false,
+		"..hidden": false,
+		"~tilde":   false,
+		"$dollar":  false,
+		"name/":    false,
+		"":         false,
+	}
+
+	for arg, want := range tests {
+		if got := IsExplicitPath(arg); got != want {
+			t.Errorf("IsExplicitPath(%q) = %v, want %v", arg, got, want)
+		}
+	}
+}
+
+func TestResolveArgumentPath(t *testing.T) {
+	cwd := t.TempDir()
+	t.Chdir(cwd)
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	homedir.Reset()
+	t.Cleanup(homedir.Reset)
+	t.Setenv("MUXLY_TEST_VAR", "expanded")
+
+	tests := map[string]string{
+		".":                  cwd,
+		"./sub":              filepath.Join(cwd, "sub"),
+		"sub/dir":            filepath.Join(cwd, "sub/dir"),
+		"sub/":               filepath.Join(cwd, "sub"),
+		"..":                 filepath.Dir(cwd),
+		"../sibling":         filepath.Join(filepath.Dir(cwd), "sibling"),
+		"/abs/./path/":       "/abs/path",
+		"~":                  home,
+		"~/x/":               filepath.Join(home, "x"),
+		"/a/$MUXLY_TEST_VAR": "/a/$MUXLY_TEST_VAR",
+	}
+
+	for arg, want := range tests {
+		got, err := ResolveArgumentPath(arg)
+		if err != nil {
+			t.Errorf("ResolveArgumentPath(%q): %v", arg, err)
+		} else if got != want {
+			t.Errorf("ResolveArgumentPath(%q) = %q, want %q", arg, got, want)
+		}
+	}
+}
+
+func TestRequireDirectory(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "file")
+	mustWriteFile(t, file)
+
+	tests := []struct {
+		name string
+		path string
+		want string
+	}{
+		{name: "a directory", path: dir},
+		{name: "missing", path: filepath.Join(dir, "gone"), want: "does not exist"},
+		{name: "a file", path: file, want: "is not a directory"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := RequireDirectory(tt.path)
+			if tt.want == "" {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Errorf("error = %v, want one mentioning %q", err, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsWithin(t *testing.T) {
+	paths := models.StringSet{"/a/b": {}}
+
+	tests := map[string]bool{
+		"/a/b":     true,
+		"/a/b/c":   true,
+		"/a/b/c/d": true,
+		"/a":       false,
+		"/a/bc":    false,
+		"/x/a/b":   false,
+		"/":        false,
+	}
+
+	for path, want := range tests {
+		if got := IsWithin(path, paths); got != want {
+			t.Errorf("IsWithin(%q) = %v, want %v", path, got, want)
+		}
 	}
 }

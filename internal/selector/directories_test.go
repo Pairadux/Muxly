@@ -277,3 +277,60 @@ func TestDirectoriesSkipPathsWithANewline(t *testing.T) {
 		t.Errorf("warnings = %q, want one for each", warnings)
 	}
 }
+
+func TestFind(t *testing.T) {
+	dirs := []Directory{
+		{Path: "/home/me/Dev/MyProject", Label: "MyProject"},
+		{Path: "/home/me/.config", Label: ".config"},
+		{Path: "/home/me/Dev/src", Label: "Dev/src"},
+		{Path: "/home/me/Work/src", Label: "Work/src"},
+		{Path: "/home/me/p/unique", Label: "proj/unique"},
+		{Path: "/home/me/my.dir", Label: "my.dir"},
+		{Path: "/home/me/my_dir", Label: "my_dir"},
+	}
+
+	tests := []struct {
+		name string
+		want []string
+	}{
+		{name: "MyProject", want: []string{"MyProject"}},
+		{name: "myproject", want: []string{"MyProject"}},
+		{name: "MYPROJECT", want: []string{"MyProject"}},
+		{name: ".config", want: []string{".config"}},
+		{name: "config", want: []string{".config"}},
+		{name: "Dev/src", want: []string{"Dev/src"}},
+		{name: "dev/src", want: []string{"Dev/src"}},
+		{name: "dev-src", want: []string{"Dev/src"}},
+		{name: "src", want: []string{"Dev/src", "Work/src"}},
+		{name: "proj/unique", want: []string{"proj/unique"}},
+		{name: "proj-unique", want: []string{"proj/unique"}},
+		{name: "unique", want: []string{"proj/unique"}},
+		{name: "my.dir", want: []string{"my.dir"}},
+		{name: "my_dir", want: []string{"my_dir"}},
+		{name: "unknown"},
+		{name: "myproj"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got []string
+			for _, dir := range Find(dirs, tt.name) {
+				got = append(got, dir.Label)
+			}
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("Find(%q) = %q, want %q", tt.name, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFindPath(t *testing.T) {
+	dirs := []Directory{{Path: "/a", Label: "a"}, {Path: "/b", Label: "b", Template: "t"}}
+
+	if got, found := FindPath(dirs, "/b"); !found || got.Template != "t" {
+		t.Errorf("FindPath(/b) = %+v, %v", got, found)
+	}
+	if _, found := FindPath(dirs, "/c"); found {
+		t.Error("FindPath(/c) found something")
+	}
+}

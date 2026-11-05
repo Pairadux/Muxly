@@ -3,6 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/Pairadux/muxly/internal/config"
 	"github.com/Pairadux/muxly/internal/models"
@@ -21,15 +23,63 @@ func printWarnings(warnings []string) {
 	}
 }
 
-// openName opens the directory with the given label, or else the session with that name.
-func openName(name string, dirs []selector.Directory, sessions []tmux.Session) error {
-	for _, dir := range dirs {
-		if dir.Label == name {
-			return openDirectory(dir, directoryLayout(dir), sessions)
-		}
+// openArgument opens what an argument to muxly means. The first of these that fits wins:
+// an explicit path, the exact name of a running session, a configured directory, anything
+// with a slash as a relative path, and otherwise the name of a new session.
+func openArgument(arg string, dirs []selector.Directory, sessions []tmux.Session) error {
+	if utility.IsExplicitPath(arg) {
+		return openPath(arg, dirs, sessions)
 	}
-	created := models.Session{Name: name, Layout: directoryLayout(selector.Directory{})}
-	if err := tmux.CreateAndSwitchSession(created); err != nil {
+
+	if existing, found := tmux.FindSession(sessions, arg); found {
+		if err := tmux.SwitchToSession(existing); err != nil {
+			return fmt.Errorf("failed to switch session: %w", err)
+		}
+		return nil
+	}
+
+	matches := selector.Find(dirs, arg)
+	if len(matches) == 1 {
+		return openDirectory(matches[0], directoryLayout(matches[0]), sessions)
+	}
+	if len(matches) > 1 {
+		labels := make([]string, len(matches))
+		for i, match := range matches {
+			labels[i] = match.Label
+		}
+		return fmt.Errorf("%q could mean any of these directories: %s\nName one of them, or run 'muxly' to pick", arg, strings.Join(labels, ", "))
+	}
+
+	if strings.ContainsRune(arg, filepath.Separator) {
+		return openPath(arg, dirs, sessions)
+	}
+	return openNamedSession(arg)
+}
+
+// openPath opens a directory given as a path on the command line, which doesn't have to be
+// in the config. If it is, the config's alias and template apply.
+func openPath(arg string, dirs []selector.Directory, sessions []tmux.Session) error {
+	path, err := utility.ResolveArgumentPath(arg)
+	if err != nil {
+		return fmt.Errorf("resolving %s: %w", arg, err)
+	}
+	dir, configured := selector.FindPath(dirs, path)
+	if !configured {
+		dir = selector.Directory{Path: path, Label: filepath.Base(path)}
+	}
+	return openDirectory(dir, directoryLayout(dir), sessions)
+}
+
+// openNamedSession opens the session with a name that means nothing else. It's created in
+// the current folder from the default template. A .muxly file there isn't used, because
+// a name says nothing about wanting to open that folder, unlike "muxly .".
+func openNamedSession(name string) error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("finding the current folder: %w", err)
+	}
+	session := models.Session{Name: name, Path: cwd, Layout: defaultLayout()}
+	if err := tmux.CreateAndSwitchSession(session); err != nil {
 		return fmt.Errorf("failed to switch session: %w", err)
 	}
 	return nil

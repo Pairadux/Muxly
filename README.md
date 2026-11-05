@@ -37,6 +37,8 @@ Muxly is a highly configurable Tmux Session Manager based on ThePrimeagen's tmux
 ### Available Commands
 
 - `muxly` - Interactive session selector with fzf
+- `muxly <path>` - Open a directory, such as `muxly .` or `muxly ~/Dev/project`
+- `muxly <name>` - Open a running session or configured directory by name
 - `muxly create` - Interactive TUI for creating new sessions
 - `muxly switch` - Switch between active tmux sessions
 - `muxly kill` - Kill current session and switch to another
@@ -175,7 +177,7 @@ Muxly gives each new session a short, safe name based on that label, so it can a
 - **Symbols at either end**: Removed. `.config` becomes `config`, and `$dollar` becomes `dollar`
 - **Folders and aliases**: Joined with dashes. `Dev/src` becomes `dev-src`, and `proj/unique` becomes `proj-unique`
 - **Name already taken**: A session elsewhere with the same name means this one adds its parent folder, then a number: `dev-foo`, then `foo-2`
-- **Names you type**: `muxly foo.bar` opens a session called `foo_bar`, and finds it again next time. Names must match exactly, so `muxly foo` won't open a running `foobar`
+- **Names you type**: `muxly foo.bar` opens a session called `foo_bar`, and finds it again next time. Session names must match exactly, so `muxly foo` won't open a running `foobar`
 
 Accents and other alphabets are kept. If nothing is left, as with `🚀`, the session is called `session`.
 
@@ -454,12 +456,31 @@ muxly config remove scan ~/projects
 muxly config remove entry ~/Documents
 ```
 
-### Direct Session Creation
+### Opening Without the Picker
 
 ```bash
-# Create/switch to session by name
-muxly my-project
+# The current folder, or any other directory, configured or not
+muxly .
+muxly ~/Dev/project
+
+# A running session, or a configured directory, by name
+muxly MyProject
+
+# Anything else opens a new session with that name, in the current folder
+muxly scratch
 ```
+
+The first of these that fits is what opens:
+
+1. A path, if it's `.`, `..`, or starts with `/`, `./`, `../` or `~/`
+2. The running session with exactly that name
+3. A configured directory, by its label or folder name, ignoring case. If several match, muxly lists them and opens nothing
+4. A path from the current folder, if it contains a `/`
+5. A new session with that name, in the current folder, from the default template. It doesn't read a `.muxly` file there, which `muxly .` does
+
+A directory that already has a session goes to that session.
+
+Muxly's own commands come first, so a directory called `doctor` needs a path: `muxly ./doctor`.
 
 ## Project Status
 

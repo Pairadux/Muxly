@@ -392,3 +392,311 @@ func TestPickingAMissingEntryExplainsAndOpensNothing(t *testing.T) {
 		})
 	}
 }
+
+// sessionPath returns where a session was started, finding it by its exact name.
+func sessionPath(srv *tmuxtest.Server, name string) string {
+	return srv.Run("display-message", "-p", "-t", "="+name+":", "#{session_path}")
+}
+
+func TestOpeningAPathOpensItThere(t *testing.T) {
+	tests := []struct {
+		name    string
+		arg     string
+		wantDir string
+		session string
+	}{
+		{name: "the current folder", arg: ".", wantDir: "work/here", session: "here"},
+		{name: "the parent folder", arg: "..", wantDir: "work", session: "work"},
+		{name: "below the current folder", arg: "./sub", wantDir: "work/here/sub", session: "sub"},
+		{name: "beside the current folder", arg: "../beside", wantDir: "work/beside", session: "beside"},
+		{name: "a slash with nothing before it means relative", arg: "sub/deep", wantDir: "work/here/sub/deep", session: "deep"},
+		{name: "a trailing slash, as tab completion leaves", arg: "sub/", wantDir: "work/here/sub", session: "sub"},
+		{name: "from home", arg: "~/work/beside", wantDir: "work/beside", session: "beside"},
+		{name: "a dollar is a real dollar", arg: "./$HOME", wantDir: "work/here/$HOME", session: "home"},
+		{name: "a dotted name", arg: "./.hidden.dir", wantDir: "work/here/.hidden.dir", session: "hidden_dir"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := newCLI(t)
+			here := c.mkdirs("work/here")[0]
+			c.mkdirs("work/beside", "work/here/sub/deep", "work/here/$HOME", "work/here/.hidden.dir")
+			c.cwd = here
+			srv := c.insideShell(validConfig)
+
+			got := c.run(tt.arg)
+
+			if got.code != 0 {
+				t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
+			}
+			srv.Eventually("the client to arrive", func() bool { return srv.ClientSession() == tt.session })
+			if path, want := sessionPath(srv, tt.session), filepath.Join(c.home, tt.wantDir); path != want {
+				t.Errorf("the session is at %q, want %q", path, want)
+			}
+		})
+	}
+}
+
+func TestOpeningAnAbsolutePath(t *testing.T) {
+	c := newCLI(t)
+	dir := c.mkdirs("somewhere/else")[0]
+	srv := c.insideShell(validConfig)
+
+	if got := c.run(dir); got.code != 0 {
+		t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
+	}
+
+	srv.Eventually("the client to arrive", func() bool { return srv.ClientSession() == "else" })
+	if path := sessionPath(srv, "else"); path != dir {
+		t.Errorf("the session is at %q, want %q", path, dir)
+	}
+}
+
+func TestOpeningAPathThatIsNotADirectoryOpensNothing(t *testing.T) {
+	tests := []struct {
+		name string
+		arg  string
+		want string
+	}{
+		{name: "missing", arg: "./gone", want: "does not exist"},
+		{name: "missing with a slash in the middle", arg: "not/there", want: "does not exist"},
+		{name: "absolute and missing", arg: "/no/such/place", want: "does not exist"},
+		{name: "a file", arg: "./a-file", want: "is not a directory"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := newCLI(t)
+			c.writeFile(filepath.Join(c.home, "a-file"), "", 0o644)
+			srv := c.insideShell(validConfig)
+
+			got := c.run(tt.arg)
+
+			if got.code == 0 || !strings.Contains(got.stderr, tt.want) {
+				t.Errorf("exit %d, stderr %q: want an error mentioning %q", got.code, got.stderr, tt.want)
+			}
+			if sessions := srv.Sessions(); !slices.Equal(sessions, []string{"shell"}) {
+				t.Errorf("sessions = %q, want only shell", sessions)
+			}
+		})
+	}
+}
+
+func TestOpeningAPathWithASessionGoesToThatSession(t *testing.T) {
+	c := newCLI(t)
+	dir := c.mkdirs("dev/backend")[0]
+	srv := c.insideShell(validConfig)
+	sessionAt(srv, "api", dir+"/")
+
+	for _, attempt := range []string{"first", "second"} {
+		got := c.run(dir)
+
+		if got.code != 0 {
+			t.Fatalf("%s: exit %d, stderr %q", attempt, got.code, got.stderr)
+		}
+		srv.Eventually("the client to reach api", func() bool { return srv.ClientSession() == "api" })
+		if sessions, want := srv.Sessions(), []string{"api", "shell"}; !slices.Equal(sessions, want) {
+			t.Fatalf("%s: sessions = %q, want %q", attempt, sessions, want)
+		}
+		srv.Run("switch-client", "-t", "=shell")
+		srv.Eventually("the client to return", func() bool { return srv.ClientSession() == "shell" })
+	}
+}
+
+// tmux lists sessions by name, so "aaa" comes first even though it's the newer one.
+func TestOpeningAPathWithTwoSessionsGoesToTheOlder(t *testing.T) {
+	c := newCLI(t)
+	dir := c.mkdirs("dev/shared")[0]
+	srv := c.insideShell(validConfig)
+	sessionAt(srv, "zzz", dir)
+	sessionAt(srv, "aaa", dir)
+
+	if got := c.run(dir); got.code != 0 {
+		t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
+	}
+
+	srv.Eventually("the client to reach zzz", func() bool { return srv.ClientSession() == "zzz" })
+}
+
+func TestOpeningAConfiguredPathUsesItsConfig(t *testing.T) {
+	c := newCLI(t)
+	dir := c.mkdirs("projects/unique")[0]
+	srv := c.insideShell("scan_dirs:\n  - path: ~/projects\n    alias: proj\n    template: other\n" +
+		"templates:\n  - name: default\n    default: true\n    windows:\n      - name: from-default\n" +
+		"  - name: other\n    windows:\n      - name: from-template\n")
+
+	if got := c.run(dir); got.code != 0 {
+		t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
+	}
+
+	srv.Eventually("the client to reach proj-unique", func() bool { return srv.ClientSession() == "proj-unique" })
+	if window := srv.Run("display-message", "-p", "-t", "=proj-unique:", "#{window_name}"); window != "from-template" {
+		t.Errorf("window = %q, want from-template", window)
+	}
+}
+
+func TestOpeningADirectoryByName(t *testing.T) {
+	tests := []struct {
+		arg     string
+		rel     string
+		session string
+	}{
+		{arg: "MyProject", rel: "Dev/MyProject", session: "myproject"},
+		{arg: "myproject", rel: "Dev/MyProject", session: "myproject"},
+		{arg: "MYPROJECT", rel: "Dev/MyProject", session: "myproject"},
+		{arg: "hidden", rel: ".hidden", session: "hidden"},
+		{arg: ".hidden", rel: ".hidden", session: "hidden"},
+		{arg: "Dev/src", rel: "Dev/src", session: "dev-src"},
+		{arg: "work-src", rel: "Work/src", session: "work-src"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.arg, func(t *testing.T) {
+			c := newCLI(t)
+			c.mkdirs("Dev/MyProject", ".hidden", "Dev/src", "Work/src", "elsewhere")
+			c.cwd = filepath.Join(c.home, "elsewhere")
+			config := configWithEntries("~/Dev/MyProject", "~/.hidden", "~/Dev/src", "~/Work/src")
+			srv := c.insideShell(config)
+
+			for _, attempt := range []string{"first", "second"} {
+				if got := c.run(tt.arg); got.code != 0 {
+					t.Fatalf("%s: exit %d, stderr %q", attempt, got.code, got.stderr)
+				}
+				srv.Eventually("the client to arrive", func() bool { return srv.ClientSession() == tt.session })
+				if sessions := srv.Sessions(); len(sessions) != 2 {
+					t.Fatalf("%s: sessions = %q, want shell and one more", attempt, sessions)
+				}
+				srv.Run("switch-client", "-t", "=shell")
+				srv.Eventually("the client to return", func() bool { return srv.ClientSession() == "shell" })
+			}
+			if path, want := sessionPath(srv, tt.session), filepath.Join(c.home, tt.rel); path != want {
+				t.Errorf("the session is at %q, want %q", path, want)
+			}
+		})
+	}
+}
+
+func TestANameMatchingSeveralDirectoriesListsThem(t *testing.T) {
+	c := newCLI(t)
+	c.mkdirs("Dev/src", "Work/src")
+	srv := c.insideShell(configWithEntries("~/Dev/src", "~/Work/src"))
+
+	got := c.run("src")
+
+	for _, want := range []string{"Dev/src", "Work/src"} {
+		if got.code == 0 || !strings.Contains(got.stderr, want) {
+			t.Errorf("exit %d, stderr %q: want a failure listing %q", got.code, got.stderr, want)
+		}
+	}
+	if sessions := srv.Sessions(); !slices.Equal(sessions, []string{"shell"}) {
+		t.Errorf("sessions = %q, want only shell", sessions)
+	}
+}
+
+// Picking from the list and typing a name can reach different places, on purpose: what's
+// in tmux's status bar can always be typed, and a path always means that path.
+func TestARunningSessionsExactNameBeatsADirectory(t *testing.T) {
+	c := newCLI(t)
+	dir := c.mkdirs("dev/foo")[0]
+	srv := c.insideShell(configWithEntries(dir))
+	sessionAt(srv, "foo", "/tmp")
+
+	if got := c.run("foo"); got.code != 0 {
+		t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
+	}
+	srv.Eventually("the client to reach foo", func() bool { return srv.ClientSession() == "foo" })
+	if sessions, want := srv.Sessions(), []string{"foo", "shell"}; !slices.Equal(sessions, want) {
+		t.Errorf("sessions = %q, want %q", sessions, want)
+	}
+
+	if got := c.run(dir); got.code != 0 {
+		t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
+	}
+	srv.Eventually("the client to reach dev-foo", func() bool { return srv.ClientSession() == "dev-foo" })
+}
+
+func TestOpeningAMissingEntryByNameExplains(t *testing.T) {
+	c := newCLI(t)
+	srv := c.insideShell(configWithEntries(filepath.Join(c.home, "gone")))
+
+	got := c.run("gone")
+
+	if got.code == 0 || !strings.Contains(got.stderr, "does not exist") {
+		t.Errorf("exit %d, stderr %q: want an explanation", got.code, got.stderr)
+	}
+	if sessions := srv.Sessions(); !slices.Equal(sessions, []string{"shell"}) {
+		t.Errorf("sessions = %q, want only shell", sessions)
+	}
+}
+
+func TestAnUnknownNameOpensANewSessionHere(t *testing.T) {
+	c := newCLI(t)
+	here := c.mkdirs("here")[0]
+	c.cwd = here
+	marker := filepath.Join(c.home, "ran")
+	c.writeFile(filepath.Join(here, ".muxly"), "windows:\n  - name: from-file\n    cmd: touch "+marker+"\n", 0o644)
+	srv := c.insideShell(validConfig)
+
+	for _, attempt := range []string{"first", "second"} {
+		if got := c.run("scratch"); got.code != 0 {
+			t.Fatalf("%s: exit %d, stderr %q", attempt, got.code, got.stderr)
+		}
+		srv.Eventually("the client to reach scratch", func() bool { return srv.ClientSession() == "scratch" })
+		if sessions, want := srv.Sessions(), []string{"scratch", "shell"}; !slices.Equal(sessions, want) {
+			t.Fatalf("%s: sessions = %q, want %q", attempt, sessions, want)
+		}
+		srv.Run("switch-client", "-t", "=shell")
+		srv.Eventually("the client to return", func() bool { return srv.ClientSession() == "shell" })
+	}
+
+	if path := sessionPath(srv, "scratch"); path != here {
+		t.Errorf("scratch is at %q, want %q", path, here)
+	}
+	if window := srv.Run("display-message", "-p", "-t", "=scratch:", "#{window_name}"); window != "main" {
+		t.Errorf("window = %q, want the default template's main, not the .muxly file's", window)
+	}
+	if _, err := os.Stat(marker); err == nil {
+		t.Error("the .muxly file in the current folder ran")
+	}
+}
+
+func TestDifferentSpellingsOfANameShareASession(t *testing.T) {
+	c := newCLI(t)
+	srv := c.insideShell(validConfig)
+
+	for _, arg := range []string{"a.b", "a_b", "A.B"} {
+		if got := c.run(arg); got.code != 0 {
+			t.Fatalf("%s: exit %d, stderr %q", arg, got.code, got.stderr)
+		}
+		if sessions, want := srv.Sessions(), []string{"a_b", "shell"}; !slices.Equal(sessions, want) {
+			t.Fatalf("%s: sessions = %q, want %q", arg, sessions, want)
+		}
+	}
+}
+
+func TestAnEmptyArgumentOpensThePicker(t *testing.T) {
+	c := newCLI(t).withFakes().setEnv("FAKE_FZF_EXIT=130").writeConfig(validConfig)
+
+	if got := c.run(""); got.code != 0 {
+		t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
+	}
+	if c.log("fzf") == nil {
+		t.Error("the picker never opened")
+	}
+}
+
+// A command's name can't also be a directory's, so a path is the way to reach one.
+func TestAPathReachesADirectoryNamedLikeACommand(t *testing.T) {
+	c := newCLI(t)
+	dir := c.mkdirs("doctor")[0]
+	srv := c.insideShell(validConfig)
+
+	if got := c.run("./doctor"); got.code != 0 {
+		t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
+	}
+
+	srv.Eventually("the client to reach doctor", func() bool { return srv.ClientSession() == "doctor" })
+	if path := sessionPath(srv, "doctor"); path != dir {
+		t.Errorf("the session is at %q, want %q", path, dir)
+	}
+}
