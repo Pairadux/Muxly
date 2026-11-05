@@ -55,8 +55,8 @@ func (e *commandError) Unwrap() error {
 
 // run executes a tmux command and returns its output, without the trailing newline.
 //
-// Without -u, tmux replaces tabs and non-ASCII characters in its output with "_" whenever
-// the locale isn't UTF-8. Key bindings often run muxly with no locale set.
+// Without -u, tmux replaces tabs and non-ASCII characters in its output with "_" when it
+// runs outside tmux with a locale that isn't UTF-8, as it can under cron or a bare ssh.
 func run(args ...string) (string, error) {
 	cmd := exec.Command("tmux", append([]string{"-u"}, args...)...)
 	var stdout, stderr bytes.Buffer

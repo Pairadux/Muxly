@@ -3,6 +3,8 @@
 package tmux
 
 import (
+	"errors"
+	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -19,8 +21,13 @@ func privateServer(t *testing.T) *tmuxtest.Server {
 	bin := t.TempDir()
 	srv := tmuxtest.New(t, bin)
 	t.Setenv("PATH", bin)
+	// Setenv restores these afterwards. They have to be truly unset, because tmux treats
+	// even an empty $TMUX as being inside tmux, and assumes a UTF-8 locale there.
 	t.Setenv("TMUX", "")
 	t.Setenv("TMUX_PANE", "")
+	if err := errors.Join(os.Unsetenv("TMUX"), os.Unsetenv("TMUX_PANE")); err != nil {
+		t.Fatal(err)
+	}
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("SHELL", "/bin/sh")
 	t.Setenv("LANG", "C.UTF-8")

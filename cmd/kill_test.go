@@ -240,8 +240,9 @@ func TestKillLastSessionAnswerYesFromARealPane(t *testing.T) {
 			srv.Run("send-keys", "-t", old, "y")
 
 			srv.Eventually("a fresh session named default", func() bool {
-				return slices.Equal(srv.Sessions(), []string{"default"}) &&
-					srv.Run("display-message", "-p", "-t", "=default:", "#{session_id}") != old
+				// Not Run: the old session may be giving up this name right now.
+				id, err := srv.Try("display-message", "-p", "-t", "=default:", "#{session_id}")
+				return err == nil && id != old && slices.Equal(srv.Sessions(), []string{"default"})
 			})
 			srv.Eventually("the client to reach it", func() bool { return srv.ClientSession() == "default" })
 			if !srv.HasServer() {

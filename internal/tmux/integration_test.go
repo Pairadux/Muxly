@@ -73,14 +73,14 @@ func TestNoServerMeansNoSessions(t *testing.T) {
 	}
 }
 
-// Key bindings can run muxly with no locale, where tmux would otherwise replace the tabs
-// in sessionFormat and every non-ASCII character with "_".
+// Outside tmux with a locale that isn't UTF-8, tmux would otherwise replace the tabs in
+// sessionFormat and every non-ASCII character with "_".
 func TestSessionsParseWithoutAUTF8Locale(t *testing.T) {
 	srv := privateServer(t)
 	id := srv.NewSession("é-🎉")
 	t.Setenv("LANG", "C")
-	t.Setenv("LC_ALL", "")
-	t.Setenv("LC_CTYPE", "")
+	t.Setenv("LC_ALL", "C")
+	t.Setenv("LC_CTYPE", "C")
 
 	got, err := ListSessions()
 	if err != nil {
@@ -244,12 +244,14 @@ func TestCreatedSessionHasTheLayoutInTheRightPlace(t *testing.T) {
 	if got := windowsOf(srv, "proj"); !slices.Equal(got, []string{"editor", "run"}) {
 		t.Errorf("windows = %q", got)
 	}
-	paths := srv.Run("list-windows", "-t", created.ID, "-F", "#{pane_start_path}#{session_path}")
-	for line := range strings.SplitSeq(paths, "\n") {
-		if !strings.Contains(line, dir) {
-			t.Errorf("a window isn't in the session's path: %q", line)
-		}
+	want, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		t.Fatal(err)
 	}
+	srv.Eventually("every window's shell to start in the session's path", func() bool {
+		paths := srv.Run("list-windows", "-t", created.ID, "-F", "#{pane_current_path}")
+		return paths == want+"\n"+want
+	})
 }
 
 func TestAFailedWindowLeavesNoHalfMadeSession(t *testing.T) {
