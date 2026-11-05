@@ -103,3 +103,31 @@ func TestConfigAddRefusesAMissingPath(t *testing.T) {
 		})
 	}
 }
+
+func TestIgnoredPathsHideWhatIsInsideThem(t *testing.T) {
+	c := newCLI(t).withFakes().setEnv("FAKE_FZF_EXIT=130")
+	c.mkdirs("dev/old/inside/deeper", "dev/keep", "notes/old")
+	c.writeConfig(`scan_dirs:
+  - path: ~/dev
+    depth: 3
+entry_dirs:
+  - path: ~/dev/old/inside
+  - path: ~/notes/old
+ignore_dirs:
+  - ~/dev/old
+` + validTemplates)
+
+	if got := c.run(); got.code != 0 {
+		t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
+	}
+
+	labels := c.pickerLabels()
+	for _, ignored := range []string{"inside", "deeper", "dev/old"} {
+		if slices.Contains(labels, ignored) {
+			t.Errorf("the picker offered %q: %q", ignored, labels)
+		}
+	}
+	if !slices.Contains(labels, "keep") || !slices.Contains(labels, "old") {
+		t.Errorf("the picker lost a directory that isn't ignored: %q", labels)
+	}
+}

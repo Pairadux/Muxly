@@ -286,12 +286,12 @@ entry_dirs:
 # Directories to exclude from scanning (additive)
 # .git and node_modules are always ignored — no need to list them
 # Bare names match any directory with that name at any depth
-# Paths match only that specific resolved directory
+# Paths match that resolved directory and everything inside it
 ignore_dirs:
   - .vscode               # bare name — skips all .vscode dirs
   - .idea                 # bare name — skips all .idea dirs
   - target                # bare name — skips all target dirs (e.g. Rust builds)
-  - ~/projects/archived   # path — skips only this specific directory
+  - ~/projects/archived   # path — skips this directory and everything inside it
 
 # Session templates (one must have default: true)
 templates:
@@ -363,7 +363,7 @@ The `ignore_dirs` list supports two matching styles, determined automatically by
 | Entry format | Example | Behavior |
 |---|---|---|
 | **Bare name** (no `/` or `~`) | `target`, `.vscode` | Matches any directory with that exact name at any depth during scanning. The directory and its contents are skipped entirely. |
-| **Path** (contains `/` or `~`) | `~/projects/archived` | Resolved to an absolute path and matches only that specific directory. |
+| **Path** (contains `/` or `~`) | `~/projects/archived` | Resolved to an absolute path. That directory and everything inside it are hidden, including anything in `entry_dirs`. |
 
 **Built-in filters:** `.git` and `node_modules` are always ignored and cannot be overridden. Any entries you add to `ignore_dirs` are **additive** on top of these built-in filters.
 
@@ -371,7 +371,7 @@ The `ignore_dirs` list supports two matching styles, determined automatically by
 ignore_dirs:
   - target                # bare name — skips all target dirs (e.g. Rust builds)
   - .vscode               # bare name — skips all .vscode dirs
-  - ~/projects/archived   # path — skips only this specific directory
+  - ~/projects/archived   # path — skips this directory and everything inside it
 ```
 
 ### Configuration Options Reference

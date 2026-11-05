@@ -46,6 +46,20 @@ func ResolvePath(p string) (string, error) {
 	return filepath.Clean(filepath.Join(home, p)), nil
 }
 
+// IsWithin reports whether path is one of paths, or inside one of them.
+func IsWithin(path string, paths models.StringSet) bool {
+	for {
+		if _, found := paths[path]; found {
+			return true
+		}
+		parent := filepath.Dir(path)
+		if parent == path {
+			return false
+		}
+		path = parent
+	}
+}
+
 // RequireDirectory returns an error saying what's wrong unless path is a directory.
 func RequireDirectory(path string) error {
 	info, err := os.Stat(path)
@@ -68,8 +82,9 @@ func RequireDirectory(path string) error {
 //	maxDepth = 1: /home/user/Dev/project1, /home/user/Dev/project2
 //	maxDepth = 2: above + /home/user/Dev/project1/src, /home/user/Dev/project2/src
 //
-// Directories whose base names appear in ignoreDirNames are skipped entirely
-// (not descended into), providing both correct filtering and a performance benefit.
+// Directories whose base names appear in ignoreDirNames, or whose paths appear in
+// ignorePaths, are skipped entirely (not descended into), providing both correct
+// filtering and a performance benefit.
 //
 // Uses fastwalk for efficient concurrent traversal. The root directory itself is
 // always excluded from results. Individual path errors are logged to stderr but
@@ -77,7 +92,7 @@ func RequireDirectory(path string) error {
 //
 // Performance: Results are collected concurrently via a buffered channel
 // (size: constants.DefaultChannelBufferSize).
-func GetSubDirs(maxDepth int, root string, ignoreDirNames models.StringSet) ([]string, error) {
+func GetSubDirs(maxDepth int, root string, ignoreDirNames, ignorePaths models.StringSet) ([]string, error) {
 	dirChan := make(chan string, constants.DefaultChannelBufferSize)
 	cfg := &fastwalk.Config{MaxDepth: maxDepth}
 	walkFn := func(path string, d fs.DirEntry, err error) error {
@@ -90,6 +105,9 @@ func GetSubDirs(maxDepth int, root string, ignoreDirNames models.StringSet) ([]s
 		}
 		if d.IsDir() {
 			if _, ignored := ignoreDirNames[d.Name()]; ignored {
+				return fastwalk.SkipDir
+			}
+			if _, ignored := ignorePaths[path]; ignored {
 				return fastwalk.SkipDir
 			}
 			dirChan <- path

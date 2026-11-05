@@ -93,7 +93,7 @@ func SortedNames(entries map[string]models.DirEntry, sessionPrefix string) []str
 //
 //	ignore_dirs:
 //	  - target            # bare name  — matches any directory named "target" at any depth
-//	  - ~/projects/old    # path       — matches only that specific resolved directory
+//	  - ~/projects/old    # path       — matches that resolved directory and all inside it
 func (b *Builder) buildIgnoreSets() (ignorePaths models.StringSet, ignoreNames models.StringSet) {
 	ignorePaths = make(models.StringSet)
 	ignoreNames = make(models.StringSet)
@@ -121,7 +121,7 @@ func (b *Builder) collectAllPaths(flagDepth int, ignorePaths, ignoreNames models
 	var allPaths []models.DirEntry
 
 	addPath := func(path, prefix, template string) error {
-		if _, ignored := ignorePaths[path]; ignored {
+		if utility.IsWithin(path, ignorePaths) {
 			return nil
 		}
 
@@ -132,7 +132,7 @@ func (b *Builder) collectAllPaths(flagDepth int, ignorePaths, ignoreNames models
 
 	for _, scanDir := range b.cfg.ScanDirs {
 		prefix := scanDir.Alias
-		if err := b.processScanDir(scanDir, flagDepth, prefix, ignoreNames, addPath); err != nil {
+		if err := b.processScanDir(scanDir, flagDepth, prefix, ignorePaths, ignoreNames, addPath); err != nil {
 			continue
 		}
 	}
@@ -180,7 +180,7 @@ func (b *Builder) addTmuxSessionEntries(entries map[string]models.DirEntry, exis
 }
 
 // processScanDir scans a single scan_dir entry and adds all discovered subdirectories.
-func (b *Builder) processScanDir(scanDir models.ScanDir, flagDepth int, prefix string, ignoreNames models.StringSet, addEntry func(string, string, string) error) error {
+func (b *Builder) processScanDir(scanDir models.ScanDir, flagDepth int, prefix string, ignorePaths, ignoreNames models.StringSet, addEntry func(string, string, string) error) error {
 	defaultDepth := b.cfg.Settings.DefaultDepth
 	effectiveDepth := scanDir.GetDepth(flagDepth, defaultDepth)
 
@@ -192,7 +192,7 @@ func (b *Builder) processScanDir(scanDir models.ScanDir, flagDepth int, prefix s
 		return nil
 	}
 
-	subDirs, err := utility.GetSubDirs(effectiveDepth, resolved, ignoreNames)
+	subDirs, err := utility.GetSubDirs(effectiveDepth, resolved, ignoreNames, ignorePaths)
 	if err != nil {
 		if b.verbose {
 			fmt.Fprintf(os.Stderr, "Warning: failed to scan directory %s: %v\n", resolved, err)
