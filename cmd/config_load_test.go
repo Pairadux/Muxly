@@ -116,7 +116,7 @@ func TestABrokenConfigDoesNotLockYouOut(t *testing.T) {
 				if got.code != 1 || !strings.Contains(got.stdout, tt.want) {
 					t.Errorf("exit %d, stdout:\n%s", got.code, got.stdout)
 				}
-				if strings.Contains(got.stdout, "No directories") || strings.Contains(got.stderr, "Error:") {
+				if strings.Contains(got.stdout, "no directories") || strings.Contains(got.stderr, "Error:") {
 					t.Errorf("unexpected noise, stdout:\n%s\nstderr: %q", got.stdout, got.stderr)
 				}
 			})

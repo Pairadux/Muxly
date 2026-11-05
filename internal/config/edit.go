@@ -179,18 +179,16 @@ func isBlockList(node *yaml.Node) bool {
 	return node.Kind == yaml.SequenceNode && node.Style&yaml.FlowStyle == 0 && len(node.Content) > 0
 }
 
-// itemIndent returns the whitespace before a list item's dash. It reports false if the
-// item's line doesn't start with one, which means the dash is on a line of its own.
+// itemIndent returns the whitespace that starts a list item's line, which is where its dash
+// should be. If it's not, as with a dash on a line of its own, then the edit won't parse as
+// what was asked for, and editList refuses it. It reports false if yaml and this file
+// disagree about what counts as a line.
 func itemIndent(lines []string, item *yaml.Node) (string, bool) {
 	if item.Line > len(lines) {
 		return "", false
 	}
 	line := lines[item.Line-1]
-	rest := strings.TrimLeft(line, " ")
-	if !strings.HasPrefix(rest, "-") {
-		return "", false
-	}
-	return line[:len(line)-len(rest)], true
+	return line[:len(line)-len(strings.TrimLeft(line, " "))], true
 }
 
 // preferredIndent returns the indent to start a new list with: that of the first list in

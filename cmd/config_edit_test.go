@@ -282,6 +282,25 @@ func TestConfigRemovePrefersWhatAPathResolvesTo(t *testing.T) {
 	}
 }
 
+// An entry that doesn't resolve has no directory, so there's no .muxly file to think about.
+// Looking for one with an empty path would find the one in the current folder.
+func TestConfigRemoveOfAnEntryThatCannotResolveLeavesTheCurrentFolderAlone(t *testing.T) {
+	c := newCLI(t)
+	c.cwd = c.mkdir(filepath.Join(c.home, "here"))
+	muxlyFile := filepath.Join(c.cwd, ".muxly")
+	c.writeFile(muxlyFile, "windows:\n  - name: main\n", 0o644)
+	c.writeConfig("entry_dirs:\n  - path: ~other/x\n  - path: /keep\n" + validTemplates)
+
+	got := c.run("config", "remove", "entry", "--delete", "~other/x")
+
+	if got.code != 0 {
+		t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
+	}
+	if _, err := os.Stat(muxlyFile); err != nil {
+		t.Errorf("the .muxly file in the current folder is gone: %v", err)
+	}
+}
+
 // With nothing left, every command but "config edit" refuses to run. Nothing else may
 // happen either: the .muxly file only goes once the entry has.
 func TestConfigRemoveRefusesTheLastDirectory(t *testing.T) {

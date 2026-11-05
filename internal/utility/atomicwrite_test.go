@@ -129,3 +129,20 @@ func TestWriteFileAtomicFailureKeepsTheOldFile(t *testing.T) {
 		t.Errorf("contents = %q", got)
 	}
 }
+
+func TestWriteFileAtomicCleansUpAfterAFailure(t *testing.T) {
+	parent := t.TempDir()
+	// Renaming a file onto a directory fails, and only after the temporary file exists.
+	target := filepath.Join(parent, "a directory")
+	if err := os.Mkdir(target, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := WriteFileAtomic(target, []byte("new"), 0o644); err == nil {
+		t.Error("want an error")
+	}
+
+	if names := dirEntries(t, parent); len(names) != 1 {
+		t.Errorf("left behind: %q", names)
+	}
+}
