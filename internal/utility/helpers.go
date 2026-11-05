@@ -69,9 +69,7 @@ func GetSubDirs(maxDepth int, root string, ignoreDirNames models.StringSet) ([]s
 			fmt.Fprintf(os.Stderr, "Walk error %q: %v\n", path, err)
 			return nil
 		}
-		// IDEA: might make this into a flag or config option
-		// ExcludeRootDir
-		if d.Name() == filepath.Base(root) {
+		if path == root {
 			return nil
 		}
 		if d.IsDir() {

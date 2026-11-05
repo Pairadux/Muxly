@@ -3,6 +3,7 @@ package utility
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -312,5 +313,28 @@ func mustWriteFile(t *testing.T, path string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte("test"), 0o644); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// Only the root itself is left out, not everything that shares its name.
+func TestGetSubDirsListsDirectoriesNamedLikeTheRoot(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "scan")
+	child := filepath.Join(root, "scan")
+	nested := filepath.Join(root, "nested", "scan")
+	mustMkdirAll(t, child)
+	mustMkdirAll(t, nested)
+
+	dirs, err := GetSubDirs(2, root, nil)
+	if err != nil {
+		t.Fatalf("GetSubDirs unexpected error: %v", err)
+	}
+
+	for _, want := range []string{child, nested} {
+		if !slices.Contains(dirs, want) {
+			t.Errorf("GetSubDirs = %q, want it to contain %q", dirs, want)
+		}
+	}
+	if slices.Contains(dirs, root) {
+		t.Errorf("GetSubDirs = %q, want it to leave out the root", dirs)
 	}
 }
