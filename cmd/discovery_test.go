@@ -69,3 +69,36 @@ func TestDepthFlagStillWorks(t *testing.T) {
 		t.Errorf("the picker offered:\n%s", picker)
 	}
 }
+
+func TestConfigAddRefusesAFile(t *testing.T) {
+	for _, kind := range []string{"entry", "scan"} {
+		t.Run(kind, func(t *testing.T) {
+			c := newCLI(t).withFakes().writeConfig(validConfig)
+			file := filepath.Join(c.home, "notes.txt")
+			c.writeFile(file, "not a directory", 0o644)
+
+			got := c.run("config", "add", kind, file)
+
+			if got.code == 0 || !strings.Contains(got.stderr, "is not a directory") {
+				t.Errorf("exit %d, stderr %q: want an error about the file", got.code, got.stderr)
+			}
+			if strings.Contains(c.readConfig(), "notes.txt") {
+				t.Errorf("the file was added:\n%s", c.readConfig())
+			}
+		})
+	}
+}
+
+func TestConfigAddRefusesAMissingPath(t *testing.T) {
+	for _, kind := range []string{"entry", "scan"} {
+		t.Run(kind, func(t *testing.T) {
+			c := newCLI(t).withFakes().writeConfig(validConfig)
+
+			got := c.run("config", "add", kind, filepath.Join(c.home, "gone"))
+
+			if got.code == 0 || !strings.Contains(got.stderr, "does not exist") {
+				t.Errorf("exit %d, stderr %q: want an error about the path", got.code, got.stderr)
+			}
+		})
+	}
+}

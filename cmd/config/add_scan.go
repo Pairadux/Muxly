@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/Pairadux/muxly/internal/state"
@@ -37,11 +36,8 @@ Examples:
 			return err
 		}
 
-		// Verify the path actually exists on the filesystem
-		if _, err := os.Stat(resolvedPath); os.IsNotExist(err) {
-			return fmt.Errorf("path does not exist: %s", resolvedPath)
-		} else if err != nil {
-			return fmt.Errorf("failed to access path %q: %w", resolvedPath, err)
+		if err := utility.RequireDirectory(resolvedPath); err != nil {
+			return err
 		}
 
 		// Get flags

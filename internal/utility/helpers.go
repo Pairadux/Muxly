@@ -2,6 +2,7 @@
 package utility
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -43,6 +44,21 @@ func ResolvePath(p string) (string, error) {
 		return "", err
 	}
 	return filepath.Clean(filepath.Join(home, p)), nil
+}
+
+// RequireDirectory returns an error saying what's wrong unless path is a directory.
+func RequireDirectory(path string) error {
+	info, err := os.Stat(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("%s does not exist", path)
+	}
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("%s is not a directory", path)
+	}
+	return nil
 }
 
 // GetSubDirs returns all subdirectories within root, up to maxDepth levels deep.
