@@ -47,6 +47,9 @@ func Validate(cfg *models.Config) error {
 
 	seenAliases := make(map[string]string)
 	for _, scanDir := range cfg.ScanDirs {
+		if scanDir.Depth != nil && *scanDir.Depth < 1 {
+			return fmt.Errorf("scan_dir %q has depth %d, and it must be at least 1", scanDir.Path, *scanDir.Depth)
+		}
 		if scanDir.Alias != "" {
 			if existingPath, exists := seenAliases[scanDir.Alias]; exists {
 				return fmt.Errorf("duplicate alias %q used by both %q and %q",

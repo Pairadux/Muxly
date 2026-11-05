@@ -395,3 +395,31 @@ templates:
 		})
 	}
 }
+
+func TestValidateScanDirDepth(t *testing.T) {
+	depth := func(n int) *int { return &n }
+
+	tests := []struct {
+		name    string
+		depth   *int
+		wantErr bool
+	}{
+		{name: "not set", depth: nil},
+		{name: "one", depth: depth(1)},
+		{name: "zero would mean no limit", depth: depth(0), wantErr: true},
+		{name: "negative would mean no limit", depth: depth(-1), wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := models.Config{
+				ScanDirs:  []models.ScanDir{{Path: "/tmp", Depth: tt.depth}},
+				Templates: []models.SessionTemplate{{Name: "default", Default: true, Windows: []models.Window{{Name: "main"}}}},
+			}
+
+			if err := Validate(&cfg); (err != nil) != tt.wantErr {
+				t.Errorf("Validate() = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}

@@ -72,6 +72,9 @@ var rootCmd = &cobra.Command{
 		}
 
 		flagDepth, _ := cmd.Flags().GetInt("depth")
+		if cmd.Flags().Changed("depth") && flagDepth < 1 {
+			return fmt.Errorf("--depth must be at least 1, got %d", flagDepth)
+		}
 		builder := selector.NewBuilder(&state.Cfg, state.Verbose)
 		entries, err := builder.BuildEntries(flagDepth)
 		if err != nil {

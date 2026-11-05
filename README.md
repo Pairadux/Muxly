@@ -380,7 +380,7 @@ ignore_dirs:
 |--------|------|----------|-------------|
 | `scan_dirs` | array | yes* | Directories to scan for projects |
 | `scan_dirs[].path` | string | yes | Directory path to scan (supports `~` and environment variables) |
-| `scan_dirs[].depth` | int | no | Scan depth for this directory (overrides `settings.default_depth`) |
+| `scan_dirs[].depth` | int | no | Scan depth for this directory, at least 1 (overrides `settings.default_depth`) |
 | `scan_dirs[].alias` | string | no | Display prefix in selector (e.g., "dev" shows as "dev/project-name") |
 | `scan_dirs[].template` | string | no | Template name to use for sessions created from this scan directory |
 | `entry_dirs` | array | yes* | Directories always included without scanning |
