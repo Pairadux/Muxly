@@ -101,7 +101,6 @@ func generateConfigYAML(cfg models.Config) (string, error) {
 #
 # settings: General application settings
 #   editor: Default editor for 'muxly config edit' (overrides $EDITOR)
-#   tmux_base: Base index for tmux windows (0 or 1, should match your tmux.conf)
 #   default_depth: Default scanning depth for scan_dirs without explicit depth
 #   tmux_session_prefix: Prefix for active tmux sessions in the selector
 #   always_kill_on_last_session: Skip prompt and kill server on last session

@@ -68,7 +68,6 @@ var rootCmd = &cobra.Command{
 			fmt.Printf("entry_dirs: %v\n", state.Cfg.EntryDirs)
 			fmt.Printf("ignore_dirs: %v\n", state.Cfg.IgnoreDirs)
 			fmt.Printf("templates: %v\n", state.Cfg.Templates)
-			fmt.Printf("tmux_base: %v\n", state.Cfg.Settings.TmuxBase)
 			fmt.Printf("default_depth: %v\n", state.Cfg.Settings.DefaultDepth)
 		}
 
@@ -204,7 +203,6 @@ func initConfig() {
 	viper.SetEnvPrefix("MUXLY")
 	_ = viper.BindEnv("settings.editor", "MUXLY_EDITOR", "EDITOR") // Support both MUXLY_EDITOR and standard $EDITOR
 	_ = viper.BindEnv("settings.default_depth")                    // MUXLY_DEFAULT_DEPTH
-	_ = viper.BindEnv("settings.tmux_base")                        // MUXLY_TMUX_BASE
 	_ = viper.BindEnv("settings.tmux_session_prefix")              // MUXLY_TMUX_SESSION_PREFIX
 	_ = viper.BindEnv("settings.always_kill_on_last_session")      // MUXLY_ALWAYS_KILL_ON_LAST_SESSION
 

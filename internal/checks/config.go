@@ -118,14 +118,5 @@ func ValidateConfig(cfg *models.Config) []CheckResult {
 		})
 	}
 
-	if cfg.Settings.TmuxBase != 0 && cfg.Settings.TmuxBase != 1 {
-		results = append(results, CheckResult{
-			Name:    "tmux_base",
-			Status:  StatusWarning,
-			Message: fmt.Sprintf("Unusual tmux_base value: %d", cfg.Settings.TmuxBase),
-			Hint:    "tmux_base is typically 0 or 1",
-		})
-	}
-
 	return results
 }

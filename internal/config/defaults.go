@@ -8,8 +8,6 @@ const (
 	DefaultEditor = "vi"
 	// DefaultTmuxSessionPrefix marks active sessions in the picker.
 	DefaultTmuxSessionPrefix = "[TMUX] "
-	// DefaultTmuxBase is the window index that session targets assume.
-	DefaultTmuxBase = 0
 	// DefaultScanDepth is how deep scan_dirs are searched when no depth is set.
 	DefaultScanDepth = 1
 	// DefaultAlwaysKillOnLastSession keeps the prompt when killing the last session.
@@ -73,7 +71,6 @@ func NewDefaultConfig() models.Config {
 		Templates:  DefaultTemplates,
 		Settings: models.Settings{
 			Editor:                  DefaultEditor,
-			TmuxBase:                DefaultTmuxBase,
 			DefaultDepth:            DefaultScanDepth,
 			TmuxSessionPrefix:       DefaultTmuxSessionPrefix,
 			AlwaysKillOnLastSession: DefaultAlwaysKillOnLastSession,
@@ -91,9 +88,6 @@ func ApplyDefaults(cfg *models.Config) {
 	}
 	if cfg.Settings.TmuxSessionPrefix == "" {
 		cfg.Settings.TmuxSessionPrefix = DefaultTmuxSessionPrefix
-	}
-	if cfg.Settings.TmuxBase < 0 {
-		cfg.Settings.TmuxBase = DefaultTmuxBase
 	}
 	if cfg.Settings.DefaultDepth == 0 {
 		cfg.Settings.DefaultDepth = DefaultScanDepth

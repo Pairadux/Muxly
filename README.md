@@ -212,7 +212,6 @@ EDITOR=nano muxly config edit
 **Supported Environment Variables:**
 - `MUXLY_EDITOR` or `EDITOR` - Editor for config editing
 - `MUXLY_DEFAULT_DEPTH` - Default scanning depth
-- `MUXLY_TMUX_BASE` - Tmux window base index
 - `MUXLY_TMUX_SESSION_PREFIX` - Prefix for active sessions in selector
 - `MUXLY_ALWAYS_KILL_ON_LAST_SESSION` - Skip fallback prompt (true/false)
 
@@ -249,9 +248,6 @@ templates:
 settings:
   # Editor for 'muxly config edit' (falls back to $EDITOR, then 'vi')
   editor: vi
-  # Base index for tmux windows (0 or 1)
-  # See: https://www.man7.org/linux/man-pages/man1/tmux.1.html#OPTIONS (base-index)
-  tmux_base: 0
   # Default scanning depth for directories
   default_depth: 1
   # Prefix for active tmux sessions in the selector
@@ -316,9 +312,6 @@ templates:
 settings:
   # Editor for 'muxly config edit' (falls back to $EDITOR, then 'vi')
   editor: nvim
-  # Base index for tmux windows (should match your tmux.conf)
-  # See: https://www.man7.org/linux/man-pages/man1/tmux.1.html#OPTIONS (base-index)
-  tmux_base: 1
   # Default scanning depth for scan_dirs (can be overridden per directory)
   default_depth: 1
   # Prefix for active tmux sessions in the selector
@@ -402,7 +395,6 @@ ignore_dirs:
 | `templates[].windows[].cmd` | string | no | Command to run in window (empty string opens default shell) |
 | `settings` | object | no | General application settings |
 | `settings.editor` | string | no | Editor for config editing, falls back to `$EDITOR` (default: `"vi"`) |
-| `settings.tmux_base` | int | no | Tmux window [base index](https://www.man7.org/linux/man-pages/man1/tmux.1.html#OPTIONS) - 0 or 1, should match your tmux.conf (default: `1`) |
 | `settings.default_depth` | int | no | Default scanning depth for `scan_dirs` (default: `1`) |
 | `settings.tmux_session_prefix` | string | no | Prefix for active sessions in selector (default: `"[TMUX] "`) |
 | `settings.always_kill_on_last_session` | bool | no | Skip fallback prompt and kill server on last session (default: `false`) |
