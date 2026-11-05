@@ -14,9 +14,9 @@ import (
 	"github.com/mitchellh/go-homedir"
 )
 
-// ResolvePath takes an "unknown" path pattern and returns an absolute path.
+// ResolvePath takes an "unknown" path pattern and returns a clean absolute path.
 //
-//   - Absolute (/…):               returned as-is
+//   - Absolute (/…):               used as it is
 //   - Home (~ or ~/…):             expanded via os.UserHomeDir()
 //   - Explicit relative (./, ../): error
 //
@@ -29,7 +29,7 @@ func ResolvePath(p string) (string, error) {
 	p = os.ExpandEnv(p)
 
 	if filepath.IsAbs(p) {
-		return p, nil
+		return filepath.Clean(p), nil
 	}
 	if strings.HasPrefix(p, "~") {
 		return homedir.Expand(p)

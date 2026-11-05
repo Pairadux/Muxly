@@ -28,6 +28,21 @@ func TestResolvePath(t *testing.T) {
 			expected: "/usr/local/bin",
 		},
 		{
+			name:     "trailing slash removed",
+			input:    "/usr/local/bin/",
+			expected: "/usr/local/bin",
+		},
+		{
+			name:     "dot segments removed",
+			input:    "/usr/./local/../local/bin",
+			expected: "/usr/local/bin",
+		},
+		{
+			name:     "home tilde with a trailing slash",
+			input:    "~/Dev/",
+			expected: filepath.Join(home, "Dev"),
+		},
+		{
 			name:     "home tilde expands",
 			input:    "~",
 			expected: home,
