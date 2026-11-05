@@ -220,3 +220,28 @@ func TestNoServer(t *testing.T) {
 		})
 	}
 }
+
+func TestEscapeFormat(t *testing.T) {
+	tests := map[string]string{
+		"plain":        "plain",
+		"a#b":          "a##b",
+		"a#":           "a##",
+		"#":            "##",
+		"a##b":         "a####b",
+		"a#S":          "a##S",
+		"a#{x}b":       "a##{x}b",
+		"a#(x)b":       "a##(x)b",
+		"a#[b":         "a#[b",
+		"a##[b":        "a##[b",
+		"a###[b":       "a###[b",
+		"a#[#b":        "a#[##b",
+		"a#b#[c":       "a##b#[c",
+		"#{a}#[b]#(c)": "##{a}#[b]##(c)",
+	}
+
+	for input, want := range tests {
+		if got := escapeFormat(input); got != want {
+			t.Errorf("escapeFormat(%q) = %q, want %q", input, got, want)
+		}
+	}
+}

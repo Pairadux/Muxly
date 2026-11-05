@@ -375,3 +375,39 @@ func TestUnresolvableTemplatePathKillsNothing(t *testing.T) {
 		t.Errorf("tmux was called: %q", got)
 	}
 }
+
+// tmux expands formats in -c, so these would open somewhere else if passed as they are:
+// "a#S" would mean "a" followed by the session's name. The last ones are why escaping
+// isn't just doubling every #, since tmux leaves a run of # before "[" unchanged.
+func TestDirectoryNamesReachTmuxUnchanged(t *testing.T) {
+	names := []string{
+		"a#b", "a#", "#", "a##b", "a#S", "a#H", "a#{session_id}b", "a#(true)b", "a#,b", "a#}b",
+		"a#[b", "a##[b", "a###[b", "a#[#b",
+	}
+
+	for _, name := range names {
+		t.Run(name, func(t *testing.T) {
+			srv := privateServer(t)
+			dir := filepath.Join(t.TempDir(), name)
+			if err := os.Mkdir(dir, 0o755); err != nil {
+				t.Fatal(err)
+			}
+
+			created, err := createSession(sessionNamed("proj", dir, "first", "second"))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if created.Path != dir {
+				t.Errorf("session path = %q, want %q", created.Path, dir)
+			}
+			want, err := filepath.EvalSymlinks(dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			srv.Eventually("every window's shell to start in the directory", func() bool {
+				return srv.Run("list-windows", "-t", created.ID, "-F", "#{pane_current_path}") == want+"\n"+want
+			})
+		})
+	}
+}

@@ -254,6 +254,8 @@ func createSession(session models.Session) (Session, error) {
 // the target's $id. If cmd is provided, it wraps it with shell execution to keep the
 // window open.
 func buildWindowArgs(isFirst bool, session, windowName, dir, cmd string) []string {
+	dir = escapeFormat(dir)
+
 	var args []string
 	if isFirst {
 		args = []string{"new-session", "-d", "-P", "-F", sessionFormat, "-s", session, "-n", windowName, "-c", dir}
@@ -271,6 +273,31 @@ func buildWindowArgs(isFirst bool, session, windowName, dir, cmd string) []strin
 	}
 
 	return args
+}
+
+// escapeFormat makes tmux take s literally where it would expand formats. "##" means a
+// plain "#", except that tmux leaves any run of "#" before "[" as it is, because that
+// marks a style. Those runs already come through unchanged, so they stay as they are.
+func escapeFormat(s string) string {
+	var b strings.Builder
+	for i := 0; i < len(s); {
+		if s[i] != '#' {
+			b.WriteByte(s[i])
+			i++
+			continue
+		}
+		end := i
+		for end < len(s) && s[end] == '#' {
+			end++
+		}
+		run := s[i:end]
+		b.WriteString(run)
+		if end == len(s) || s[end] != '[' {
+			b.WriteString(run)
+		}
+		i = end
+	}
+	return b.String()
 }
 
 // KillSession terminates a session.
