@@ -45,6 +45,7 @@ const validConfig = "entry_dirs:\n  - path: /tmp\n" + validTemplates
 // from FAKE_SESSIONS (comma separated), and an empty list behaves like no server.
 const fakeTmuxScript = `#!/bin/sh
 PATH=/usr/bin:/bin
+[ "$1" = "-u" ] && shift
 printf '%s\n' "$*" >> "$FAKE_LOG_DIR/tmux"
 case "$1" in
   list-sessions)

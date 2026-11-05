@@ -1,6 +1,7 @@
 package tmux
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
@@ -116,6 +117,38 @@ func TestGetSessionTarget(t *testing.T) {
 			got := getSessionTarget(tt.cfg, tt.session)
 			if got != tt.expected {
 				t.Errorf("getSessionTarget() = %q, want %q", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestCommandErrorMessage(t *testing.T) {
+	cause := errors.New("exit status 1")
+
+	tests := []struct {
+		name string
+		err  commandError
+		want string
+	}{
+		{
+			name: "tmux's own message replaces the exit status",
+			err:  commandError{subcommand: "kill-session", stderr: "can't find session: x\n", err: cause},
+			want: "tmux kill-session: can't find session: x",
+		},
+		{
+			name: "with nothing from tmux, the cause is all there is",
+			err:  commandError{subcommand: "kill-session", stderr: " \n", err: cause},
+			want: "tmux kill-session: exit status 1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.err.Error(); got != tt.want {
+				t.Errorf("Error() = %q, want %q", got, tt.want)
+			}
+			if !errors.Is(&tt.err, cause) {
+				t.Error("the cause should stay reachable through errors.Is")
 			}
 		})
 	}

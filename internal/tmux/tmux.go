@@ -2,6 +2,7 @@
 package tmux
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -23,17 +24,49 @@ var ErrGracefulExit = errors.New("graceful exit")
 // DefaultShell runs window commands when $SHELL isn't set.
 const DefaultShell = "/bin/bash"
 
+// commandError is a failed tmux command, along with what tmux said about it.
+type commandError struct {
+	subcommand string
+	stderr     string
+	err        error
+}
+
+func (e *commandError) Error() string {
+	if message := strings.TrimSpace(e.stderr); message != "" {
+		return fmt.Sprintf("tmux %s: %s", e.subcommand, message)
+	}
+	return fmt.Sprintf("tmux %s: %v", e.subcommand, e.err)
+}
+
+func (e *commandError) Unwrap() error {
+	return e.err
+}
+
+// run executes a tmux command and returns its output, without the trailing newline.
+//
+// Without -u, tmux replaces tabs and non-ASCII characters in its output with "_" whenever
+// the locale isn't UTF-8. Key bindings often run muxly with no locale set.
+func run(args ...string) (string, error) {
+	cmd := exec.Command("tmux", append([]string{"-u"}, args...)...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return "", &commandError{subcommand: args[0], stderr: stderr.String(), err: err}
+	}
+	return strings.TrimRight(stdout.String(), "\n"), nil
+}
+
 // GetTmuxSessionNames returns a slice of all active tmux session names.
 // Returns an empty slice if tmux is not available or if there's an error.
 func GetTmuxSessionNames() []string {
-	cmd := exec.Command("tmux", "list-sessions", "-F", "#{session_name}")
-	output, err := cmd.Output()
+	output, err := run("list-sessions", "-F", "#{session_name}")
 	if err != nil {
 		return nil
 	}
 
 	// Parse session names from output, one per line
-	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	lines := strings.Split(output, "\n")
 	sessions := make([]string, 0, len(lines))
 	for _, line := range lines {
 		if line != "" {
@@ -58,7 +91,8 @@ func GetSessionsExceptCurrent(current string) []string {
 
 // HasTmuxSession checks if a tmux session with the given name exists.
 func HasTmuxSession(name string) bool {
-	return exec.Command("tmux", "has-session", "-t", name).Run() == nil
+	_, err := run("has-session", "-t", name)
+	return err == nil
 }
 
 // GetTmuxSessionSet returns a set (map[string]bool) of active session names
@@ -82,13 +116,12 @@ func GetCurrentTmuxSession() string {
 		return ""
 	}
 
-	cmd := exec.Command("tmux", "display-message", "-p", "#{session_name}")
-	output, err := cmd.Output()
+	output, err := run("display-message", "-p", "#{session_name}")
 	if err != nil {
 		return ""
 	}
 
-	return strings.TrimSpace(string(output))
+	return output
 }
 
 // SwitchToExistingSession switches to an existing tmux session by name.
@@ -110,8 +143,8 @@ func SwitchToExistingSession(cfg *models.Config, name string) error {
 
 // IsTmuxServerRunning checks if a tmux server is currently running
 func IsTmuxServerRunning() bool {
-	cmd := exec.Command("tmux", "list-sessions")
-	return cmd.Run() == nil
+	_, err := run("list-sessions")
+	return err == nil
 }
 
 // CreateAndSwitchSession creates a new tmux session and switches to it.
@@ -146,48 +179,39 @@ func attachToSession(target, fallbackName string) error {
 		return ErrGracefulExit
 	}
 
-	cmd := exec.Command("tmux", "attach-session", "-t", target)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-
-	if err := cmd.Run(); err != nil {
-		// If targeting a specific window failed, try just the session name
-		if target != fallbackName {
-			cmd := exec.Command("tmux", "attach-session", "-t", fallbackName)
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			cmd.Stdin = os.Stdin
-			if cmd.Run() == nil {
-				return ErrGracefulExit
-			}
-			if !IsTmuxServerRunning() {
-				return ErrGracefulExit
-			}
-			return err
-		}
-
-		if !IsTmuxServerRunning() {
-			return ErrGracefulExit
-		}
-		return fmt.Errorf("attaching to session: %w", err)
+	err := attach(target)
+	// If targeting a specific window failed, try just the session name
+	if err != nil && target != fallbackName {
+		err = attach(fallbackName)
 	}
+	// Killing the server from inside the session also ends this client with an error.
+	if err == nil || !IsTmuxServerRunning() {
+		return ErrGracefulExit
+	}
+	return err
+}
 
-	return ErrGracefulExit
+// attach runs a tmux client on this terminal until it detaches or its session ends.
+func attach(target string) error {
+	cmd := exec.Command("tmux", "attach-session", "-t", target)
+	var stderr bytes.Buffer
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return &commandError{subcommand: "attach-session", stderr: stderr.String(), err: err}
+	}
+	return nil
 }
 
 // switchClientToSession switches to a session when already in tmux
 func switchClientToSession(target, fallbackName string) error {
-	if err := exec.Command("tmux", "switch-client", "-t", target).Run(); err != nil {
-		// If targeting a specific window failed, try just the session name
-		if target != fallbackName {
-			return exec.Command("tmux", "switch-client", "-t", fallbackName).Run()
-		}
-
-		return fmt.Errorf("switching to session: %w", err)
+	_, err := run("switch-client", "-t", target)
+	// If targeting a specific window failed, try just the session name
+	if err != nil && target != fallbackName {
+		_, err = run("switch-client", "-t", fallbackName)
 	}
-
-	return nil
+	return err
 }
 
 // CreateSession creates a new tmux session using the provided session configuration.
@@ -204,13 +228,13 @@ func CreateSession(session models.Session) error {
 	// REFACTOR: Consider using a single tmux command with multiple operations for better performance
 	w0 := session.Layout.Windows[0]
 	args := buildWindowArgs(true, session.Name, w0.Name, session.Path, w0.Cmd)
-	if err := exec.Command("tmux", args...).Run(); err != nil {
+	if _, err := run(args...); err != nil {
 		return err
 	}
 
 	for _, w := range session.Layout.Windows[1:] {
 		args := buildWindowArgs(false, session.Name, w.Name, session.Path, w.Cmd)
-		if err := exec.Command("tmux", args...).Run(); err != nil {
+		if _, err := run(args...); err != nil {
 			return err
 		}
 	}
@@ -246,11 +270,8 @@ func buildWindowArgs(isFirst bool, sessionName, windowName, dir, cmd string) []s
 //
 // Returns an error if the session doesn't exist or if the kill operation fails.
 func KillSession(target string) error {
-	if err := exec.Command("tmux", "kill-session", "-t", target).Run(); err != nil {
-		return fmt.Errorf("killing session: %w", err)
-	}
-
-	return nil
+	_, err := run("kill-session", "-t", target)
+	return err
 }
 
 // KillServer terminates the entire tmux server and all sessions.
@@ -258,11 +279,8 @@ func KillSession(target string) error {
 // This is a destructive operation that will close all tmux sessions.
 // Returns an error if the kill operation fails.
 func KillServer() error {
-	if err := exec.Command("tmux", "kill-server").Run(); err != nil {
-		return fmt.Errorf("killing server: %w", err)
-	}
-
-	return nil
+	_, err := run("kill-server")
+	return err
 }
 
 // ReplaceLastSession swaps current, the only session left on the server, for a fresh
@@ -318,7 +336,7 @@ func ReplaceLastSession(cfg *models.Config, current string) error {
 // reach the old session by prefix.
 func undoReplace(newName, old, original string) error {
 	// The new session may never have been created, so failing to kill it means nothing.
-	_ = exec.Command("tmux", "kill-session", "-t", "="+newName).Run()
+	_, _ = run("kill-session", "-t", "="+newName)
 
 	if old == original {
 		return nil
@@ -328,10 +346,8 @@ func undoReplace(newName, old, original string) error {
 
 // renameSession renames the session with exactly the name from.
 func renameSession(from, to string) error {
-	if err := exec.Command("tmux", "rename-session", "-t", "="+from, to).Run(); err != nil {
-		return fmt.Errorf("renaming session %q to %q: %w", from, to, err)
-	}
-	return nil
+	_, err := run("rename-session", "-t", "="+from, to)
+	return err
 }
 
 // CreateSessionFromTemplate creates and switches to a session from a given template and path.
