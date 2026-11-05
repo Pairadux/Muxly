@@ -4,7 +4,6 @@ package selector
 
 import (
 	"fmt"
-	"os"
 	"slices"
 	"strings"
 
@@ -27,15 +26,21 @@ type Directory struct {
 }
 
 // Directories finds everything in scan_dirs and entry_dirs that isn't ignored, sorted by
-// path. A directory in both takes its template from entry_dirs, as the more specific.
+// path, along with warnings about anything it couldn't use. A directory in both takes its
+// template from entry_dirs, as the more specific.
+//
+// It prints nothing, because the picker may be about to take over the terminal. The caller
+// reports the warnings when it's safe to.
 //
 // A flagDepth above zero overrides the depth of every scan directory.
-func Directories(cfg *models.Config, flagDepth int, verbose bool) []Directory {
-	ignorePaths, ignoreNames := buildIgnoreSets(cfg)
+func Directories(cfg *models.Config, flagDepth int) ([]Directory, []string) {
+	ignorePaths, ignoreNames, warnings := buildIgnoreSets(cfg)
 	found := make(map[string]*Directory)
 
 	for _, scanDir := range cfg.ScanDirs {
-		for _, path := range scan(cfg, scanDir, flagDepth, ignorePaths, ignoreNames, verbose) {
+		paths, scanWarnings := scan(cfg, scanDir, flagDepth, ignorePaths, ignoreNames)
+		warnings = append(warnings, scanWarnings...)
+		for _, path := range paths {
 			if _, seen := found[path]; !seen {
 				found[path] = &Directory{Path: path, Alias: scanDir.Alias, Template: scanDir.Template}
 			}
@@ -45,9 +50,7 @@ func Directories(cfg *models.Config, flagDepth int, verbose bool) []Directory {
 	for _, entryDir := range cfg.EntryDirs {
 		path, err := utility.ResolvePath(entryDir.Path)
 		if err != nil {
-			if verbose {
-				fmt.Fprintf(os.Stderr, "Warning: failed to resolve entry directory %s: %v\n", entryDir.Path, err)
-			}
+			warnings = append(warnings, fmt.Sprintf("can't use entry_dirs path %s: %v", entryDir.Path, err))
 			continue
 		}
 		if utility.IsWithin(path, ignorePaths) {
@@ -69,7 +72,7 @@ func Directories(cfg *models.Config, flagDepth int, verbose bool) []Directory {
 	}
 	slices.SortFunc(dirs, func(a, b Directory) int { return strings.Compare(a.Path, b.Path) })
 	assignLabels(dirs)
-	return dirs
+	return dirs, warnings
 }
 
 // buildIgnoreSets partitions ignore directories into two sets for O(1) lookup:
@@ -86,7 +89,7 @@ func Directories(cfg *models.Config, flagDepth int, verbose bool) []Directory {
 //	ignore_dirs:
 //	  - target            # bare name  — matches any directory named "target" at any depth
 //	  - ~/projects/old    # path       — matches that resolved directory and all inside it
-func buildIgnoreSets(cfg *models.Config) (ignorePaths, ignoreNames models.StringSet) {
+func buildIgnoreSets(cfg *models.Config) (ignorePaths, ignoreNames models.StringSet, warnings []string) {
 	ignorePaths = make(models.StringSet)
 	ignoreNames = make(models.StringSet)
 
@@ -96,36 +99,38 @@ func buildIgnoreSets(cfg *models.Config) (ignorePaths, ignoreNames models.String
 
 	for _, dir := range cfg.IgnoreDirs {
 		if strings.Contains(dir, "/") || strings.HasPrefix(dir, "~") {
-			if resolved, err := utility.ResolvePath(dir); err == nil {
-				ignorePaths[resolved] = struct{}{}
+			resolved, err := utility.ResolvePath(dir)
+			if err != nil {
+				warnings = append(warnings, fmt.Sprintf("can't use ignore_dirs path %s: %v", dir, err))
+				continue
 			}
+			ignorePaths[resolved] = struct{}{}
 		} else {
 			ignoreNames[dir] = struct{}{}
 		}
 	}
-	return ignorePaths, ignoreNames
+	return ignorePaths, ignoreNames, warnings
 }
 
-// scan returns the subdirectories of one scan directory.
-func scan(cfg *models.Config, scanDir models.ScanDir, flagDepth int, ignorePaths, ignoreNames models.StringSet, verbose bool) []string {
+// scan returns the subdirectories of one scan directory, and warnings about any problems.
+func scan(cfg *models.Config, scanDir models.ScanDir, flagDepth int, ignorePaths, ignoreNames models.StringSet) ([]string, []string) {
 	root, err := utility.ResolvePath(scanDir.Path)
 	if err != nil {
-		if verbose {
-			fmt.Fprintf(os.Stderr, "Warning: failed to resolve scan directory %s: %v\n", scanDir.Path, err)
-		}
-		return nil
+		return nil, []string{fmt.Sprintf("can't use scan_dirs path %s: %v", scanDir.Path, err)}
 	}
 	if utility.IsWithin(root, ignorePaths) {
-		return nil
+		return nil, nil
+	}
+	if err := utility.RequireDirectory(root); err != nil {
+		return nil, []string{fmt.Sprintf("can't scan: %v", err)}
 	}
 
 	depth := scanDir.GetDepth(flagDepth, cfg.Settings.DefaultDepth)
-	subDirs, err := utility.GetSubDirs(depth, root, ignoreNames, ignorePaths)
-	if err != nil {
-		if verbose {
-			fmt.Fprintf(os.Stderr, "Warning: failed to scan directory %s: %v\n", root, err)
-		}
-		return nil
+	subDirs, problems := utility.GetSubDirs(depth, root, ignoreNames, ignorePaths)
+
+	var warnings []string
+	for _, problem := range problems {
+		warnings = append(warnings, fmt.Sprintf("can't scan everything: %v", problem))
 	}
-	return subDirs
+	return subDirs, warnings
 }

@@ -7,9 +7,6 @@ const (
 	// FilePermissions is the mode for files muxly creates.
 	FilePermissions = 0o644
 
-	// DefaultChannelBufferSize sizes the buffer that collects directory scan results.
-	DefaultChannelBufferSize = 100
-
 	// FzfNoMatchExitCode is fzf's exit code when Enter is pressed with nothing matching.
 	FzfNoMatchExitCode = 1
 	// FzfUserCancelExitCode is fzf's exit code when the user presses Esc or Ctrl-C.

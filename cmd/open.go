@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/Pairadux/muxly/internal/config"
 	"github.com/Pairadux/muxly/internal/models"
@@ -10,6 +11,14 @@ import (
 	"github.com/Pairadux/muxly/internal/state"
 	"github.com/Pairadux/muxly/internal/tmux"
 )
+
+// printWarnings reports problems found while looking for directories. Printing them while
+// the picker is open would draw over it, so callers wait until it has closed.
+func printWarnings(warnings []string) {
+	for _, warning := range warnings {
+		fmt.Fprintln(os.Stderr, "Warning:", warning)
+	}
+}
 
 // openName opens the directory with the given label, or else the session with that name.
 func openName(name string, dirs []selector.Directory, sessions []tmux.Session) error {

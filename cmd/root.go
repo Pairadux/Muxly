@@ -77,9 +77,10 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to list sessions: %w", err)
 		}
-		dirs := selector.Directories(&state.Cfg, flagDepth, state.Verbose)
+		dirs, warnings := selector.Directories(&state.Cfg, flagDepth)
 
 		if len(args) == 1 && args[0] != "" {
+			printWarnings(warnings)
 			return openName(args[0], dirs, sessions)
 		}
 
@@ -87,6 +88,7 @@ var rootCmd = &cobra.Command{
 		current, _ := tmux.CurrentSession()
 		entries := selector.Entries(dirs, sessions, current, state.Cfg.Settings.TmuxSessionPrefix)
 		choice, err := fzf.Pick(selector.Labels(entries))
+		printWarnings(warnings)
 		if err != nil {
 			if errors.Is(err, fzf.ErrCancelled) {
 				return nil

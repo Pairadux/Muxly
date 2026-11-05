@@ -8,8 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
-	"github.com/Pairadux/muxly/internal/constants"
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/charlievieth/fastwalk"
 	"github.com/mitchellh/go-homedir"
@@ -86,18 +86,17 @@ func RequireDirectory(path string) error {
 // ignorePaths, are skipped entirely (not descended into), providing both correct
 // filtering and a performance benefit.
 //
-// Uses fastwalk for efficient concurrent traversal. The root directory itself is
-// always excluded from results. Individual path errors are logged to stderr but
-// don't stop the scan or cause an error return.
-//
-// Performance: Results are collected concurrently via a buffered channel
-// (size: constants.DefaultChannelBufferSize).
-func GetSubDirs(maxDepth int, root string, ignoreDirNames, ignorePaths models.StringSet) ([]string, error) {
-	dirChan := make(chan string, constants.DefaultChannelBufferSize)
+// Uses fastwalk for efficient concurrent traversal. The root directory itself is always
+// excluded from results. A path that can't be read doesn't stop the scan: it's returned
+// with the others in problems, for the caller to report when it can.
+func GetSubDirs(maxDepth int, root string, ignoreDirNames, ignorePaths models.StringSet) (dirs []string, problems []error) {
+	var mu sync.Mutex
 	cfg := &fastwalk.Config{MaxDepth: maxDepth}
 	walkFn := func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Walk error %q: %v\n", path, err)
+			mu.Lock()
+			defer mu.Unlock()
+			problems = append(problems, err)
 			return nil
 		}
 		if path == root {
@@ -110,23 +109,14 @@ func GetSubDirs(maxDepth int, root string, ignoreDirNames, ignorePaths models.St
 			if _, ignored := ignorePaths[path]; ignored {
 				return fastwalk.SkipDir
 			}
-			dirChan <- path
+			mu.Lock()
+			defer mu.Unlock()
+			dirs = append(dirs, path)
 		}
 		return nil
 	}
-	dirs := make([]string, 0, constants.DefaultChannelBufferSize)
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		for dir := range dirChan {
-			dirs = append(dirs, dir)
-		}
-	}()
-	err := fastwalk.Walk(cfg, root, walkFn)
-	close(dirChan)
-	<-done
-	if err != nil {
-		return nil, err
+	if err := fastwalk.Walk(cfg, root, walkFn); err != nil {
+		problems = append(problems, err)
 	}
-	return dirs, nil
+	return dirs, problems
 }

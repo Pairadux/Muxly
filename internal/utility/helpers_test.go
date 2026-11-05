@@ -187,9 +187,9 @@ func TestGetSubDirs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dirs, err := GetSubDirs(tt.maxDepth, tempDir, nil, nil)
-			if err != nil {
-				t.Fatalf("GetSubDirs(%d, %q) unexpected error: %v", tt.maxDepth, tempDir, err)
+			dirs, problems := GetSubDirs(tt.maxDepth, tempDir, nil, nil)
+			if len(problems) > 0 {
+				t.Fatalf("GetSubDirs(%d, %q) unexpected problems: %v", tt.maxDepth, tempDir, problems)
 			}
 
 			if len(dirs) < tt.minExpected {
@@ -227,9 +227,9 @@ func TestGetSubDirsExcludesFiles(t *testing.T) {
 	mustWriteFile(t, filepath.Join(tempDir, "file1.txt"))
 	mustWriteFile(t, filepath.Join(tempDir, "file2.go"))
 
-	dirs, err := GetSubDirs(1, tempDir, nil, nil)
-	if err != nil {
-		t.Fatalf("GetSubDirs unexpected error: %v", err)
+	dirs, problems := GetSubDirs(1, tempDir, nil, nil)
+	if len(problems) > 0 {
+		t.Fatalf("GetSubDirs unexpected problems: %v", problems)
 	}
 
 	for _, d := range dirs {
@@ -242,9 +242,9 @@ func TestGetSubDirsExcludesFiles(t *testing.T) {
 func TestGetSubDirsEmptyDir(t *testing.T) {
 	tempDir := t.TempDir()
 
-	dirs, err := GetSubDirs(1, tempDir, nil, nil)
-	if err != nil {
-		t.Fatalf("GetSubDirs unexpected error: %v", err)
+	dirs, problems := GetSubDirs(1, tempDir, nil, nil)
+	if len(problems) > 0 {
+		t.Fatalf("GetSubDirs unexpected problems: %v", problems)
 	}
 
 	if len(dirs) != 0 {
@@ -268,9 +268,9 @@ func TestGetSubDirsIgnoreNames(t *testing.T) {
 		"node_modules": {},
 	}
 
-	dirs, err := GetSubDirs(3, tempDir, ignoreNames, nil)
-	if err != nil {
-		t.Fatalf("GetSubDirs unexpected error: %v", err)
+	dirs, problems := GetSubDirs(3, tempDir, ignoreNames, nil)
+	if len(problems) > 0 {
+		t.Fatalf("GetSubDirs unexpected problems: %v", problems)
 	}
 
 	dirSet := make(map[string]bool)
@@ -324,9 +324,9 @@ func TestGetSubDirsListsDirectoriesNamedLikeTheRoot(t *testing.T) {
 	mustMkdirAll(t, child)
 	mustMkdirAll(t, nested)
 
-	dirs, err := GetSubDirs(2, root, nil, nil)
-	if err != nil {
-		t.Fatalf("GetSubDirs unexpected error: %v", err)
+	dirs, problems := GetSubDirs(2, root, nil, nil)
+	if len(problems) > 0 {
+		t.Fatalf("GetSubDirs unexpected problems: %v", problems)
 	}
 
 	for _, want := range []string{child, nested} {
@@ -348,9 +348,9 @@ func TestGetSubDirsIgnorePaths(t *testing.T) {
 	mustMkdirAll(t, child)
 	mustMkdirAll(t, sameName)
 
-	dirs, err := GetSubDirs(3, root, nil, models.StringSet{old: {}})
-	if err != nil {
-		t.Fatalf("GetSubDirs unexpected error: %v", err)
+	dirs, problems := GetSubDirs(3, root, nil, models.StringSet{old: {}})
+	if len(problems) > 0 {
+		t.Fatalf("GetSubDirs unexpected problems: %v", problems)
 	}
 
 	for _, ignored := range []string{old, child} {
@@ -362,5 +362,13 @@ func TestGetSubDirsIgnorePaths(t *testing.T) {
 		if !slices.Contains(dirs, want) {
 			t.Errorf("GetSubDirs = %q, want it to contain %q", dirs, want)
 		}
+	}
+}
+
+func TestGetSubDirsMissingRootIsAProblem(t *testing.T) {
+	dirs, problems := GetSubDirs(1, filepath.Join(t.TempDir(), "gone"), nil, nil)
+
+	if len(dirs) != 0 || len(problems) != 1 {
+		t.Errorf("GetSubDirs = %q, %v, want no dirs and one problem", dirs, problems)
 	}
 }

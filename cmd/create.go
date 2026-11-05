@@ -40,9 +40,10 @@ var createCmd = &cobra.Command{
 			}
 			dir = selector.Directory{Path: resolved, Label: filepath.Base(resolved)}
 		} else {
-			dirs := selector.Directories(&state.Cfg, 0, state.Verbose)
+			dirs, warnings := selector.Directories(&state.Cfg, 0)
 			entries := selector.Entries(dirs, nil, tmux.Session{}, "")
 			choice, err := fzf.Pick(selector.Labels(entries))
+			printWarnings(warnings)
 			if err != nil {
 				if errors.Is(err, fzf.ErrCancelled) {
 					return nil

@@ -3,6 +3,7 @@
 package cmd
 
 import (
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -298,5 +299,52 @@ func TestTemplatesAndMuxlyFilesStillChooseTheLayout(t *testing.T) {
 		if window := srv.Run("display-message", "-p", "-t", "="+tt.label+":", "#{window_name}"); window != tt.window {
 			t.Errorf("%s has window %q, want %q", tt.label, window, tt.window)
 		}
+	}
+}
+
+// With real fzf on a real terminal: anything printed while it's open would land on top of
+// the picker. Permissions don't stop root, so this can't be tested as root.
+func TestScanWarningsWaitUntilThePickerCloses(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root can read anything")
+	}
+	c := newCLI(t)
+	dirs := c.mkdirs("scan/locked", "scan/readable")
+	if err := os.Chmod(dirs[0], 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chmod(dirs[0], 0o755); err != nil {
+			t.Error(err)
+		}
+	})
+	c.writeConfig("scan_dirs:\n  - path: ~/scan\n    depth: 2\n" + validTemplates)
+	srv := c.withRealTmux()
+	c.withRealFzf()
+	shell := srv.NewSession("shell")
+	srv.Attach(shell)
+
+	typeInPane(srv, shell, c.installMuxly())
+
+	srv.Eventually("the picker to open", func() bool { return strings.Contains(srv.PaneText(shell), "readable") })
+	if text := srv.PaneText(shell); strings.Contains(text, "permission denied") {
+		t.Errorf("a warning was printed over the picker:\n%s", text)
+	}
+	srv.Run("send-keys", "-t", shell, "Escape")
+	srv.Eventually("the warning to appear", func() bool { return strings.Contains(srv.PaneText(shell), "permission denied") })
+}
+
+func TestAMissingScanDirectoryWarnsWithoutVerbose(t *testing.T) {
+	c := newCLI(t).withFakes().setEnv("FAKE_FZF_EXIT=130")
+	c.mkdirs("real")
+	c.writeConfig("scan_dirs:\n  - path: ~/gone\nentry_dirs:\n  - path: ~/real\n" + validTemplates)
+
+	got := c.run()
+
+	if got.code != 0 || !strings.Contains(got.stderr, "gone does not exist") {
+		t.Errorf("exit %d, stderr %q: want a warning about gone", got.code, got.stderr)
+	}
+	if labels := c.pickerLabels(); !slices.Equal(labels, []string{"real"}) {
+		t.Errorf("rows = %q, want the rest still offered", labels)
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/Pairadux/muxly/internal/models"
@@ -60,7 +61,7 @@ func TestDirectoriesConfiguredTwiceAppearOnce(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dirs := Directories(&tt.cfg, 0, false)
+			dirs, _ := Directories(&tt.cfg, 0)
 
 			matches := 0
 			for _, dir := range dirs {
@@ -88,7 +89,7 @@ func TestDirectoriesEntryTemplateBeatsScanTemplate(t *testing.T) {
 		},
 	}
 
-	dirs := Directories(&cfg, 0, false)
+	dirs, _ := Directories(&cfg, 0)
 
 	want := map[string]string{"d/proj": "from-entry", "d/other": "from-scan"}
 	for _, dir := range dirs {
@@ -122,7 +123,11 @@ func TestDirectoriesLoseNothingFromTheFixtures(t *testing.T) {
 		scanDir("deep-nesting/a/b/c"),
 	}}
 
-	got := labelsOf(Directories(&cfg, 0, false))
+	dirs, warnings := Directories(&cfg, 0)
+	if len(warnings) > 0 {
+		t.Errorf("warnings = %q", warnings)
+	}
+	got := labelsOf(dirs)
 
 	want := []string{
 		"...triple", "..double-hidden", ".config", ".settings",
@@ -139,10 +144,12 @@ func TestDirectoriesRespectDepth(t *testing.T) {
 	root := makeDirs(t, "one/two/three")
 	cfg := models.Config{ScanDirs: []models.ScanDir{{Path: root, Depth: new(2)}}}
 
-	if got, want := labelsOf(Directories(&cfg, 0, false)), []string{"one", "two"}; !slices.Equal(got, want) {
+	dirs, _ := Directories(&cfg, 0)
+	if got, want := labelsOf(dirs), []string{"one", "two"}; !slices.Equal(got, want) {
 		t.Errorf("configured depth: labels = %q, want %q", got, want)
 	}
-	if got, want := labelsOf(Directories(&cfg, 3, false)), []string{"one", "three", "two"}; !slices.Equal(got, want) {
+	dirs, _ = Directories(&cfg, 3)
+	if got, want := labelsOf(dirs), []string{"one", "three", "two"}; !slices.Equal(got, want) {
 		t.Errorf("flag depth: labels = %q, want %q", got, want)
 	}
 }
@@ -154,7 +161,8 @@ func TestDirectoriesIgnore(t *testing.T) {
 		IgnoreDirs: []string{"target", filepath.Join(root, "dev/old")},
 	}
 
-	if got, want := labelsOf(Directories(&cfg, 0, false)), []string{"keep"}; !slices.Equal(got, want) {
+	dirs, _ := Directories(&cfg, 0)
+	if got, want := labelsOf(dirs), []string{"keep"}; !slices.Equal(got, want) {
 		t.Errorf("labels = %q, want %q", got, want)
 	}
 }
@@ -166,7 +174,57 @@ func TestDirectoriesIgnoringAScanRootHidesAllOfIt(t *testing.T) {
 		IgnoreDirs: []string{filepath.Join(root, "dev")},
 	}
 
-	if got := Directories(&cfg, 0, false); len(got) != 0 {
+	if got, _ := Directories(&cfg, 0); len(got) != 0 {
 		t.Errorf("dirs = %+v, want none", got)
+	}
+}
+
+func TestDirectoriesWarnAboutWhatTheyCantUse(t *testing.T) {
+	root := makeDirs(t, "real")
+	file := filepath.Join(root, "file")
+	if err := os.WriteFile(file, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name string
+		cfg  models.Config
+		want string
+	}{
+		{
+			name: "a missing scan directory",
+			cfg:  models.Config{ScanDirs: []models.ScanDir{{Path: filepath.Join(root, "gone")}}},
+			want: "does not exist",
+		},
+		{
+			name: "a scan directory that's a file",
+			cfg:  models.Config{ScanDirs: []models.ScanDir{{Path: file}}},
+			want: "is not a directory",
+		},
+		{
+			name: "a relative scan directory",
+			cfg:  models.Config{ScanDirs: []models.ScanDir{{Path: "./rel"}}},
+			want: "scan_dirs",
+		},
+		{
+			name: "a relative entry directory",
+			cfg:  models.Config{EntryDirs: []models.EntryDir{{Path: "./rel"}}},
+			want: "entry_dirs",
+		},
+		{
+			name: "a relative ignored path",
+			cfg:  models.Config{IgnoreDirs: []string{"./rel"}},
+			want: "ignore_dirs",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, warnings := Directories(&tt.cfg, 0)
+
+			if len(warnings) != 1 || !strings.Contains(warnings[0], tt.want) {
+				t.Errorf("warnings = %q, want one mentioning %q", warnings, tt.want)
+			}
+		})
 	}
 }
