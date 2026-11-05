@@ -139,7 +139,7 @@ func TestAwkwardNamesOpenOneSessionAndFindItAgain(t *testing.T) {
 		{name: "x.y/src", stored: "x_y/src"},
 		{name: ".conf/app", stored: "_conf/app"},
 		{name: "foo.bar", stored: "foo_bar"},
-		{name: "a:b", stored: "a_b"},
+		{name: "a:b", stored: "a-b"},
 		{name: "$dollar", stored: "$dollar"},
 		{name: "%pct", stored: "%pct"},
 		{name: "=eq", stored: "=eq"},

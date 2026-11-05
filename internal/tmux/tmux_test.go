@@ -184,7 +184,7 @@ func TestNewSessionName(t *testing.T) {
 	tests := map[string]string{
 		"plain":     "plain",
 		"foo.bar":   "foo_bar",
-		"a:b":       "a_b",
+		"a:b":       "a-b",
 		".conf/app": "_conf/app",
 		"x.y/src":   "x_y/src",
 		"$dollar":   "$dollar",
