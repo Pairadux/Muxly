@@ -151,3 +151,32 @@ func TestConfigListNeedsAConfig(t *testing.T) {
 		t.Errorf("exit %d, stderr %q", got.code, got.stderr)
 	}
 }
+
+func TestNewConfigsHaveNoTmuxBase(t *testing.T) {
+	c := newCLI(t)
+
+	if got := c.run("config", "init"); got.code != 0 {
+		t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
+	}
+
+	if config := c.readConfig(); strings.Contains(config, "tmux_base") {
+		t.Errorf("the new config still mentions tmux_base:\n%s", config)
+	}
+}
+
+// Removing the setting mustn't lock anyone out, and it no longer changes anything.
+func TestOldConfigsWithTmuxBaseStillWork(t *testing.T) {
+	c := newCLI(t).writeConfig(validConfig + "  tmux_base: 7\n").setEnv("FAKE_PICK=other")
+	srv := c.withRealTmux()
+	shell := srv.NewSession("shell")
+	srv.NewSession("other")
+	srv.Attach(shell)
+	c.insideTmux(srv, shell)
+
+	got := c.run("switch")
+
+	if got.code != 0 {
+		t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
+	}
+	srv.Eventually("the client to reach other", func() bool { return srv.ClientSession() == "other" })
+}

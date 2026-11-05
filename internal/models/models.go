@@ -95,7 +95,6 @@ type DirEntry struct {
 // Settings groups general configuration options
 type Settings struct {
 	Editor                  string `mapstructure:"editor" yaml:"editor"`
-	TmuxBase                int    `mapstructure:"tmux_base" yaml:"tmux_base"`
 	DefaultDepth            int    `mapstructure:"default_depth" yaml:"default_depth"`
 	TmuxSessionPrefix       string `mapstructure:"tmux_session_prefix" yaml:"tmux_session_prefix"`
 	AlwaysKillOnLastSession bool   `mapstructure:"always_kill_on_last_session" yaml:"always_kill_on_last_session"`

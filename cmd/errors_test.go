@@ -3,8 +3,11 @@
 package cmd
 
 import (
+	"slices"
 	"strings"
 	"testing"
+
+	"github.com/Pairadux/muxly/internal/tmuxtest"
 )
 
 func TestRuntimeErrorsDoNotPrintUsage(t *testing.T) {
@@ -22,7 +25,7 @@ func TestRuntimeErrorsDoNotPrintUsage(t *testing.T) {
 		},
 		{
 			name:  "kill outside tmux",
-			setup: func(c *cli) { c.withFakes().writeConfig(validConfig).setEnv("FAKE_SESSIONS=a") },
+			setup: func(c *cli) { c.withFakes().writeConfig(validConfig) },
 			args:  []string{"kill"},
 			want:  "not inside a tmux session",
 		},
@@ -91,8 +94,11 @@ func TestClosingPickerIsSilent(t *testing.T) {
 	for _, command := range commands {
 		for _, exit := range []string{"1", "130"} {
 			t.Run(command.name+" exit "+exit, func(t *testing.T) {
-				c := newCLI(t).withFakes().writeConfig(validConfig).
-					insideTmux("current", "current", "other").setEnv("FAKE_FZF_EXIT=" + exit)
+				c := newCLI(t).writeConfig(validConfig)
+				srv := c.withRealTmux()
+				current := srv.NewSession("current")
+				srv.NewSession("other")
+				c.insideTmux(srv, current).setEnv("FAKE_FZF_EXIT=" + exit)
 
 				got := c.run(command.args...)
 
@@ -102,8 +108,8 @@ func TestClosingPickerIsSilent(t *testing.T) {
 				if c.log("fzf") == nil {
 					t.Error("the picker never opened")
 				}
-				if c.tmuxCalled("kill-session") || c.tmuxCalled("switch-client") || c.tmuxCalled("new-session") {
-					t.Errorf("unexpected tmux calls: %q", c.log("tmux"))
+				if sessions := srv.Sessions(); !slices.Equal(sessions, []string{"current", "other"}) {
+					t.Errorf("sessions changed: %q", sessions)
 				}
 			})
 		}
@@ -111,12 +117,54 @@ func TestClosingPickerIsSilent(t *testing.T) {
 }
 
 func TestPickerFailureIsReported(t *testing.T) {
-	c := newCLI(t).withFakes().writeConfig(validConfig).
-		insideTmux("current", "current", "other").setEnv("FAKE_FZF_EXIT=2")
+	c := newCLI(t).writeConfig(validConfig)
+	srv := c.withRealTmux()
+	current := srv.NewSession("current")
+	srv.NewSession("other")
+	c.insideTmux(srv, current).setEnv("FAKE_FZF_EXIT=2")
 
 	got := c.run("switch")
 
 	if got.code == 0 || !strings.Contains(got.stderr, "fzf") {
 		t.Errorf("exit %d, stderr %q: want an fzf error", got.code, got.stderr)
+	}
+}
+
+// A failed tmux command must explain itself, not print "exit status 1". Each command here
+// reaches tmux at a different point on its way to the failure.
+func TestFailedTmuxCommandsShowTmuxsMessage(t *testing.T) {
+	tests := []struct {
+		name   string
+		failOn string
+		args   []string
+	}{
+		{name: "creating", failOn: "new-session", args: []string{"fresh"}},
+		{name: "switching", failOn: "switch-client", args: []string{"switch", "other"}},
+		{name: "killing a session", failOn: "kill-session", args: []string{"kill", "other"}},
+		{name: "killing the server", failOn: "kill-server", args: []string{"kill", "-k"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := newCLI(t).writeConfig(validConfig)
+			srv := c.withRealTmux()
+			current := srv.NewSession("current")
+			srv.NewSession("other")
+			srv.Attach(current)
+			c.insideTmux(srv, current)
+			srv.FailOn(tt.failOn)
+
+			got := c.run(tt.args...)
+
+			if got.code == 0 || !strings.Contains(got.stderr, tmuxtest.InjectedFailure) {
+				t.Errorf("exit %d, stderr %q: want tmux's message", got.code, got.stderr)
+			}
+			if strings.Contains(got.stderr, "exit status") {
+				t.Errorf("stderr %q still has the exit status", got.stderr)
+			}
+			if strings.Contains(got.stderr, "Usage:") {
+				t.Errorf("usage was printed:\n%s", got.stderr)
+			}
+		})
 	}
 }

@@ -50,7 +50,6 @@ templates:
 
 settings:
   editor: vi
-  tmux_base: 1
   default_depth: 1
   tmux_session_prefix: "[TMUX] "
   always_kill_on_last_session: false

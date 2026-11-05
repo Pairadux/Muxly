@@ -7,6 +7,7 @@ import (
 
 	"github.com/Pairadux/muxly/internal/forms"
 	"github.com/Pairadux/muxly/internal/fzf"
+	"github.com/Pairadux/muxly/internal/models"
 	"github.com/Pairadux/muxly/internal/selector"
 	"github.com/Pairadux/muxly/internal/state"
 	"github.com/Pairadux/muxly/internal/tmux"
@@ -66,13 +67,12 @@ var createCmd = &cobra.Command{
 
 		sessionName := filepath.Base(sessionPath)
 
-		if err := tmux.CreateSessionFromTemplate(&state.Cfg, tmpl, sessionPath, sessionName); err != nil {
-			if errors.Is(err, tmux.ErrGracefulExit) {
-				return nil
-			}
-			return err
+		sess := models.Session{
+			Name:   sessionName,
+			Path:   sessionPath,
+			Layout: models.SessionLayout{Windows: tmpl.Windows},
 		}
-		return nil
+		return tmux.CreateAndSwitchSession(sess)
 	},
 }
 
