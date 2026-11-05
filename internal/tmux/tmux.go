@@ -18,7 +18,7 @@ import (
 	"github.com/Pairadux/muxly/internal/config"
 	"github.com/Pairadux/muxly/internal/constants"
 	"github.com/Pairadux/muxly/internal/models"
-	"github.com/mitchellh/go-homedir"
+	"github.com/Pairadux/muxly/internal/utility"
 )
 
 // ErrGracefulExit signals that the program should exit successfully (exit code 0).
@@ -303,13 +303,14 @@ func ReplaceLastSession(cfg *models.Config, current Session) error {
 		return errors.New("no default template configured")
 	}
 
-	sessionPath := tmpl.Path
-	if sessionPath == "" {
-		var err error
-		sessionPath, err = homedir.Dir()
-		if err != nil {
-			return fmt.Errorf("failed to get homedir: %w", err)
-		}
+	// tmux doesn't expand "~" itself, and would open the session in the home directory.
+	templatePath := tmpl.Path
+	if templatePath == "" {
+		templatePath = "~"
+	}
+	sessionPath, err := utility.ResolvePath(templatePath)
+	if err != nil {
+		return fmt.Errorf("resolving the path of template %q: %w", tmpl.Name, err)
 	}
 
 	session := models.Session{

@@ -9,6 +9,7 @@ import (
 
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/Pairadux/muxly/internal/tmuxtest"
+	"github.com/mitchellh/go-homedir"
 )
 
 // privateServer points this test's tmux commands at a private server, with nothing else
@@ -23,6 +24,8 @@ func privateServer(t *testing.T) *tmuxtest.Server {
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("SHELL", "/bin/sh")
 	t.Setenv("LANG", "C.UTF-8")
+	// go-homedir remembers the first home directory it finds, and HOME just changed.
+	homedir.Reset()
 	return srv
 }
 

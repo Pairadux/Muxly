@@ -4,6 +4,8 @@ package tmux
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -302,5 +304,63 @@ func TestFailedCommandsCarryTmuxsOwnMessage(t *testing.T) {
 	var cmdErr *commandError
 	if !errors.As(err, &cmdErr) {
 		t.Errorf("err is a %T", err)
+	}
+}
+
+func TestDefaultTemplatePathIsExpanded(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+		want string
+	}{
+		{name: "tilde path", path: "~/x", want: "x"},
+		{name: "tilde", path: "~", want: ""},
+		{name: "no path opens in home", path: "", want: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			srv := privateServer(t)
+			want := filepath.Join(os.Getenv("HOME"), tt.want)
+			if err := os.MkdirAll(want, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			old := srv.NewSession("current")
+			srv.Attach(old)
+			runInside(t, srv, old)
+
+			if err := ReplaceLastSession(replaceConfig(tt.path), Session{ID: old, Name: "current"}); err != nil {
+				t.Fatal(err)
+			}
+
+			sessions, err := ListSessions()
+			if err != nil {
+				t.Fatal(err)
+			}
+			created, found := FindSession(sessions, "default")
+			if !found || created.Path != want {
+				t.Errorf("session = %+v, want its path to be %q", created, want)
+			}
+		})
+	}
+}
+
+// A path that can't be resolved must fail before anything has changed.
+func TestUnresolvableTemplatePathKillsNothing(t *testing.T) {
+	srv := privateServer(t)
+	old := srv.NewSession("default")
+	srv.Attach(old)
+	runInside(t, srv, old)
+
+	err := ReplaceLastSession(replaceConfig("./relative"), Session{ID: old, Name: "default"})
+
+	if err == nil || !strings.Contains(err.Error(), "relative") {
+		t.Errorf("err = %v, want it to name the path", err)
+	}
+	if got := srv.Sessions(); !slices.Equal(got, []string{"default"}) {
+		t.Errorf("sessions = %q", got)
+	}
+	if got := srv.Calls(); got != nil {
+		t.Errorf("tmux was called: %q", got)
 	}
 }
