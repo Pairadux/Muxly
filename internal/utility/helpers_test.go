@@ -3,10 +3,12 @@ package utility
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/Pairadux/muxly/internal/models"
+	"github.com/mitchellh/go-homedir"
 )
 
 func TestResolvePath(t *testing.T) {
@@ -26,6 +28,21 @@ func TestResolvePath(t *testing.T) {
 			name:     "absolute path returned as-is",
 			input:    "/usr/local/bin",
 			expected: "/usr/local/bin",
+		},
+		{
+			name:     "trailing slash removed",
+			input:    "/usr/local/bin/",
+			expected: "/usr/local/bin",
+		},
+		{
+			name:     "dot segments removed",
+			input:    "/usr/./local/../local/bin",
+			expected: "/usr/local/bin",
+		},
+		{
+			name:     "home tilde with a trailing slash",
+			input:    "~/Dev/",
+			expected: filepath.Join(home, "Dev"),
 		},
 		{
 			name:     "home tilde expands",
@@ -171,9 +188,9 @@ func TestGetSubDirs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dirs, err := GetSubDirs(tt.maxDepth, tempDir, nil)
-			if err != nil {
-				t.Fatalf("GetSubDirs(%d, %q) unexpected error: %v", tt.maxDepth, tempDir, err)
+			dirs, problems := GetSubDirs(tt.maxDepth, tempDir, nil, nil)
+			if len(problems) > 0 {
+				t.Fatalf("GetSubDirs(%d, %q) unexpected problems: %v", tt.maxDepth, tempDir, problems)
 			}
 
 			if len(dirs) < tt.minExpected {
@@ -211,9 +228,9 @@ func TestGetSubDirsExcludesFiles(t *testing.T) {
 	mustWriteFile(t, filepath.Join(tempDir, "file1.txt"))
 	mustWriteFile(t, filepath.Join(tempDir, "file2.go"))
 
-	dirs, err := GetSubDirs(1, tempDir, nil)
-	if err != nil {
-		t.Fatalf("GetSubDirs unexpected error: %v", err)
+	dirs, problems := GetSubDirs(1, tempDir, nil, nil)
+	if len(problems) > 0 {
+		t.Fatalf("GetSubDirs unexpected problems: %v", problems)
 	}
 
 	for _, d := range dirs {
@@ -226,9 +243,9 @@ func TestGetSubDirsExcludesFiles(t *testing.T) {
 func TestGetSubDirsEmptyDir(t *testing.T) {
 	tempDir := t.TempDir()
 
-	dirs, err := GetSubDirs(1, tempDir, nil)
-	if err != nil {
-		t.Fatalf("GetSubDirs unexpected error: %v", err)
+	dirs, problems := GetSubDirs(1, tempDir, nil, nil)
+	if len(problems) > 0 {
+		t.Fatalf("GetSubDirs unexpected problems: %v", problems)
 	}
 
 	if len(dirs) != 0 {
@@ -252,9 +269,9 @@ func TestGetSubDirsIgnoreNames(t *testing.T) {
 		"node_modules": {},
 	}
 
-	dirs, err := GetSubDirs(3, tempDir, ignoreNames)
-	if err != nil {
-		t.Fatalf("GetSubDirs unexpected error: %v", err)
+	dirs, problems := GetSubDirs(3, tempDir, ignoreNames, nil)
+	if len(problems) > 0 {
+		t.Fatalf("GetSubDirs unexpected problems: %v", problems)
 	}
 
 	dirSet := make(map[string]bool)
@@ -297,5 +314,171 @@ func mustWriteFile(t *testing.T, path string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte("test"), 0o644); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// Only the root itself is left out, not everything that shares its name.
+func TestGetSubDirsListsDirectoriesNamedLikeTheRoot(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "scan")
+	child := filepath.Join(root, "scan")
+	nested := filepath.Join(root, "nested", "scan")
+	mustMkdirAll(t, child)
+	mustMkdirAll(t, nested)
+
+	dirs, problems := GetSubDirs(2, root, nil, nil)
+	if len(problems) > 0 {
+		t.Fatalf("GetSubDirs unexpected problems: %v", problems)
+	}
+
+	for _, want := range []string{child, nested} {
+		if !slices.Contains(dirs, want) {
+			t.Errorf("GetSubDirs = %q, want it to contain %q", dirs, want)
+		}
+	}
+	if slices.Contains(dirs, root) {
+		t.Errorf("GetSubDirs = %q, want it to leave out the root", dirs)
+	}
+}
+
+func TestGetSubDirsIgnorePaths(t *testing.T) {
+	root := t.TempDir()
+	old := filepath.Join(root, "old")
+	child := filepath.Join(old, "child")
+	keep := filepath.Join(root, "keep")
+	sameName := filepath.Join(keep, "old")
+	mustMkdirAll(t, child)
+	mustMkdirAll(t, sameName)
+
+	dirs, problems := GetSubDirs(3, root, nil, models.StringSet{old: {}})
+	if len(problems) > 0 {
+		t.Fatalf("GetSubDirs unexpected problems: %v", problems)
+	}
+
+	for _, ignored := range []string{old, child} {
+		if slices.Contains(dirs, ignored) {
+			t.Errorf("GetSubDirs = %q, want it to leave out %q", dirs, ignored)
+		}
+	}
+	for _, want := range []string{keep, sameName} {
+		if !slices.Contains(dirs, want) {
+			t.Errorf("GetSubDirs = %q, want it to contain %q", dirs, want)
+		}
+	}
+}
+
+func TestGetSubDirsMissingRootIsAProblem(t *testing.T) {
+	dirs, problems := GetSubDirs(1, filepath.Join(t.TempDir(), "gone"), nil, nil)
+
+	if len(dirs) != 0 || len(problems) != 1 {
+		t.Errorf("GetSubDirs = %q, %v, want no dirs and one problem", dirs, problems)
+	}
+}
+
+func TestIsExplicitPath(t *testing.T) {
+	tests := map[string]bool{
+		".":        true,
+		"..":       true,
+		"~":        true,
+		"/abs":     true,
+		"./rel":    true,
+		"../rel":   true,
+		"~/rel":    true,
+		"name":     false,
+		"dev/src":  false,
+		".config":  false,
+		"..hidden": false,
+		"~tilde":   false,
+		"$dollar":  false,
+		"name/":    false,
+		"":         false,
+	}
+
+	for arg, want := range tests {
+		if got := IsExplicitPath(arg); got != want {
+			t.Errorf("IsExplicitPath(%q) = %v, want %v", arg, got, want)
+		}
+	}
+}
+
+func TestResolveArgumentPath(t *testing.T) {
+	cwd := t.TempDir()
+	t.Chdir(cwd)
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	homedir.Reset()
+	t.Cleanup(homedir.Reset)
+	t.Setenv("MUXLY_TEST_VAR", "expanded")
+
+	tests := map[string]string{
+		".":                  cwd,
+		"./sub":              filepath.Join(cwd, "sub"),
+		"sub/dir":            filepath.Join(cwd, "sub/dir"),
+		"sub/":               filepath.Join(cwd, "sub"),
+		"..":                 filepath.Dir(cwd),
+		"../sibling":         filepath.Join(filepath.Dir(cwd), "sibling"),
+		"/abs/./path/":       "/abs/path",
+		"~":                  home,
+		"~/x/":               filepath.Join(home, "x"),
+		"/a/$MUXLY_TEST_VAR": "/a/$MUXLY_TEST_VAR",
+	}
+
+	for arg, want := range tests {
+		got, err := ResolveArgumentPath(arg)
+		if err != nil {
+			t.Errorf("ResolveArgumentPath(%q): %v", arg, err)
+		} else if got != want {
+			t.Errorf("ResolveArgumentPath(%q) = %q, want %q", arg, got, want)
+		}
+	}
+}
+
+func TestRequireDirectory(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "file")
+	mustWriteFile(t, file)
+
+	tests := []struct {
+		name string
+		path string
+		want string
+	}{
+		{name: "a directory", path: dir},
+		{name: "missing", path: filepath.Join(dir, "gone"), want: "does not exist"},
+		{name: "a file", path: file, want: "is not a directory"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := RequireDirectory(tt.path)
+			if tt.want == "" {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Errorf("error = %v, want one mentioning %q", err, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsWithin(t *testing.T) {
+	paths := models.StringSet{"/a/b": {}}
+
+	tests := map[string]bool{
+		"/a/b":     true,
+		"/a/b/c":   true,
+		"/a/b/c/d": true,
+		"/a":       false,
+		"/a/bc":    false,
+		"/x/a/b":   false,
+		"/":        false,
+	}
+
+	for path, want := range tests {
+		if got := IsWithin(path, paths); got != want {
+			t.Errorf("IsWithin(%q) = %v, want %v", path, got, want)
+		}
 	}
 }

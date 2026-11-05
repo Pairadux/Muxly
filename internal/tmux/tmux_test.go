@@ -123,6 +123,8 @@ func TestParseSessions(t *testing.T) {
 		},
 		{name: "characters tmux would read as syntax", output: "$1\t$2\t/a", want: []Session{{"$1", "$2", "/a"}}},
 		{name: "a session with no path", output: "$1\tfoo\t", want: []Session{{"$1", "foo", ""}}},
+		{name: "a trailing slash is cleaned", output: "$1\tfoo\t/a/b/", want: []Session{{"$1", "foo", "/a/b"}}},
+		{name: "dot segments are cleaned", output: "$1\tfoo\t/a/../b/./c", want: []Session{{"$1", "foo", "/b/c"}}},
 		{name: "a tab in the path", output: "$1\tfoo\t/a\tb", want: []Session{{"$1", "foo", "/a\tb"}}},
 		{
 			name:   "a newline in the path skips the leftover line",
@@ -180,21 +182,124 @@ func TestWithoutLeavesTheOriginalAlone(t *testing.T) {
 	}
 }
 
-func TestNewSessionName(t *testing.T) {
-	tests := map[string]string{
-		"plain":     "plain",
-		"foo.bar":   "foo_bar",
-		"a:b":       "a-b",
-		".conf/app": "_conf/app",
-		"x.y/src":   "x_y/src",
-		"$dollar":   "_dollar",
-		"a\\b":      "a_b",
-		"=eq":       "=eq",
+func TestFindSessionAt(t *testing.T) {
+	sessions := []Session{
+		{ID: "$10", Name: "newest", Path: "/shared"},
+		{ID: "$9", Name: "older", Path: "/shared"},
+		{ID: "$12", Name: "newer", Path: "/shared"},
+		{ID: "$3", Name: "alone", Path: "/alone"},
+		{ID: "$4", Name: "nowhere", Path: ""},
 	}
 
-	for name, want := range tests {
-		if got := newSessionName(name); got != want {
-			t.Errorf("newSessionName(%q) = %q, want %q", name, got, want)
+	tests := []struct {
+		name      string
+		path      string
+		want      string
+		wantFound bool
+	}{
+		{name: "the only session there", path: "/alone", want: "alone", wantFound: true},
+		{name: "the oldest of several, comparing ids as numbers", path: "/shared", want: "older", wantFound: true},
+		{name: "nothing there", path: "/other"},
+		{name: "a parent isn't a match", path: "/"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, found := FindSessionAt(sessions, tt.path)
+			if found != tt.wantFound || got.Name != tt.want {
+				t.Errorf("FindSessionAt(%q) = %+v, %v, want %q, %v", tt.path, got, found, tt.want, tt.wantFound)
+			}
+		})
+	}
+}
+
+func TestFreeSessionName(t *testing.T) {
+	named := func(names ...string) []Session {
+		sessions := make([]Session, len(names))
+		for i, name := range names {
+			sessions[i] = Session{Name: name}
+		}
+		return sessions
+	}
+
+	tests := []struct {
+		name     string
+		sessions []Session
+		label    string
+		path     string
+		want     string
+	}{
+		{name: "free", label: "foo", path: "/dev/foo", want: "foo"},
+		{name: "made safe", label: ".My Project", path: "/dev/.My Project", want: "my-project"},
+		{name: "taken adds the parent", sessions: named("foo"), label: "foo", path: "/dev/foo", want: "dev-foo"},
+		{name: "the parent is made safe", sessions: named("foo"), label: "foo", path: "/My.Dev/foo", want: "my_dev-foo"},
+		{name: "a longer label adds another parent", sessions: named("dev-src"), label: "Dev/src", path: "/a/Dev/src", want: "dev-dev-src"},
+		{name: "that taken too adds a number", sessions: named("foo", "dev-foo"), label: "foo", path: "/dev/foo", want: "foo-2"},
+		{name: "numbers go up", sessions: named("foo", "dev-foo", "foo-2", "foo-3"), label: "foo", path: "/dev/foo", want: "foo-4"},
+		{name: "no parent to add", sessions: named("foo"), label: "foo", path: "/foo", want: "foo-2"},
+		{name: "only the exact name counts as taken", sessions: named("foobar"), label: "foo", path: "/dev/foo", want: "foo"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := FreeSessionName(tt.sessions, tt.label, tt.path); got != tt.want {
+				t.Errorf("FreeSessionName() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSessionName(t *testing.T) {
+	tests := map[string]string{
+		"plain":         "plain",
+		"MyProject":     "myproject",
+		"CAFÉ":          "café",
+		"日本語":           "日本語",
+		"foo.bar":       "foo_bar",
+		"a:b":           "a-b",
+		"my project":    "my-project",
+		"a  b":          "a-b",
+		"a--b":          "a-b",
+		"a__b":          "a_b",
+		"a..b":          "a_b",
+		"100%":          "100",
+		"a\\b":          "a-b",
+		"it's":          "it-s",
+		"[brk]":         "brk",
+		".config":       "config",
+		"..hidden":      "hidden",
+		"$dollar":       "dollar",
+		"%pct":          "pct",
+		"=eq":           "eq",
+		"@at":           "at",
+		"-dash":         "dash",
+		"_under":        "under",
+		"~tilde":        "tilde",
+		"🚀rocket":       "rocket",
+		"é-🎉":           "é",
+		"#(touch x)":    "touch-x",
+		"#{session_id}": "session_id",
+		"a#{b}c":        "a-b-c",
+		"new\nline":     "new-line",
+		"Dev/src":       "dev-src",
+		"proj/unique":   "proj-unique",
+		"x.y/src":       "x_y-src",
+		".conf/app":     "conf-app",
+		"Dev/.config":   "dev-config",
+		"/abs/path/":    "abs-path",
+		"":              "session",
+		"...":           "session",
+		"🚀":             "session",
+		"/":             "session",
+	}
+
+	for label, want := range tests {
+		got := SessionName(label)
+		if got != want {
+			t.Errorf("SessionName(%q) = %q, want %q", label, got, want)
+		}
+		if again := SessionName(got); again != got {
+			t.Errorf("SessionName(%q) = %q changes its own result to %q", label, got, again)
 		}
 	}
 }
@@ -218,5 +323,30 @@ func TestNoServer(t *testing.T) {
 				t.Errorf("noServer() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestEscapeFormat(t *testing.T) {
+	tests := map[string]string{
+		"plain":        "plain",
+		"a#b":          "a##b",
+		"a#":           "a##",
+		"#":            "##",
+		"a##b":         "a####b",
+		"a#S":          "a##S",
+		"a#{x}b":       "a##{x}b",
+		"a#(x)b":       "a##(x)b",
+		"a#[b":         "a#[b",
+		"a##[b":        "a##[b",
+		"a###[b":       "a###[b",
+		"a#[#b":        "a#[##b",
+		"a#b#[c":       "a##b#[c",
+		"#{a}#[b]#(c)": "##{a}#[b]##(c)",
+	}
+
+	for input, want := range tests {
+		if got := escapeFormat(input); got != want {
+			t.Errorf("escapeFormat(%q) = %q, want %q", input, got, want)
+		}
 	}
 }

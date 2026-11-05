@@ -2,11 +2,11 @@ package config
 
 import (
 	"fmt"
-	"os"
 	"slices"
 
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/Pairadux/muxly/internal/state"
+	"github.com/Pairadux/muxly/internal/utility"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -38,11 +38,8 @@ Examples:
 			return err
 		}
 
-		// Verify the path actually exists on the filesystem
-		if _, err := os.Stat(resolvedPath); os.IsNotExist(err) {
-			return fmt.Errorf("path does not exist: %s", resolvedPath)
-		} else if err != nil {
-			return fmt.Errorf("failed to access path %q: %w", resolvedPath, err)
+		if err := utility.RequireDirectory(resolvedPath); err != nil {
+			return err
 		}
 
 		// Check if this path would already be discovered by a scan_dir

@@ -136,24 +136,28 @@ func TestAwkwardNamesOpenOneSessionAndFindItAgain(t *testing.T) {
 		name   string
 		stored string
 	}{
-		{name: "x.y/src", stored: "x_y/src"},
-		{name: ".conf/app", stored: "_conf/app"},
+		{name: "x.y/src", stored: "x_y-src"},
+		{name: ".conf/app", stored: "conf-app"},
 		{name: "foo.bar", stored: "foo_bar"},
 		{name: "a:b", stored: "a-b"},
-		{name: "$dollar", stored: "_dollar"},
-		{name: `back\slash`, stored: "back_slash"},
-		{name: "%pct", stored: "%pct"},
-		{name: "=eq", stored: "=eq"},
-		{name: "@at", stored: "@at"},
-		{name: "é-🎉", stored: "é-🎉"},
-		{name: "sp ace", stored: "sp ace"},
-		{name: `"quote`, stored: `"quote`},
-		{name: "'apos", stored: "'apos"},
-		{name: "~tilde", stored: "~tilde"},
-		{name: "*star", stored: "*star"},
-		{name: "[br]", stored: "[br]"},
-		{name: "!bang", stored: "!bang"},
-		{name: "{brace}", stored: "{brace}"},
+		{name: "$dollar", stored: "dollar"},
+		{name: `back\slash`, stored: "back-slash"},
+		{name: "%pct", stored: "pct"},
+		{name: "=eq", stored: "eq"},
+		{name: "@at", stored: "at"},
+		{name: "é-🎉", stored: "é"},
+		{name: "日本語", stored: "日本語"},
+		{name: "sp ace", stored: "sp-ace"},
+		{name: `"quote`, stored: "quote"},
+		{name: "'apos", stored: "apos"},
+		{name: "~tilde", stored: "tilde"},
+		{name: "*star", stored: "star"},
+		{name: "[br]", stored: "br"},
+		{name: "!bang", stored: "bang"},
+		{name: "{brace}", stored: "brace"},
+		{name: "#(true)", stored: "true"},
+		{name: "#{session_id}", stored: "session_id"},
+		{name: "🚀", stored: "session"},
 	}
 
 	for _, tt := range tests {
@@ -373,5 +377,41 @@ func TestUnresolvableTemplatePathKillsNothing(t *testing.T) {
 	}
 	if got := srv.Calls(); got != nil {
 		t.Errorf("tmux was called: %q", got)
+	}
+}
+
+// tmux expands formats in -c, so these would open somewhere else if passed as they are:
+// "a#S" would mean "a" followed by the session's name. The last ones are why escaping
+// isn't just doubling every #, since tmux leaves a run of # before "[" unchanged.
+func TestDirectoryNamesReachTmuxUnchanged(t *testing.T) {
+	names := []string{
+		"a#b", "a#", "#", "a##b", "a#S", "a#H", "a#{session_id}b", "a#(true)b", "a#,b", "a#}b",
+		"a#[b", "a##[b", "a###[b", "a#[#b",
+	}
+
+	for _, name := range names {
+		t.Run(name, func(t *testing.T) {
+			srv := privateServer(t)
+			dir := filepath.Join(t.TempDir(), name)
+			if err := os.Mkdir(dir, 0o755); err != nil {
+				t.Fatal(err)
+			}
+
+			created, err := createSession(sessionNamed("proj", dir, "first", "second"))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if created.Path != dir {
+				t.Errorf("session path = %q, want %q", created.Path, dir)
+			}
+			want, err := filepath.EvalSymlinks(dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			srv.Eventually("every window's shell to start in the directory", func() bool {
+				return srv.Run("list-windows", "-t", created.ID, "-F", "#{pane_current_path}") == want+"\n"+want
+			})
+		})
 	}
 }

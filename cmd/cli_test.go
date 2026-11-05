@@ -54,11 +54,12 @@ printf '%s\n' "$*" >> "$FAKE_LOG_DIR/tmux"
 exit 0
 `
 
-// fakeFzfScript logs each call, prints FAKE_PICK and exits with FAKE_FZF_EXIT.
+// fakeFzfScript logs what it's given, returns the row labelled FAKE_PICK as real fzf would,
+// and exits with FAKE_FZF_EXIT. A pick that matches no row prints nothing, which fails.
 const fakeFzfScript = `#!/bin/sh
 PATH=/usr/bin:/bin
 cat > "$FAKE_LOG_DIR/fzf"
-[ -z "$FAKE_PICK" ] || printf '%s\n' "$FAKE_PICK"
+[ -z "$FAKE_PICK" ] || awk -F '\t' '$2 == ENVIRON["FAKE_PICK"]' "$FAKE_LOG_DIR/fzf"
 exit "${FAKE_FZF_EXIT:-0}"
 `
 
@@ -215,6 +216,21 @@ func (c *cli) log(fake string) []string {
 		c.t.Fatal(err)
 	}
 	return strings.Split(strings.TrimSpace(string(data)), "\n")
+}
+
+// pickerLabels returns the labels of the rows the picker was given, in order, or nil if it
+// never opened.
+func (c *cli) pickerLabels() []string {
+	c.t.Helper()
+	var labels []string
+	for _, row := range c.log("fzf") {
+		_, label, found := strings.Cut(row, "\t")
+		if !found {
+			c.t.Fatalf("the picker was given a row with no key: %q", row)
+		}
+		labels = append(labels, label)
+	}
+	return labels
 }
 
 // tmuxCalled reports whether a tmux call starting with the given subcommand was made.

@@ -37,6 +37,8 @@ Muxly is a highly configurable Tmux Session Manager based on ThePrimeagen's tmux
 ### Available Commands
 
 - `muxly` - Interactive session selector with fzf
+- `muxly <path>` - Open a directory, such as `muxly .` or `muxly ~/Dev/project`
+- `muxly <name>` - Open a running session or configured directory by name
 - `muxly create` - Interactive TUI for creating new sessions
 - `muxly switch` - Switch between active tmux sessions
 - `muxly kill` - Kill current session and switch to another
@@ -161,15 +163,23 @@ After adding the completion script, restart your shell or source your config fil
 
 ## Directory Naming Notes
 
-Muxly sanitizes directory names to create valid tmux session names:
+The picker shows each directory's real name. Directories with the same name add parent folders until they differ, as with `Dev/src` and `Work/src`, and a scan directory's `alias` always comes first, as in `proj/unique`.
 
-- **Dotfiles**: Leading dots are stripped for display. `.config` appears as `config [dotdir]`
-- **Middle dots**: Replaced with underscores. `my.project` becomes `my_project`
-- **Names you type**: `muxly foo.bar` opens a session called `foo_bar`, and finds it again next time. Names must match exactly, so `muxly foo` won't open a running `foobar`
-- **`$` and `\`**: Replaced with underscores in session names, because tmux can store them differently from how they were given
-- **Colons**: Replaced with dashes. `project:v2` becomes `project-v2`
+An `entry_dirs` path that doesn't exist shows as `notes [missing]`, and picking it explains what's wrong rather than opening anything.
 
-**Unsupported characters**: Directory names containing emojis or other special Unicode characters may cause unexpected behavior. Stick to alphanumeric characters, dashes, underscores, and dots for best results.
+A running session replaces its directory in the picker, however the session got its name. Sessions belong to a directory by path, so a session called `foo` in another folder doesn't hide your `foo` directory. If a session's name doesn't resemble its directory, the picker adds the directory: `[TMUX] api (Dev/backend)`. A session you started by hand in a directory counts too.
+
+Muxly gives each new session a short, safe name based on that label, so it can always find the session again:
+
+- **Lowercase, with only letters, digits, `-` and `_`**. `MyProject` becomes `myproject`, and `my project` becomes `my-project`
+- **Dots**: Replaced with underscores. `my.project` becomes `my_project`
+- **Anything else**: Replaced with dashes. `project:v2` becomes `project-v2`
+- **Symbols at either end**: Removed. `.config` becomes `config`, and `$dollar` becomes `dollar`
+- **Folders and aliases**: Joined with dashes. `Dev/src` becomes `dev-src`, and `proj/unique` becomes `proj-unique`
+- **Name already taken**: A session elsewhere with the same name means this one adds its parent folder, then a number: `dev-foo`, then `foo-2`
+- **Names you type**: `muxly foo.bar` opens a session called `foo_bar`, and finds it again next time. Session names must match exactly, so `muxly foo` won't open a running `foobar`
+
+Accents and other alphabets are kept. If nothing is left, as with `🚀`, the session is called `session`.
 
 ## Configuration
 
@@ -286,12 +296,12 @@ entry_dirs:
 # Directories to exclude from scanning (additive)
 # .git and node_modules are always ignored — no need to list them
 # Bare names match any directory with that name at any depth
-# Paths match only that specific resolved directory
+# Paths match that resolved directory and everything inside it
 ignore_dirs:
   - .vscode               # bare name — skips all .vscode dirs
   - .idea                 # bare name — skips all .idea dirs
   - target                # bare name — skips all target dirs (e.g. Rust builds)
-  - ~/projects/archived   # path — skips only this specific directory
+  - ~/projects/archived   # path — skips this directory and everything inside it
 
 # Session templates (one must have default: true)
 templates:
@@ -363,7 +373,7 @@ The `ignore_dirs` list supports two matching styles, determined automatically by
 | Entry format | Example | Behavior |
 |---|---|---|
 | **Bare name** (no `/` or `~`) | `target`, `.vscode` | Matches any directory with that exact name at any depth during scanning. The directory and its contents are skipped entirely. |
-| **Path** (contains `/` or `~`) | `~/projects/archived` | Resolved to an absolute path and matches only that specific directory. |
+| **Path** (contains `/` or `~`) | `~/projects/archived` | Resolved to an absolute path. That directory and everything inside it are hidden, including anything in `entry_dirs`. |
 
 **Built-in filters:** `.git` and `node_modules` are always ignored and cannot be overridden. Any entries you add to `ignore_dirs` are **additive** on top of these built-in filters.
 
@@ -371,7 +381,7 @@ The `ignore_dirs` list supports two matching styles, determined automatically by
 ignore_dirs:
   - target                # bare name — skips all target dirs (e.g. Rust builds)
   - .vscode               # bare name — skips all .vscode dirs
-  - ~/projects/archived   # path — skips only this specific directory
+  - ~/projects/archived   # path — skips this directory and everything inside it
 ```
 
 ### Configuration Options Reference
@@ -380,8 +390,8 @@ ignore_dirs:
 |--------|------|----------|-------------|
 | `scan_dirs` | array | yes* | Directories to scan for projects |
 | `scan_dirs[].path` | string | yes | Directory path to scan (supports `~` and environment variables) |
-| `scan_dirs[].depth` | int | no | Scan depth for this directory (overrides `settings.default_depth`) |
-| `scan_dirs[].alias` | string | no | Display prefix in selector (e.g., "dev" shows as "dev/project-name") |
+| `scan_dirs[].depth` | int | no | Scan depth for this directory, at least 1 (overrides `settings.default_depth`) |
+| `scan_dirs[].alias` | string | no | Prefix for directories from here, in the picker and in session names (e.g., "dev" shows as "dev/project-name" and names the session "dev-project-name") |
 | `scan_dirs[].template` | string | no | Template name to use for sessions created from this scan directory |
 | `entry_dirs` | array | yes* | Directories always included without scanning |
 | `entry_dirs[].path` | string | yes | Directory path (supports `~` and environment variables) |
@@ -446,12 +456,31 @@ muxly config remove scan ~/projects
 muxly config remove entry ~/Documents
 ```
 
-### Direct Session Creation
+### Opening Without the Picker
 
 ```bash
-# Create/switch to session by name
-muxly my-project
+# The current folder, or any other directory, configured or not
+muxly .
+muxly ~/Dev/project
+
+# A running session, or a configured directory, by name
+muxly MyProject
+
+# Anything else opens a new session with that name, in the current folder
+muxly scratch
 ```
+
+The first of these that fits is what opens:
+
+1. A path, if it's `.`, `..`, or starts with `/`, `./`, `../` or `~/`
+2. The running session with exactly that name
+3. A configured directory, by its label or folder name, ignoring case. If several match, muxly lists them and opens nothing
+4. A path from the current folder, if it contains a `/`
+5. A new session with that name, in the current folder, from the default template. It doesn't read a `.muxly` file there, which `muxly .` does
+
+A directory that already has a session goes to that session.
+
+Muxly's own commands come first, so a directory called `doctor` needs a path: `muxly ./doctor`.
 
 ## Project Status
 

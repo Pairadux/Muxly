@@ -85,13 +85,6 @@ func (e EntryDir) String() string {
 	return result
 }
 
-// DirEntry holds metadata for a resolved directory in the selector
-type DirEntry struct {
-	Path     string
-	Prefix   string
-	Template string
-}
-
 // Settings groups general configuration options
 type Settings struct {
 	Editor                  string `mapstructure:"editor" yaml:"editor"`

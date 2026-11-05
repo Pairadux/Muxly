@@ -12,8 +12,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strings"
+	"unicode"
 
 	"github.com/Pairadux/muxly/internal/config"
 	"github.com/Pairadux/muxly/internal/constants"
@@ -82,12 +84,20 @@ func noServer(err error) bool {
 
 // parseSessions reads tmux's output in sessionFormat. It skips any line that doesn't fit,
 // which takes a newline in a session's path.
+//
+// tmux stores a path exactly as it was given, with any trailing slash or "..", and a
+// session started with no path at all has an empty one. Cleaning them here means a path
+// can simply be compared, and an empty one matches nothing.
 func parseSessions(output string) []Session {
 	var sessions []Session
 	for line := range strings.SplitSeq(output, "\n") {
 		fields := strings.SplitN(line, "\t", 3)
 		if len(fields) == 3 && strings.HasPrefix(fields[0], "$") {
-			sessions = append(sessions, Session{ID: fields[0], Name: fields[1], Path: fields[2]})
+			path := fields[2]
+			if path != "" {
+				path = filepath.Clean(path)
+			}
+			sessions = append(sessions, Session{ID: fields[0], Name: fields[1], Path: path})
 		}
 	}
 	return sessions
@@ -112,6 +122,47 @@ func FindSession(sessions []Session, name string) (Session, bool) {
 		return Session{}, false
 	}
 	return sessions[i], true
+}
+
+// FindSessionAt returns the session started in the given clean, absolute path. If there
+// are several, it returns the oldest. tmux lists sessions by name, and numbers them in
+// order, so a shorter id is always older, and ids of one length sort as text.
+func FindSessionAt(sessions []Session, path string) (Session, bool) {
+	var oldest Session
+	found := false
+	for _, s := range sessions {
+		if s.Path != path {
+			continue
+		}
+		older := len(s.ID) < len(oldest.ID) || (len(s.ID) == len(oldest.ID) && s.ID < oldest.ID)
+		if !found || older {
+			oldest, found = s, true
+		}
+	}
+	return oldest, found
+}
+
+// FreeSessionName returns a name no session has for a new session in path with the given
+// label. If the label's name is taken, it adds the parent folder, and then a number.
+func FreeSessionName(sessions []Session, label, path string) string {
+	isFree := func(name string) bool {
+		_, taken := FindSession(sessions, name)
+		return !taken
+	}
+
+	name := SessionName(label)
+	if isFree(name) {
+		return name
+	}
+	withParent := SessionName(filepath.Base(filepath.Dir(path)) + "/" + label)
+	if isFree(withParent) {
+		return withParent
+	}
+	for n := 2; ; n++ {
+		if numbered := fmt.Sprintf("%s-%d", name, n); isFree(numbered) {
+			return numbered
+		}
+	}
 }
 
 // Without returns sessions, leaving out one session.
@@ -175,7 +226,7 @@ func CreateAndSwitchSession(session models.Session) error {
 		return err
 	}
 
-	for _, name := range []string{session.Name, newSessionName(session.Name)} {
+	for _, name := range []string{session.Name, SessionName(session.Name)} {
 		if existing, found := FindSession(sessions, name); found {
 			return SwitchToSession(existing)
 		}
@@ -189,14 +240,49 @@ func CreateAndSwitchSession(session models.Session) error {
 	return SwitchToSession(created)
 }
 
-// newSessionName returns the name muxly gives tmux for a new session, with the characters
-// tmux would store differently from how they were given. For "." and ":" it depends on the
-// version: up to 3.7 tmux replaces them with "_", and from 3.7a it keeps them. tmux 3.2a
-// stores "$name" as "\$name", and tmux doubles a backslash. Replacing them all here means
-// every version stores the name muxly asked for, so muxly can find the session again. "."
-// and ":" get the same replacements as in directory names.
-func newSessionName(name string) string {
-	return strings.NewReplacer(".", "_", ":", "-", "$", "_", "\\", "_").Replace(name)
+// fallbackSessionName names a session whose label has nothing usable in it, such as "🚀".
+const fallbackSessionName = "session"
+
+// SessionName returns the name muxly gives a new session with the given label: lowercase,
+// with only letters, digits, "-" and "_", and each path component joined by "-".
+//
+// tmux stores many other characters differently from how it's given them, depending on
+// the version, and then muxly can't find the session again. It also expands formats in a
+// name, so "#{session_id}" would create a session with an empty name. Keeping to these
+// characters means every version stores exactly the name muxly asked for.
+func SessionName(label string) string {
+	var parts []string
+	for part := range strings.SplitSeq(strings.ToLower(label), "/") {
+		if safe := safeNamePart(part); safe != "" {
+			parts = append(parts, safe)
+		}
+	}
+	if len(parts) == 0 {
+		return fallbackSessionName
+	}
+	return strings.Join(parts, "-")
+}
+
+// safeNamePart makes one path component safe. "." becomes "_", as it always has in muxly,
+// and anything else unusual becomes "-". Repeats collapse, and symbols at either end go.
+func safeNamePart(part string) string {
+	var b strings.Builder
+	var previous rune
+	for _, r := range part {
+		switch {
+		case r == '.':
+			r = '_'
+		case r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r) || unicode.IsMark(r):
+		default:
+			r = '-'
+		}
+		if (r == '-' || r == '_') && r == previous {
+			continue
+		}
+		b.WriteRune(r)
+		previous = r
+	}
+	return strings.Trim(b.String(), "-_")
 }
 
 // attachToSession runs a tmux client on this terminal, until it detaches or its session
@@ -227,7 +313,7 @@ func createSession(session models.Session) (Session, error) {
 	}
 
 	first := session.Layout.Windows[0]
-	output, err := run(buildWindowArgs(true, newSessionName(session.Name), first.Name, session.Path, first.Cmd)...)
+	output, err := run(buildWindowArgs(true, SessionName(session.Name), first.Name, session.Path, first.Cmd)...)
 	if err != nil {
 		return Session{}, err
 	}
@@ -254,6 +340,8 @@ func createSession(session models.Session) (Session, error) {
 // the target's $id. If cmd is provided, it wraps it with shell execution to keep the
 // window open.
 func buildWindowArgs(isFirst bool, session, windowName, dir, cmd string) []string {
+	dir = escapeFormat(dir)
+
 	var args []string
 	if isFirst {
 		args = []string{"new-session", "-d", "-P", "-F", sessionFormat, "-s", session, "-n", windowName, "-c", dir}
@@ -271,6 +359,31 @@ func buildWindowArgs(isFirst bool, session, windowName, dir, cmd string) []strin
 	}
 
 	return args
+}
+
+// escapeFormat makes tmux take s literally where it would expand formats. "##" means a
+// plain "#", except that tmux leaves any run of "#" before "[" as it is, because that
+// marks a style. Those runs already come through unchanged, so they stay as they are.
+func escapeFormat(s string) string {
+	var b strings.Builder
+	for i := 0; i < len(s); {
+		if s[i] != '#' {
+			b.WriteByte(s[i])
+			i++
+			continue
+		}
+		end := i
+		for end < len(s) && s[end] == '#' {
+			end++
+		}
+		run := s[i:end]
+		b.WriteString(run)
+		if end == len(s) || s[end] != '[' {
+			b.WriteString(run)
+		}
+		i = end
+	}
+	return b.String()
 }
 
 // KillSession terminates a session.
@@ -317,7 +430,7 @@ func ReplaceLastSession(cfg *models.Config, current Session) error {
 	}
 
 	// tmux refuses duplicate names, so the old session gives up the name first.
-	renamed := current.Name == newSessionName(session.Name)
+	renamed := current.Name == SessionName(session.Name)
 	if renamed {
 		if err := renameSession(current, fmt.Sprintf("muxly-replaced-%d", os.Getpid())); err != nil {
 			return err

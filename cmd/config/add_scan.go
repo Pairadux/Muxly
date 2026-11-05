@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/Pairadux/muxly/internal/state"
@@ -37,16 +36,16 @@ Examples:
 			return err
 		}
 
-		// Verify the path actually exists on the filesystem
-		if _, err := os.Stat(resolvedPath); os.IsNotExist(err) {
-			return fmt.Errorf("path does not exist: %s", resolvedPath)
-		} else if err != nil {
-			return fmt.Errorf("failed to access path %q: %w", resolvedPath, err)
+		if err := utility.RequireDirectory(resolvedPath); err != nil {
+			return err
 		}
 
 		// Get flags
 		depth, _ := cmd.Flags().GetInt("depth")
 		alias, _ := cmd.Flags().GetString("alias")
+		if cmd.Flags().Changed("depth") && depth < 1 {
+			return fmt.Errorf("--depth must be at least 1, got %d", depth)
+		}
 
 		// Check if already in scan_dirs
 		for _, scanDir := range state.Cfg.ScanDirs {
@@ -92,6 +91,6 @@ func init() {
 	addCmd.AddCommand(addScanCmd)
 
 	// Flags for scan subcommand
-	addScanCmd.Flags().IntP("depth", "d", 0, "Scanning depth (0 = use default_depth)")
+	addScanCmd.Flags().IntP("depth", "d", 0, "Scanning depth, at least 1 (uses default_depth if not set)")
 	addScanCmd.Flags().StringP("alias", "a", "", "Alias prefix for the directory in selector")
 }
