@@ -348,3 +348,47 @@ func TestAMissingScanDirectoryWarnsWithoutVerbose(t *testing.T) {
 		t.Errorf("rows = %q, want the rest still offered", labels)
 	}
 }
+
+// tmux opens a session in the home directory when it can't use the path it's given.
+func TestPickingAMissingEntryExplainsAndOpensNothing(t *testing.T) {
+	tests := []struct {
+		name  string
+		setup func(*cli) string
+		want  string
+	}{
+		{
+			name:  "gone",
+			setup: func(c *cli) string { return filepath.Join(c.home, "gone") },
+			want:  "does not exist",
+		},
+		{
+			name: "a file",
+			setup: func(c *cli) string {
+				file := filepath.Join(c.home, "gone")
+				c.writeFile(file, "", 0o644)
+				return file
+			},
+			want: "is not a directory",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := newCLI(t)
+			kept := c.mkdirs("kept")[0]
+			srv := c.insideShell(configWithEntries(tt.setup(c), kept))
+
+			got := c.pick("gone [missing]")
+
+			if got.code == 0 || !strings.Contains(got.stderr, tt.want) || !strings.Contains(got.stderr, "muxly config remove entry") {
+				t.Errorf("exit %d, stderr %q: want an explanation with a next step", got.code, got.stderr)
+			}
+			if labels, want := c.pickerLabels(), []string{"gone [missing]", "kept"}; !slices.Equal(labels, want) {
+				t.Errorf("rows = %q, want %q", labels, want)
+			}
+			if sessions, want := srv.Sessions(), []string{"shell"}; !slices.Equal(sessions, want) {
+				t.Errorf("sessions = %q, want %q", sessions, want)
+			}
+		})
+	}
+}

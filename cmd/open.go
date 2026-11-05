@@ -10,6 +10,7 @@ import (
 	"github.com/Pairadux/muxly/internal/session"
 	"github.com/Pairadux/muxly/internal/state"
 	"github.com/Pairadux/muxly/internal/tmux"
+	"github.com/Pairadux/muxly/internal/utility"
 )
 
 // printWarnings reports problems found while looking for directories. Printing them while
@@ -42,6 +43,14 @@ func openDirectory(dir selector.Directory, layout models.SessionLayout, sessions
 			return fmt.Errorf("failed to switch session: %w", err)
 		}
 		return nil
+	}
+
+	// tmux would open a session in the home directory rather than refuse.
+	if err := utility.RequireDirectory(dir.Path); err != nil {
+		if dir.Missing {
+			return fmt.Errorf("%w\nFix its path in your config, or run 'muxly config remove entry %s'", err, dir.Path)
+		}
+		return err
 	}
 
 	created := models.Session{

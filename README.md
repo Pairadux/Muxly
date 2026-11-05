@@ -163,6 +163,8 @@ After adding the completion script, restart your shell or source your config fil
 
 The picker shows each directory's real name. Directories with the same name add parent folders until they differ, as with `Dev/src` and `Work/src`, and a scan directory's `alias` always comes first, as in `proj/unique`.
 
+An `entry_dirs` path that doesn't exist shows as `notes [missing]`, and picking it explains what's wrong rather than opening anything.
+
 A running session replaces its directory in the picker, however the session got its name. Sessions belong to a directory by path, so a session called `foo` in another folder doesn't hide your `foo` directory. If a session's name doesn't resemble its directory, the picker adds the directory: `[TMUX] api (Dev/backend)`. A session you started by hand in a directory counts too.
 
 Muxly gives each new session a short, safe name based on that label, so it can always find the session again:

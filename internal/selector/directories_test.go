@@ -228,3 +228,52 @@ func TestDirectoriesWarnAboutWhatTheyCantUse(t *testing.T) {
 		})
 	}
 }
+
+func TestDirectoriesFlagMissingEntries(t *testing.T) {
+	root := makeDirs(t, "real", "dev/scanned")
+	file := filepath.Join(root, "file")
+	if err := os.WriteFile(file, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := models.Config{
+		ScanDirs: []models.ScanDir{{Path: filepath.Join(root, "dev")}},
+		EntryDirs: []models.EntryDir{
+			{Path: filepath.Join(root, "real")},
+			{Path: filepath.Join(root, "gone")},
+			{Path: file},
+			{Path: filepath.Join(root, "dev/scanned")},
+		},
+	}
+
+	dirs, warnings := Directories(&cfg, 0)
+
+	if len(warnings) > 0 {
+		t.Errorf("warnings = %q, want the flag to be enough", warnings)
+	}
+	want := map[string]bool{"real": false, "gone": true, "file": true, "scanned": false}
+	if len(dirs) != len(want) {
+		t.Errorf("dirs = %+v", dirs)
+	}
+	for _, dir := range dirs {
+		if missing, listed := want[dir.Label]; !listed || dir.Missing != missing {
+			t.Errorf("%s: Missing = %v, want %v", dir.Label, dir.Missing, missing)
+		}
+	}
+}
+
+func TestDirectoriesSkipPathsWithANewline(t *testing.T) {
+	root := makeDirs(t, "scan/new\nline", "scan/tab\there", "scan/fine")
+	cfg := models.Config{
+		ScanDirs:  []models.ScanDir{{Path: filepath.Join(root, "scan")}},
+		EntryDirs: []models.EntryDir{{Path: filepath.Join(root, "other\nentry")}},
+	}
+
+	dirs, warnings := Directories(&cfg, 0)
+
+	if got, want := labelsOf(dirs), []string{"fine", "tab\there"}; !slices.Equal(got, want) {
+		t.Errorf("labels = %q, want %q", got, want)
+	}
+	if len(warnings) != 2 || !strings.Contains(warnings[0], "newline") {
+		t.Errorf("warnings = %q, want one for each", warnings)
+	}
+}

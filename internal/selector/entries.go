@@ -8,6 +8,9 @@ import (
 	"github.com/Pairadux/muxly/internal/tmux"
 )
 
+// missingSuffix marks a directory in the picker that can't be opened.
+const missingSuffix = " [missing]"
+
 // Entry is one row of the picker. Exactly one of Session and Directory is set.
 type Entry struct {
 	// Label is what the picker shows.
@@ -46,9 +49,14 @@ func Entries(dirs []Directory, sessions []tmux.Session, current tmux.Session, se
 
 	var waiting []Entry
 	for i := range dirs {
-		if !occupied[dirs[i].Path] {
-			waiting = append(waiting, Entry{Label: dirs[i].Label, Directory: &dirs[i]})
+		if occupied[dirs[i].Path] {
+			continue
 		}
+		label := dirs[i].Label
+		if dirs[i].Missing {
+			label += missingSuffix
+		}
+		waiting = append(waiting, Entry{Label: label, Directory: &dirs[i]})
 	}
 
 	slices.SortFunc(running, compareLabels)

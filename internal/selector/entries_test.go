@@ -32,6 +32,17 @@ func TestEntries(t *testing.T) {
 			want:     []string{prefix + "kiwi", prefix + "zebra", "apple"},
 		},
 		{
+			name: "a missing directory is flagged",
+			dirs: []Directory{{Path: "/a", Label: "gone", Missing: true}, {Path: "/b", Label: "here"}},
+			want: []string{"gone [missing]", "here"},
+		},
+		{
+			name:     "a session in a directory that's gone needs no flag",
+			dirs:     []Directory{{Path: "/a", Label: "gone", Missing: true}},
+			sessions: []tmux.Session{{ID: "$1", Name: "gone", Path: "/a"}},
+			want:     []string{prefix + "gone"},
+		},
+		{
 			name:     "a session replaces its directory's row",
 			dirs:     []Directory{{Path: "/dev/foo", Label: "foo"}, {Path: "/dev/bar", Label: "bar"}},
 			sessions: []tmux.Session{foo},

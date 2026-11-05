@@ -23,6 +23,8 @@ type Directory struct {
 	Alias string
 	// Template names the template for new sessions here, if one is set.
 	Template string
+	// Missing means it's in entry_dirs, but isn't a directory that exists.
+	Missing bool
 }
 
 // Directories finds everything in scan_dirs and entry_dirs that isn't ignored, sorted by
@@ -37,11 +39,21 @@ func Directories(cfg *models.Config, flagDepth int) ([]Directory, []string) {
 	ignorePaths, ignoreNames, warnings := buildIgnoreSets(cfg)
 	found := make(map[string]*Directory)
 
+	// tmux lists a session on two lines if its path has a newline, so muxly could open a
+	// session there but never find it again.
+	usable := func(path string) bool {
+		if strings.Contains(path, "\n") {
+			warnings = append(warnings, fmt.Sprintf("skipping %q: a path with a newline in it isn't supported", path))
+			return false
+		}
+		return true
+	}
+
 	for _, scanDir := range cfg.ScanDirs {
 		paths, scanWarnings := scan(cfg, scanDir, flagDepth, ignorePaths, ignoreNames)
 		warnings = append(warnings, scanWarnings...)
 		for _, path := range paths {
-			if _, seen := found[path]; !seen {
+			if _, seen := found[path]; !seen && usable(path) {
 				found[path] = &Directory{Path: path, Alias: scanDir.Alias, Template: scanDir.Template}
 			}
 		}
@@ -53,12 +65,12 @@ func Directories(cfg *models.Config, flagDepth int) ([]Directory, []string) {
 			warnings = append(warnings, fmt.Sprintf("can't use entry_dirs path %s: %v", entryDir.Path, err))
 			continue
 		}
-		if utility.IsWithin(path, ignorePaths) {
+		if utility.IsWithin(path, ignorePaths) || !usable(path) {
 			continue
 		}
 		dir, seen := found[path]
 		if !seen {
-			dir = &Directory{Path: path}
+			dir = &Directory{Path: path, Missing: utility.RequireDirectory(path) != nil}
 			found[path] = dir
 		}
 		if entryDir.Template != "" {
