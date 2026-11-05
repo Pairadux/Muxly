@@ -180,21 +180,57 @@ func TestWithoutLeavesTheOriginalAlone(t *testing.T) {
 	}
 }
 
-func TestNewSessionName(t *testing.T) {
+func TestSessionName(t *testing.T) {
 	tests := map[string]string{
-		"plain":     "plain",
-		"foo.bar":   "foo_bar",
-		"a:b":       "a-b",
-		".conf/app": "_conf/app",
-		"x.y/src":   "x_y/src",
-		"$dollar":   "_dollar",
-		"a\\b":      "a_b",
-		"=eq":       "=eq",
+		"plain":         "plain",
+		"MyProject":     "myproject",
+		"CAFÉ":          "café",
+		"日本語":           "日本語",
+		"foo.bar":       "foo_bar",
+		"a:b":           "a-b",
+		"my project":    "my-project",
+		"a  b":          "a-b",
+		"a--b":          "a-b",
+		"a__b":          "a_b",
+		"a..b":          "a_b",
+		"100%":          "100",
+		"a\\b":          "a-b",
+		"it's":          "it-s",
+		"[brk]":         "brk",
+		".config":       "config",
+		"..hidden":      "hidden",
+		"$dollar":       "dollar",
+		"%pct":          "pct",
+		"=eq":           "eq",
+		"@at":           "at",
+		"-dash":         "dash",
+		"_under":        "under",
+		"~tilde":        "tilde",
+		"🚀rocket":       "rocket",
+		"é-🎉":           "é",
+		"#(touch x)":    "touch-x",
+		"#{session_id}": "session_id",
+		"a#{b}c":        "a-b-c",
+		"new\nline":     "new-line",
+		"Dev/src":       "dev-src",
+		"proj/unique":   "proj-unique",
+		"x.y/src":       "x_y-src",
+		".conf/app":     "conf-app",
+		"Dev/.config":   "dev-config",
+		"/abs/path/":    "abs-path",
+		"":              "session",
+		"...":           "session",
+		"🚀":             "session",
+		"/":             "session",
 	}
 
-	for name, want := range tests {
-		if got := newSessionName(name); got != want {
-			t.Errorf("newSessionName(%q) = %q, want %q", name, got, want)
+	for label, want := range tests {
+		got := SessionName(label)
+		if got != want {
+			t.Errorf("SessionName(%q) = %q, want %q", label, got, want)
+		}
+		if again := SessionName(got); again != got {
+			t.Errorf("SessionName(%q) = %q changes its own result to %q", label, got, again)
 		}
 	}
 }

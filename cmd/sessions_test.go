@@ -93,12 +93,12 @@ func TestPickingAwkwardNamesOpensOneSessionAndFindsItAgain(t *testing.T) {
 		stored string
 		repick bool
 	}{
-		{name: "dot in a parent", dirs: []string{"x.y/src", "other/src"}, pick: "x.y/src", stored: "x_y/src", repick: true},
-		{name: "leading dot in a parent", dirs: []string{".conf/app", "other/app"}, pick: ".conf/app", stored: "_conf/app", repick: true},
-		{name: "dollar", dirs: []string{"$dollar"}, pick: "$dollar", stored: "_dollar", repick: true},
-		{name: "percent", dirs: []string{"%pct"}, pick: "%pct", stored: "%pct"},
-		{name: "equals", dirs: []string{"=eq"}, pick: "=eq", stored: "=eq"},
-		{name: "at", dirs: []string{"@at"}, pick: "@at", stored: "@at"},
+		{name: "dot in a parent", dirs: []string{"x.y/src", "other/src"}, pick: "x.y/src", stored: "x_y-src", repick: true},
+		{name: "leading dot in a parent", dirs: []string{".conf/app", "other/app"}, pick: ".conf/app", stored: "conf-app", repick: true},
+		{name: "dollar", dirs: []string{"$dollar"}, pick: "$dollar", stored: "dollar", repick: true},
+		{name: "percent", dirs: []string{"%pct"}, pick: "%pct", stored: "pct", repick: true},
+		{name: "equals", dirs: []string{"=eq"}, pick: "=eq", stored: "eq", repick: true},
+		{name: "at", dirs: []string{"@at"}, pick: "@at", stored: "at", repick: true},
 	}
 
 	for _, tt := range tests {

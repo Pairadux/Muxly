@@ -161,15 +161,15 @@ After adding the completion script, restart your shell or source your config fil
 
 ## Directory Naming Notes
 
-Muxly sanitizes directory names to create valid tmux session names:
+Muxly gives each new session a short, safe name, so it can always find the session again:
 
-- **Dotfiles**: Leading dots are stripped for display. `.config` appears as `config [dotdir]`
-- **Middle dots**: Replaced with underscores. `my.project` becomes `my_project`
+- **Lowercase, with only letters, digits, `-` and `_`**. `MyProject` becomes `myproject`, and `my project` becomes `my-project`
+- **Dots**: Replaced with underscores. `my.project` becomes `my_project`
+- **Anything else**: Replaced with dashes. `project:v2` becomes `project-v2`
+- **Symbols at either end**: Removed. `.config` becomes `config`, and `$dollar` becomes `dollar`
 - **Names you type**: `muxly foo.bar` opens a session called `foo_bar`, and finds it again next time. Names must match exactly, so `muxly foo` won't open a running `foobar`
-- **`$` and `\`**: Replaced with underscores in session names, because tmux can store them differently from how they were given
-- **Colons**: Replaced with dashes. `project:v2` becomes `project-v2`
 
-**Unsupported characters**: Directory names containing emojis or other special Unicode characters may cause unexpected behavior. Stick to alphanumeric characters, dashes, underscores, and dots for best results.
+Accents and other alphabets are kept. If nothing is left, as with `🚀`, the session is called `session`.
 
 ## Configuration
 

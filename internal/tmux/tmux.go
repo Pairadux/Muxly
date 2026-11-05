@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"slices"
 	"strings"
+	"unicode"
 
 	"github.com/Pairadux/muxly/internal/config"
 	"github.com/Pairadux/muxly/internal/constants"
@@ -175,7 +176,7 @@ func CreateAndSwitchSession(session models.Session) error {
 		return err
 	}
 
-	for _, name := range []string{session.Name, newSessionName(session.Name)} {
+	for _, name := range []string{session.Name, SessionName(session.Name)} {
 		if existing, found := FindSession(sessions, name); found {
 			return SwitchToSession(existing)
 		}
@@ -189,14 +190,49 @@ func CreateAndSwitchSession(session models.Session) error {
 	return SwitchToSession(created)
 }
 
-// newSessionName returns the name muxly gives tmux for a new session, with the characters
-// tmux would store differently from how they were given. For "." and ":" it depends on the
-// version: up to 3.7 tmux replaces them with "_", and from 3.7a it keeps them. tmux 3.2a
-// stores "$name" as "\$name", and tmux doubles a backslash. Replacing them all here means
-// every version stores the name muxly asked for, so muxly can find the session again. "."
-// and ":" get the same replacements as in directory names.
-func newSessionName(name string) string {
-	return strings.NewReplacer(".", "_", ":", "-", "$", "_", "\\", "_").Replace(name)
+// fallbackSessionName names a session whose label has nothing usable in it, such as "🚀".
+const fallbackSessionName = "session"
+
+// SessionName returns the name muxly gives a new session with the given label: lowercase,
+// with only letters, digits, "-" and "_", and each path component joined by "-".
+//
+// tmux stores many other characters differently from how it's given them, depending on
+// the version, and then muxly can't find the session again. It also expands formats in a
+// name, so "#{session_id}" would create a session with an empty name. Keeping to these
+// characters means every version stores exactly the name muxly asked for.
+func SessionName(label string) string {
+	var parts []string
+	for part := range strings.SplitSeq(strings.ToLower(label), "/") {
+		if safe := safeNamePart(part); safe != "" {
+			parts = append(parts, safe)
+		}
+	}
+	if len(parts) == 0 {
+		return fallbackSessionName
+	}
+	return strings.Join(parts, "-")
+}
+
+// safeNamePart makes one path component safe. "." becomes "_", as it always has in muxly,
+// and anything else unusual becomes "-". Repeats collapse, and symbols at either end go.
+func safeNamePart(part string) string {
+	var b strings.Builder
+	var previous rune
+	for _, r := range part {
+		switch {
+		case r == '.':
+			r = '_'
+		case r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r) || unicode.IsMark(r):
+		default:
+			r = '-'
+		}
+		if (r == '-' || r == '_') && r == previous {
+			continue
+		}
+		b.WriteRune(r)
+		previous = r
+	}
+	return strings.Trim(b.String(), "-_")
 }
 
 // attachToSession runs a tmux client on this terminal, until it detaches or its session
@@ -227,7 +263,7 @@ func createSession(session models.Session) (Session, error) {
 	}
 
 	first := session.Layout.Windows[0]
-	output, err := run(buildWindowArgs(true, newSessionName(session.Name), first.Name, session.Path, first.Cmd)...)
+	output, err := run(buildWindowArgs(true, SessionName(session.Name), first.Name, session.Path, first.Cmd)...)
 	if err != nil {
 		return Session{}, err
 	}
@@ -344,7 +380,7 @@ func ReplaceLastSession(cfg *models.Config, current Session) error {
 	}
 
 	// tmux refuses duplicate names, so the old session gives up the name first.
-	renamed := current.Name == newSessionName(session.Name)
+	renamed := current.Name == SessionName(session.Name)
 	if renamed {
 		if err := renameSession(current, fmt.Sprintf("muxly-replaced-%d", os.Getpid())); err != nil {
 			return err
