@@ -19,7 +19,7 @@ func TestDoctorSurvivesBlankEditor(t *testing.T) {
 		if got.code != 0 {
 			t.Errorf("exit %d, stdout %q, stderr %q", got.code, got.stdout, got.stderr)
 		}
-		if !strings.Contains(got.stdout, "No editor configured") {
+		if !strings.Contains(got.stdout, "Editor 'vi' not found") {
 			t.Errorf("stdout doesn't mention the missing editor:\n%s", got.stdout)
 		}
 	}

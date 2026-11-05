@@ -91,7 +91,7 @@ func (e EntryDir) String() string {
 
 // Settings groups general configuration options
 type Settings struct {
-	Editor                  string `mapstructure:"editor" yaml:"editor"`
+	Editor                  string `mapstructure:"editor" yaml:"editor,omitempty"`
 	DefaultDepth            int    `mapstructure:"default_depth" yaml:"default_depth"`
 	TmuxSessionPrefix       string `mapstructure:"tmux_session_prefix" yaml:"tmux_session_prefix"`
 	AlwaysKillOnLastSession bool   `mapstructure:"always_kill_on_last_session" yaml:"always_kill_on_last_session"`

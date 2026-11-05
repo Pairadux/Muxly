@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/Pairadux/muxly/internal/checks"
+	"github.com/Pairadux/muxly/internal/config"
 	"github.com/Pairadux/muxly/internal/constants"
 	"github.com/Pairadux/muxly/internal/state"
 	"github.com/spf13/cobra"
@@ -41,7 +42,7 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 	var allResults []checks.CheckResult
 
 	externalResults := checks.CheckExternalUtils()
-	externalResults = append(externalResults, checks.CheckEditor(state.Cfg.Settings.Editor))
+	externalResults = append(externalResults, checks.CheckEditor(config.Editor(state.Cfg.Settings.Editor)))
 	allResults = append(allResults, externalResults...)
 	fmt.Print(checks.FormatSection("External Dependencies", externalResults, doctorQuiet))
 

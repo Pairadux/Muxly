@@ -217,12 +217,14 @@ MUXLY_DEFAULT_DEPTH=3 muxly
 # Override tmux session prefix
 MUXLY_TMUX_SESSION_PREFIX="[WORK] " muxly
 
-# Standard $EDITOR works too (fallback if MUXLY_EDITOR not set)
-EDITOR=nano muxly config edit
+# Standard $VISUAL and $EDITOR work too, if nothing above sets an editor
+EDITOR='code --wait' muxly config edit
 ```
 
+`muxly config edit` uses the first of these that's set: an editor you pass it, `$MUXLY_EDITOR`, `settings.editor`, `$VISUAL`, `$EDITOR`, then `vi`.
+
 **Supported Environment Variables:**
-- `MUXLY_EDITOR` or `EDITOR` - Editor for config editing
+- `MUXLY_EDITOR` - Editor for `muxly config edit`, ahead of `settings.editor`
 - `MUXLY_DEFAULT_DEPTH` - Default scanning depth
 - `MUXLY_TMUX_SESSION_PREFIX` - Prefix for active sessions in selector
 - `MUXLY_ALWAYS_KILL_ON_LAST_SESSION` - Skip fallback prompt (true/false)
@@ -258,8 +260,6 @@ templates:
 
 # General settings
 settings:
-  # Editor for 'muxly config edit' (falls back to $EDITOR, then 'vi')
-  editor: vi
   # Default scanning depth for directories
   default_depth: 1
   # Prefix for active tmux sessions in the selector
@@ -322,7 +322,7 @@ templates:
 
 # General settings
 settings:
-  # Editor for 'muxly config edit' (falls back to $EDITOR, then 'vi')
+  # Editor for 'muxly config edit' (beats $VISUAL and $EDITOR)
   editor: nvim
   # Default scanning depth for scan_dirs (can be overridden per directory)
   default_depth: 1
@@ -406,7 +406,7 @@ ignore_dirs:
 | `templates[].windows[].name` | string | yes | Window name |
 | `templates[].windows[].cmd` | string | no | Command to run in window (empty string opens default shell) |
 | `settings` | object | no | General application settings |
-| `settings.editor` | string | no | Editor for config editing, falls back to `$EDITOR` (default: `"vi"`) |
+| `settings.editor` | string | no | Editor for `muxly config edit`, and it can include arguments. Falls back to `$VISUAL`, `$EDITOR`, then `vi` |
 | `settings.default_depth` | int | no | Default scanning depth for `scan_dirs` (default: `1`) |
 | `settings.tmux_session_prefix` | string | no | Prefix for active sessions in selector (default: `"[TMUX] "`) |
 | `settings.always_kill_on_last_session` | bool | no | Skip fallback prompt and kill server on last session (default: `false`) |

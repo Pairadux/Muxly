@@ -5,9 +5,12 @@ package cmd
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/Pairadux/muxly/internal/tmuxtest"
 )
 
 func (c *cli) mkdir(path string) string {
@@ -331,5 +334,134 @@ func TestConfigAddFollowsASymlinkedConfig(t *testing.T) {
 	}
 	if dotfileInfo.Mode().Perm() != 0o600 {
 		t.Errorf("mode = %o", dotfileInfo.Mode().Perm())
+	}
+}
+
+// withFakeEditors installs commands that record how they were called, one argument per
+// line. "sh" goes on PATH too, since that's what runs them.
+func (c *cli) withFakeEditors(names ...string) *cli {
+	c.t.Helper()
+	if err := os.Symlink(tmuxtest.Require(c.t, "sh"), filepath.Join(c.bin, "sh")); err != nil {
+		c.t.Fatal(err)
+	}
+	for _, name := range names {
+		script := "#!/bin/sh\nPATH=/usr/bin:/bin\nprintf '%s\\n' " + name + " \"$@\" >> \"$FAKE_LOG_DIR/editor\"\n"
+		c.writeFile(filepath.Join(c.bin, name), script, 0o755)
+	}
+	return c
+}
+
+func TestConfigEditPicksTheEditorInOrder(t *testing.T) {
+	tests := []struct {
+		name   string
+		args   []string
+		config string
+		env    []string
+		want   string
+	}{
+		{
+			name:   "an argument beats everything",
+			args:   []string{"from-arg"},
+			config: validConfig + "  editor: from-settings\n",
+			env:    []string{"MUXLY_EDITOR=from-muxly", "VISUAL=from-visual", "EDITOR=from-editor"},
+			want:   "from-arg",
+		},
+		{
+			name:   "MUXLY_EDITOR beats settings",
+			config: validConfig + "  editor: from-settings\n",
+			env:    []string{"MUXLY_EDITOR=from-muxly", "VISUAL=from-visual", "EDITOR=from-editor"},
+			want:   "from-muxly",
+		},
+		{
+			name:   "settings beat VISUAL and EDITOR",
+			config: validConfig + "  editor: from-settings\n",
+			env:    []string{"VISUAL=from-visual", "EDITOR=from-editor"},
+			want:   "from-settings",
+		},
+		{
+			name:   "VISUAL beats EDITOR",
+			config: validConfig,
+			env:    []string{"VISUAL=from-visual", "EDITOR=from-editor"},
+			want:   "from-visual",
+		},
+		{name: "EDITOR", config: validConfig, env: []string{"EDITOR=from-editor"}, want: "from-editor"},
+		{name: "vi if nothing is set", config: validConfig, want: "vi"},
+		{name: "a blank argument doesn't count", args: []string{" "}, config: validConfig, env: []string{"EDITOR=from-editor"}, want: "from-editor"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := newCLI(t).withFakeEditors("from-arg", "from-muxly", "from-settings", "from-visual", "from-editor", "vi")
+			c.writeConfig(tt.config).setEnv(tt.env...)
+
+			got := c.run(append([]string{"config", "edit"}, tt.args...)...)
+
+			if got.code != 0 {
+				t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
+			}
+			want := []string{tt.want, c.configPath()}
+			if log := c.log("editor"); !slices.Equal(log, want) {
+				t.Errorf("editor log = %q, want %q", log, want)
+			}
+		})
+	}
+}
+
+// An editor is a command line, not just a program, and the path is one argument whatever
+// it contains.
+func TestConfigEditEditorCanHaveArguments(t *testing.T) {
+	c := newCLI(t).withFakeEditors("code").setEnv("EDITOR=code --wait --new-window")
+	path := filepath.Join(c.home, "my config; touch oops.yaml")
+	c.writeFile(path, validConfig, 0o644)
+
+	got := c.run("--config", path, "config", "edit")
+
+	if got.code != 0 {
+		t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
+	}
+	want := []string{"code", "--wait", "--new-window", path}
+	if log := c.log("editor"); !slices.Equal(log, want) {
+		t.Errorf("editor log = %q, want %q", log, want)
+	}
+}
+
+func TestConfigEditReportsAMissingEditor(t *testing.T) {
+	c := newCLI(t).withFakeEditors().writeConfig(validConfig).setEnv("EDITOR=not-installed")
+
+	got := c.run("config", "edit")
+
+	if got.code == 0 || !strings.Contains(got.stderr, "not-installed") {
+		t.Errorf("exit %d, stderr %q: want the shell's message about the editor", got.code, got.stderr)
+	}
+}
+
+func TestNewConfigsLeaveTheEditorToTheEnvironment(t *testing.T) {
+	c := newCLI(t).withFakeEditors("from-editor").setEnv("EDITOR=from-editor")
+
+	if got := c.run("config", "init"); got.code != 0 {
+		t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
+	}
+	for line := range strings.Lines(c.readConfig()) {
+		if strings.HasPrefix(strings.TrimSpace(line), "editor:") {
+			t.Errorf("the new config sets an editor: %q", line)
+		}
+	}
+
+	if got := c.run("config", "edit"); got.code != 0 {
+		t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
+	}
+	if log := c.log("editor"); len(log) == 0 || log[0] != "from-editor" {
+		t.Errorf("editor log = %q", log)
+	}
+}
+
+func TestDoctorReportsTheEditorThatWouldRun(t *testing.T) {
+	c := newCLI(t).withFakes().withFakeEditors("from-settings", "from-editor")
+	c.writeConfig(validConfig + "  editor: from-settings --wait\n").setEnv("EDITOR=from-editor")
+
+	got := c.run("doctor")
+
+	if !strings.Contains(got.stdout, "from-settings --wait") || strings.Contains(got.stdout, "from-editor") {
+		t.Errorf("exit %d, stdout:\n%s", got.code, got.stdout)
 	}
 }

@@ -6,6 +6,10 @@ import "github.com/Pairadux/muxly/internal/models"
 const (
 	// DefaultEditor is the editor for "muxly config edit" when nothing else sets one.
 	DefaultEditor = "vi"
+
+	envVisual = "VISUAL"
+	envEditor = "EDITOR"
+
 	// DefaultTmuxSessionPrefix marks active sessions in the picker.
 	DefaultTmuxSessionPrefix = "[TMUX] "
 	// DefaultScanDepth is how deep scan_dirs are searched when no depth is set.
@@ -70,7 +74,6 @@ func NewDefaultConfig() models.Config {
 		IgnoreDirs: DefaultIgnoreDirs,
 		Templates:  DefaultTemplates,
 		Settings: models.Settings{
-			Editor:                  DefaultEditor,
 			DefaultDepth:            DefaultScanDepth,
 			TmuxSessionPrefix:       DefaultTmuxSessionPrefix,
 			AlwaysKillOnLastSession: DefaultAlwaysKillOnLastSession,
@@ -83,9 +86,6 @@ func NewDefaultConfig() models.Config {
 // templates and directories are left alone — validation will catch
 // those so the user can fix them intentionally (or use config init).
 func ApplyDefaults(cfg *models.Config) {
-	if cfg.Settings.Editor == "" {
-		cfg.Settings.Editor = DefaultEditor
-	}
 	if cfg.Settings.TmuxSessionPrefix == "" {
 		cfg.Settings.TmuxSessionPrefix = DefaultTmuxSessionPrefix
 	}

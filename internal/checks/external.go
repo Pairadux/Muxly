@@ -2,7 +2,6 @@ package checks
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"regexp"
 	"slices"
@@ -130,35 +129,16 @@ func CheckExternalUtils() []CheckResult {
 	}
 }
 
-// firstNonBlank returns the first value that has something besides whitespace, or "".
-func firstNonBlank(values ...string) string {
-	for _, value := range values {
-		if strings.TrimSpace(value) != "" {
-			return value
-		}
-	}
-	return ""
-}
-
-// CheckEditor validates the configured editor or falls back to environment.
-func CheckEditor(configEditor string) CheckResult {
-	editor := firstNonBlank(configEditor, os.Getenv("EDITOR"), os.Getenv("VISUAL"))
-	if editor == "" {
-		return CheckResult{
-			Name:    "editor",
-			Status:  StatusWarning,
-			Message: "No editor configured",
-			Hint:    "Set settings.editor in config or $EDITOR environment variable",
-		}
-	}
-
-	cmd := strings.Fields(editor)[0]
+// CheckEditor checks that the command "muxly config edit" would run is installed.
+func CheckEditor(editor string) CheckResult {
+	// Only a blank editor can leave this empty, and it then fails the lookup like any other.
+	cmd, _, _ := strings.Cut(strings.TrimSpace(editor), " ")
 	if _, err := exec.LookPath(cmd); err != nil {
 		return CheckResult{
 			Name:    "editor",
 			Status:  StatusWarning,
 			Message: fmt.Sprintf("Editor '%s' not found in PATH", cmd),
-			Hint:    "Verify the editor command is installed and in your PATH",
+			Hint:    "Install it, or set settings.editor in the config or $EDITOR",
 		}
 	}
 
