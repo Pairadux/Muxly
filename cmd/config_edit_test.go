@@ -259,6 +259,29 @@ func TestConfigRemoveFindsAPathHoweverItIsGiven(t *testing.T) {
 	}
 }
 
+// "notes" typed in a folder that has one means that one, as it does when adding, even with
+// an entry written as a bare "notes" listed first.
+func TestConfigRemovePrefersWhatAPathResolvesTo(t *testing.T) {
+	for _, kind := range []string{"entry", "scan"} {
+		t.Run(kind, func(t *testing.T) {
+			c := newCLI(t)
+			c.cwd = c.mkdir(filepath.Join(c.home, "here"))
+			list := map[string]string{"entry": "entry_dirs", "scan": "scan_dirs"}[kind]
+			c.writeConfig(list + ":\n  - path: notes\n  - path: ~/here/notes\n" + validTemplates)
+
+			got := c.run("config", "remove", kind, "notes")
+
+			if got.code != 0 {
+				t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
+			}
+			want := list + ":\n  - path: notes\n" + validTemplates
+			if config := c.readConfig(); config != want {
+				t.Errorf("got:\n%s\nwant:\n%s", config, want)
+			}
+		})
+	}
+}
+
 // With nothing left, every command but "config edit" refuses to run. Nothing else may
 // happen either: the .muxly file only goes once the entry has.
 func TestConfigRemoveRefusesTheLastDirectory(t *testing.T) {

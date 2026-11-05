@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -165,6 +166,31 @@ func TestEntryDirsStayStrict(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// The list of keys in unknownEntryDirKeys has to keep up with the fields of EntryDir.
+func TestEveryEntryDirFieldIsAKnownKey(t *testing.T) {
+	fields := reflect.TypeFor[models.EntryDir]()
+	for i := range fields.NumField() {
+		key, _, _ := strings.Cut(fields.Field(i).Tag.Get("yaml"), ",")
+
+		_, _, err := Parse([]byte("entry_dirs:\n  - " + key + ": x\n"))
+
+		if err != nil {
+			t.Errorf("key %q: %v", key, err)
+		}
+	}
+}
+
+func TestAMisspelledKeyInAnEntryKeepsTheEntry(t *testing.T) {
+	cfg, _, err := Parse([]byte("entry_dirs:\n  - path: ~/a\n    tempalte: t\n"))
+
+	if err == nil {
+		t.Fatal("want an error")
+	}
+	if len(cfg.EntryDirs) != 1 || cfg.EntryDirs[0].Path != "~/a" {
+		t.Errorf("entry_dirs = %+v", cfg.EntryDirs)
 	}
 }
 

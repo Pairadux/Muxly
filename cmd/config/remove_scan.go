@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"slices"
 
 	"github.com/Pairadux/muxly/internal/config"
 	"github.com/Pairadux/muxly/internal/models"
@@ -32,9 +31,7 @@ Examples:
 			return err
 		}
 
-		idx := slices.IndexFunc(state.Cfg.ScanDirs, func(sd models.ScanDir) bool {
-			return sd.Path == args[0] || resolvesTo(sd.Path, resolvedPath)
-		})
+		idx := findConfigured(state.Cfg.ScanDirs, func(sd models.ScanDir) string { return sd.Path }, args[0], resolvedPath)
 		if idx == -1 {
 			return fmt.Errorf("path %q is not in scan_dirs", resolvedPath)
 		}

@@ -64,13 +64,13 @@ func editList(path, key string, edit listEdit, apply func(*models.Config)) error
 	}
 	want, _, err := Parse(data)
 	if err != nil {
-		return fmt.Errorf("invalid config file %s\n%w", path, err)
+		return InvalidFileError(path, err)
 	}
 	apply(&want)
 
 	var doc yaml.Node
 	if err := yaml.Unmarshal(data, &doc); err != nil {
-		return fmt.Errorf("invalid config file %s\n%w", path, err)
+		return InvalidFileError(path, err)
 	}
 	var root *yaml.Node
 	if len(doc.Content) > 0 {
@@ -108,50 +108,35 @@ func sameConfig(a, b models.Config) bool {
 // appendItem adds value at the end of the list, starting one if there's no list yet.
 func appendItem(value any) listEdit {
 	return func(lines []string, root *yaml.Node, key string) (string, error) {
-		keyNode, list := findKey(root, key)
-
-		if keyNode == nil {
-			item, err := renderItem(value, preferredIndent(lines, root))
-			if err != nil {
-				return "", err
-			}
-			return insertAfter(lines, len(lines), key+":\n"+item), nil
-		}
-
-		if isEmptyList(list) {
-			if keyNode.Line > len(lines) {
-				return "", errNotEditable(key)
-			}
-			match := emptyListLine.FindStringSubmatch(lines[keyNode.Line-1])
-			if match == nil {
-				return "", errNotEditable(key)
-			}
-			keyLine := match[1]
-			if match[2] != "" {
-				keyLine += " " + match[2]
-			}
-			item, err := renderItem(value, preferredIndent(lines, root))
-			if err != nil {
-				return "", err
-			}
-			updated := slices.Clone(lines)
-			updated[keyNode.Line-1] = keyLine + "\n" + item
-			return strings.Join(updated, ""), nil
-		}
-
-		if !isBlockList(list) {
-			return "", errNotEditable(key)
-		}
-		last := list.Content[len(list.Content)-1]
-		indent, ok := itemIndent(lines, last)
-		if !ok || lastLine(last) > len(lines) {
-			return "", errNotEditable(key)
-		}
-		item, err := renderItem(value, indent)
+		item, err := renderItem(value)
 		if err != nil {
 			return "", err
 		}
-		return insertAfter(lines, lastLine(last), item), nil
+
+		keyNode, list := findKey(root, key)
+		switch {
+		case keyNode == nil:
+			added := key + ":\n" + indentItem(item, preferredIndent(lines, root))
+			return insertAfter(lines, len(lines), added), nil
+
+		case isEmptyList(list):
+			keyLine, ok := keyLineWithoutValue(lines, keyNode)
+			if !ok {
+				return "", errNotEditable(key)
+			}
+			updated := slices.Clone(lines)
+			updated[keyNode.Line-1] = keyLine + "\n" + indentItem(item, preferredIndent(lines, root))
+			return strings.Join(updated, ""), nil
+
+		case isBlockList(list):
+			last := list.Content[len(list.Content)-1]
+			indent, ok := itemIndent(lines, last)
+			if !ok || lastLine(last) > len(lines) {
+				return "", errNotEditable(key)
+			}
+			return insertAfter(lines, lastLine(last), indentItem(item, indent)), nil
+		}
+		return "", errNotEditable(key)
 	}
 }
 
@@ -233,22 +218,47 @@ func lastLine(node *yaml.Node) int {
 	return line
 }
 
-// renderItem writes value as a list item at the given indent. Marshalling takes care of
-// anything that needs quoting, such as "~", which on its own means null in YAML.
-func renderItem(value any, indent string) (string, error) {
+// keyLineWithoutValue returns a key's line with its empty value taken out, keeping any
+// comment. It reports false if the line isn't that simple.
+func keyLineWithoutValue(lines []string, keyNode *yaml.Node) (string, bool) {
+	if keyNode.Line > len(lines) {
+		return "", false
+	}
+	match := emptyListLine.FindStringSubmatch(lines[keyNode.Line-1])
+	if match == nil {
+		return "", false
+	}
+	if match[2] != "" {
+		return match[1] + " " + match[2], true
+	}
+	return match[1], true
+}
+
+// renderItem writes value as the lines of a list item. Marshalling takes care of anything
+// that needs quoting, such as "~", which on its own means null in YAML.
+func renderItem(value any) ([]string, error) {
 	text, err := yaml.Marshal(value)
 	if err != nil {
-		return "", fmt.Errorf("writing the new item: %w", err)
+		return nil, fmt.Errorf("writing the new item: %w", err)
 	}
-	var item strings.Builder
-	for i, line := range strings.Split(strings.TrimRight(string(text), "\n"), "\n") {
+	item := strings.Split(strings.TrimRight(string(text), "\n"), "\n")
+	for i, line := range item {
 		marker := "  "
 		if i == 0 {
 			marker = "- "
 		}
-		item.WriteString(indent + marker + line + "\n")
+		item[i] = marker + line
 	}
-	return item.String(), nil
+	return item, nil
+}
+
+// indentItem joins the lines of a list item, each at the given indent.
+func indentItem(item []string, indent string) string {
+	var text strings.Builder
+	for _, line := range item {
+		text.WriteString(indent + line + "\n")
+	}
+	return text.String()
 }
 
 // insertAfter returns the text with added placed after line number n, counting from 1.

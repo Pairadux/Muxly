@@ -80,36 +80,17 @@ func (s ScanDir) String() string {
 	return result
 }
 
-// UnmarshalYAML accepts "- ~/notes" as well as "- path: ~/notes".
+// UnmarshalYAML accepts "- ~/notes" as well as "- path: ~/notes". Decoding from a node isn't
+// strict about keys, so config.Parse checks those.
 func (e *EntryDir) UnmarshalYAML(value *yaml.Node) error {
 	switch value.Kind {
 	case yaml.ScalarNode:
 		return value.Decode(&e.Path)
 	case yaml.MappingNode:
-	default:
-		return lineError(value, "an entry_dirs item must be a path, or a mapping with a path key")
+		type plain EntryDir
+		return value.Decode((*plain)(e))
 	}
-
-	// Decoding from a node ignores the decoder's strict mode, so the keys are checked here.
-	var unknown yaml.TypeError
-	for i := 0; i+1 < len(value.Content); i += 2 {
-		switch key := value.Content[i]; key.Value {
-		case "path", "template":
-		default:
-			unknown.Errors = append(unknown.Errors, fmt.Sprintf("line %d: unknown key %q", key.Line, key.Value))
-		}
-	}
-	if len(unknown.Errors) > 0 {
-		return &unknown
-	}
-
-	type plain EntryDir
-	return value.Decode((*plain)(e))
-}
-
-// lineError makes an error the yaml decoder collects with its own, rather than stopping at.
-func lineError(node *yaml.Node, message string) error {
-	return &yaml.TypeError{Errors: []string{fmt.Sprintf("line %d: %s", node.Line, message)}}
+	return &yaml.TypeError{Errors: []string{fmt.Sprintf("line %d: an entry_dirs item must be a path, or a mapping with a path key", value.Line)}}
 }
 
 // String returns the string representation

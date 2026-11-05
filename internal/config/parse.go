@@ -63,6 +63,7 @@ func decodeStrict(data []byte, cfg *models.Config) error {
 		return newParseError(err)
 	}
 	problems = append(problems, emptyListItems(&doc)...)
+	problems = append(problems, unknownEntryDirKeys(&doc)...)
 
 	var extra yaml.Node
 	err = decoder.Decode(&extra)
@@ -90,6 +91,34 @@ func emptyListItems(node *yaml.Node) []string {
 			problems = append(problems, fmt.Sprintf(`line %d: an empty list item, which would be ignored. An unquoted ~ counts as empty, so write "~" for your home directory`, child.Line))
 		}
 		problems = append(problems, emptyListItems(child)...)
+	}
+	return problems
+}
+
+// unknownEntryDirKeys does for entry_dirs what strict decoding does everywhere else. It
+// can't do it there, because EntryDir decodes itself to allow for the short form. Reporting
+// these here rather than from EntryDir also keeps the item, where an error would drop it,
+// and doctor would go on to say there were no directories.
+func unknownEntryDirKeys(doc *yaml.Node) []string {
+	if len(doc.Content) == 0 {
+		return nil
+	}
+	_, list := findKey(doc.Content[0], "entry_dirs")
+	if list == nil {
+		return nil
+	}
+	var problems []string
+	for _, item := range list.Content {
+		if item.Kind != yaml.MappingNode {
+			continue
+		}
+		for i := 0; i+1 < len(item.Content); i += 2 {
+			switch key := item.Content[i]; key.Value {
+			case "path", "template":
+			default:
+				problems = append(problems, fmt.Sprintf("line %d: unknown key %q", key.Line, key.Value))
+			}
+		}
 	}
 	return problems
 }

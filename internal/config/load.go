@@ -14,6 +14,9 @@ import (
 )
 
 const (
+	envVisual = "VISUAL"
+	envEditor = "EDITOR"
+
 	envMuxlyEditor   = "MUXLY_EDITOR"
 	envDefaultDepth  = "MUXLY_DEFAULT_DEPTH"
 	envSessionPrefix = "MUXLY_TMUX_SESSION_PREFIX"

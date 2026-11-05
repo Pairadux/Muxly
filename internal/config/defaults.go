@@ -6,10 +6,6 @@ import "github.com/Pairadux/muxly/internal/models"
 const (
 	// DefaultEditor is the editor for "muxly config edit" when nothing else sets one.
 	DefaultEditor = "vi"
-
-	envVisual = "VISUAL"
-	envEditor = "EDITOR"
-
 	// DefaultTmuxSessionPrefix marks active sessions in the picker.
 	DefaultTmuxSessionPrefix = "[TMUX] "
 	// DefaultScanDepth is how deep scan_dirs are searched when no depth is set.

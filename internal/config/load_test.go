@@ -232,3 +232,14 @@ templates:
 		}
 	}
 }
+
+func TestTheRepoFixtureConfigIsValid(t *testing.T) {
+	cfg, report := Load(filepath.Join("..", "..", "testdata", "muxly-fixtures", "config.yaml"))
+
+	if err := report.Err(); err != nil {
+		t.Fatal(err)
+	}
+	if err := Validate(&cfg); err != nil {
+		t.Error(err)
+	}
+}

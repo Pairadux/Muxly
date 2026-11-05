@@ -3,7 +3,6 @@ package config
 import (
 	"errors"
 	"fmt"
-	"slices"
 
 	"github.com/Pairadux/muxly/internal/config"
 	"github.com/Pairadux/muxly/internal/forms"
@@ -39,16 +38,14 @@ Examples:
 			return err
 		}
 
-		idx := slices.IndexFunc(state.Cfg.EntryDirs, func(ed models.EntryDir) bool {
-			return ed.Path == args[0] || resolvesTo(ed.Path, resolvedPath)
-		})
+		idx := findConfigured(state.Cfg.EntryDirs, func(ed models.EntryDir) string { return ed.Path }, args[0], resolvedPath)
 		if idx == -1 {
 			return fmt.Errorf("path %q is not in entry_dirs", resolvedPath)
 		}
 		written := state.Cfg.EntryDirs[idx].Path
 
-		// The entry may be how it was found, so its own path says where a .muxly file would
-		// be. One that doesn't resolve has no directory to look in.
+		// The entry's own path says where its .muxly file would be, since it may not be what
+		// was typed. An entry that doesn't resolve has no directory to look in.
 		deleteMuxly := false
 		dir, resolveErr := utility.ResolvePath(written)
 		if resolveErr == nil {
