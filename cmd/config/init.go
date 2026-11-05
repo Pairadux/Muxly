@@ -11,6 +11,7 @@ import (
 	"github.com/Pairadux/muxly/internal/constants"
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/Pairadux/muxly/internal/state"
+	"github.com/Pairadux/muxly/internal/utility"
 	"github.com/spf13/cobra"
 	"go.yaml.in/yaml/v3"
 )
@@ -65,7 +66,7 @@ func writeNewConfig(path, content string, force bool) error {
 	if err := os.MkdirAll(filepath.Dir(path), constants.DirectoryPermissions); err != nil {
 		return fmt.Errorf("creating config directory: %w", err)
 	}
-	if err := os.WriteFile(path, []byte(content), constants.FilePermissions); err != nil {
+	if err := utility.WriteFileAtomic(path, []byte(content), constants.FilePermissions); err != nil {
 		return fmt.Errorf("writing config: %w", err)
 	}
 	return nil

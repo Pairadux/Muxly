@@ -156,3 +156,19 @@ func GetSubDirs(maxDepth int, root string, ignoreDirNames, ignorePaths models.St
 	}
 	return dirs, problems
 }
+
+// TildePath writes a clean absolute path with the home directory as "~", which is how
+// paths are usually written in the config, and which still works if home moves.
+func TildePath(path string) string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return path
+	}
+	if path == home {
+		return "~"
+	}
+	if rest, found := strings.CutPrefix(path, home+string(filepath.Separator)); found {
+		return "~/" + rest
+	}
+	return path
+}

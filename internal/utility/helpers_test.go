@@ -435,6 +435,25 @@ func TestResolveArgumentPath(t *testing.T) {
 	}
 }
 
+func TestTildePath(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	tests := map[string]string{
+		home:               "~",
+		home + "/Dev/x":    "~/Dev/x",
+		home + "-other/x":  home + "-other/x",
+		"/somewhere/else":  "/somewhere/else",
+		filepath.Dir(home): filepath.Dir(home),
+	}
+
+	for path, want := range tests {
+		if got := TildePath(path); got != want {
+			t.Errorf("TildePath(%q) = %q, want %q", path, got, want)
+		}
+	}
+}
+
 func TestRequireDirectory(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "file")

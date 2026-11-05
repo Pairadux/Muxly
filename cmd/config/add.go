@@ -33,21 +33,22 @@ func init() {
 	Cmd.AddCommand(addCmd)
 }
 
-// resolveInputPath handles path resolution including special handling for relative paths like "." and ".."
-func resolveInputPath(inputPath string) (string, error) {
-	// Handle relative paths like "." and ".."
-	// filepath.Abs converts them to absolute paths based on current working directory
-	if inputPath == "." || inputPath == ".." {
-		absPath, err := filepath.Abs(inputPath)
-		if err != nil {
-			return "", fmt.Errorf("failed to resolve relative path %q: %w", inputPath, err)
-		}
-		// Still pass through ResolvePath to handle any env vars and path cleaning
-		return utility.ResolvePath(absPath)
-	}
+// resolvesTo reports whether a path as written in the config means the given clean,
+// absolute path.
+func resolvesTo(configured, resolved string) bool {
+	existing, err := utility.ResolvePath(configured)
+	return err == nil && existing == resolved
+}
 
-	// For absolute paths, tilde paths, or paths with env vars
-	return utility.ResolvePath(inputPath)
+// pathForConfig returns how to write a directory in the config file. Paths there are read
+// differently from those on the command line, because a "$" in one expands, so it makes
+// sure this one will still mean the same directory when it's read back.
+func pathForConfig(resolved string) (string, error) {
+	written := utility.TildePath(resolved)
+	if !resolvesTo(written, resolved) {
+		return "", fmt.Errorf("%s can't be listed in the config, because $ and \\ in paths there don't mean themselves", resolved)
+	}
+	return written, nil
 }
 
 // wouldBeFoundByScanDirs checks if a target path would be discovered by any configured scan_dir.

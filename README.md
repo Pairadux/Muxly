@@ -456,6 +456,10 @@ muxly config remove scan ~/projects
 muxly config remove entry ~/Documents
 ```
 
+Paths you type work as they would in a shell: `.`, `./foo` and `foo` start from the current folder. They go in the config starting with `~` if they're in your home directory.
+
+These commands only change the lines they need to, so your comments, blank lines and everything else stay as they are. If a list is written in a way they can't safely change, such as `entry_dirs: [{path: ~/a}]`, they say so and leave the file alone. `config remove` won't remove your last directory, because muxly needs at least one.
+
 ### Opening Without the Picker
 
 ```bash

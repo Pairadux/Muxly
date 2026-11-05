@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/Pairadux/muxly/internal/config"
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/Pairadux/muxly/internal/state"
 	"github.com/Pairadux/muxly/internal/utility"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // addEntryCmd adds a directory to entry_dirs
@@ -22,8 +22,9 @@ var addEntryCmd = &cobra.Command{
 Entry directories are included directly without scanning. Use this for
 specific directories you want to access, not entire directory trees.
 
-The path can be absolute, relative, or use tilde expansion.
-Relative paths (like . or ..) will be converted to absolute paths.
+The path can be absolute, start with ~, or be relative to the current folder.
+It's written to the config starting with ~ if it's in your home directory.
+The rest of the file, including comments, stays as it is.
 
 Examples:
   muxly config add entry .                    # Add current directory
@@ -31,9 +32,7 @@ Examples:
   muxly config add entry /path/to/directory   # Add absolute path`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		inputPath := args[0]
-
-		resolvedPath, err := resolveInputPath(inputPath)
+		resolvedPath, err := utility.ResolveArgumentPath(args[0])
 		if err != nil {
 			return err
 		}
@@ -49,20 +48,21 @@ Examples:
 		}
 
 		if slices.ContainsFunc(state.Cfg.EntryDirs, func(ed models.EntryDir) bool {
-			return ed.Path == resolvedPath
+			return resolvesTo(ed.Path, resolvedPath)
 		}) {
 			fmt.Printf("Path %q is already in entry_dirs\n", resolvedPath)
 			return nil
 		}
 
-		updatedEntryDirs := append(state.Cfg.EntryDirs, models.EntryDir{Path: resolvedPath})
-		viper.Set("entry_dirs", updatedEntryDirs)
-
-		if err := viper.WriteConfig(); err != nil {
-			return fmt.Errorf("failed to write config: %w", err)
+		written, err := pathForConfig(resolvedPath)
+		if err != nil {
+			return err
+		}
+		if err := config.AddEntryDir(state.CfgFilePath, models.EntryDir{Path: written}); err != nil {
+			return err
 		}
 
-		fmt.Printf("Added %q to entry_dirs\n", resolvedPath)
+		fmt.Printf("Added %q to entry_dirs\n", written)
 		return nil
 	},
 }

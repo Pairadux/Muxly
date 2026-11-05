@@ -1,7 +1,11 @@
 // Package models defines muxly's config and session types.
 package models
 
-import "fmt"
+import (
+	"fmt"
+
+	"go.yaml.in/yaml/v3"
+)
 
 // StringSet represents a set of strings using a map with empty struct values for memory efficiency
 type StringSet map[string]struct{}
@@ -91,6 +95,11 @@ type Settings struct {
 	DefaultDepth            int    `mapstructure:"default_depth" yaml:"default_depth"`
 	TmuxSessionPrefix       string `mapstructure:"tmux_session_prefix" yaml:"tmux_session_prefix"`
 	AlwaysKillOnLastSession bool   `mapstructure:"always_kill_on_last_session" yaml:"always_kill_on_last_session"`
+
+	// RemovedTmuxBase catches a key muxly no longer uses, so that a config which still has
+	// it gets a warning naming the line, rather than the error for an unknown key. Configs
+	// generated before 0.27.0 all have it.
+	RemovedTmuxBase yaml.Node `mapstructure:"-" yaml:"tmux_base,omitempty"`
 }
 
 // Config represents the full configuration structure

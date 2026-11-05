@@ -2,11 +2,13 @@ package config
 
 import (
 	"fmt"
+	"slices"
 
+	"github.com/Pairadux/muxly/internal/config"
+	"github.com/Pairadux/muxly/internal/models"
 	"github.com/Pairadux/muxly/internal/state"
 	"github.com/Pairadux/muxly/internal/utility"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // removeScanCmd removes a directory from scan_dirs
@@ -16,8 +18,8 @@ var removeScanCmd = &cobra.Command{
 	Short:   "Remove a directory from scan_dirs",
 	Long: `Remove a directory from scan_dirs in the configuration file.
 
-The path can be absolute, relative, or use tilde expansion.
-Relative paths (like . or ..) will be converted to absolute paths.
+The path can be absolute, start with ~, be relative to the current folder, or be
+exactly as 'muxly config list' shows it.
 
 Examples:
   muxly config remove scan ~/Dev          # Remove from scan_dirs
@@ -25,39 +27,23 @@ Examples:
   muxly config remove scan ~/.config      # Remove config directory`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		inputPath := args[0]
-
-		resolvedPath, err := resolveInputPath(inputPath)
+		resolvedPath, err := utility.ResolveArgumentPath(args[0])
 		if err != nil {
 			return err
 		}
 
-		// Find the scan_dir entry
-		foundIdx := -1
-		for i, scanDir := range state.Cfg.ScanDirs {
-			existingPath, err := utility.ResolvePath(scanDir.Path)
-			if err != nil {
-				continue
-			}
-			if existingPath == resolvedPath {
-				foundIdx = i
-				break
-			}
-		}
-
-		if foundIdx == -1 {
+		idx := slices.IndexFunc(state.Cfg.ScanDirs, func(sd models.ScanDir) bool {
+			return sd.Path == args[0] || resolvesTo(sd.Path, resolvedPath)
+		})
+		if idx == -1 {
 			return fmt.Errorf("path %q is not in scan_dirs", resolvedPath)
 		}
 
-		// Remove from scan_dirs
-		updatedScanDirs := append(state.Cfg.ScanDirs[:foundIdx], state.Cfg.ScanDirs[foundIdx+1:]...)
-		viper.Set("scan_dirs", updatedScanDirs)
-
-		if err := viper.WriteConfig(); err != nil {
-			return fmt.Errorf("failed to write config: %w", err)
+		if err := config.RemoveScanDir(state.CfgFilePath, idx); err != nil {
+			return err
 		}
 
-		fmt.Printf("Removed %q from scan_dirs\n", resolvedPath)
+		fmt.Printf("Removed %q from scan_dirs\n", state.Cfg.ScanDirs[idx].Path)
 		return nil
 	},
 }
