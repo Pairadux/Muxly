@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -33,6 +34,9 @@ such as "code --wait".`,
 		warnings, err := config.ValidateConfigFile(state.CfgFilePath)
 		for _, warning := range warnings {
 			fmt.Fprintln(os.Stderr, "Warning:", warning)
+		}
+		if errors.Is(err, config.ErrNotFound) {
+			return err
 		}
 		if err != nil {
 			return fmt.Errorf("the config still has problems:\n%w\nRun 'muxly config edit' again to fix them", err)

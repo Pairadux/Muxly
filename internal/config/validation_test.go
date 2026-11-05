@@ -329,7 +329,7 @@ templates:
 				return filepath.Join(tempDir, "nonexistent.yaml")
 			},
 			expectError: true,
-			errContains: "cannot read config file",
+			errContains: "no config file found",
 		},
 		{
 			name: "invalid YAML",

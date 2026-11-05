@@ -477,6 +477,23 @@ func TestConfigEditReportsAMissingEditor(t *testing.T) {
 	}
 }
 
+// Closing the editor with no file saved isn't a problem to fix by editing again.
+func TestConfigEditWithNoConfigPointsAtInit(t *testing.T) {
+	c := newCLI(t).withFakeEditors("fake-editor").setEnv("EDITOR=fake-editor")
+
+	got := c.run("config", "edit")
+
+	if got.code == 0 || !strings.Contains(got.stderr, "muxly config init") {
+		t.Errorf("exit %d, stderr %q", got.code, got.stderr)
+	}
+	if strings.Contains(got.stderr, "again") {
+		t.Errorf("stderr %q sends you back to the editor", got.stderr)
+	}
+	if log := c.log("editor"); len(log) == 0 {
+		t.Error("the editor never opened")
+	}
+}
+
 func TestNewConfigsLeaveTheEditorToTheEnvironment(t *testing.T) {
 	c := newCLI(t).withFakeEditors("from-editor").setEnv("EDITOR=from-editor")
 

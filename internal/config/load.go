@@ -67,7 +67,7 @@ func Load(path string) (models.Config, LoadReport) {
 	data, err := os.ReadFile(path)
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
-		report.FileErr = fmt.Errorf("%w at %s\nRun 'muxly config init' to create one, or use --config to specify a path", ErrNotFound, path)
+		report.FileErr = notFoundError(path)
 	case err != nil:
 		report.FileErr = fmt.Errorf("reading config: %w", err)
 	default:
@@ -84,6 +84,10 @@ func Load(path string) (models.Config, LoadReport) {
 	report.EnvErr = applyEnv(&cfg)
 	ApplyDefaults(&cfg)
 	return cfg, report
+}
+
+func notFoundError(path string) error {
+	return fmt.Errorf("%w at %s\nRun 'muxly config init' to create one, or use --config to specify a path", ErrNotFound, path)
 }
 
 // InvalidFileError says that the config file at path has the given problems, and what to

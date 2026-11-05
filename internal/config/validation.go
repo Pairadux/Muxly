@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 
 	"github.com/Pairadux/muxly/internal/models"
@@ -81,6 +82,9 @@ func Problems(cfg *models.Config) []error {
 // an error if it can't be read or muxly wouldn't accept it.
 func ValidateConfigFile(path string) ([]string, error) {
 	data, err := os.ReadFile(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, notFoundError(path)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("cannot read config file: %w", err)
 	}
