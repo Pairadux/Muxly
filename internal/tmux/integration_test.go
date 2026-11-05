@@ -140,11 +140,20 @@ func TestAwkwardNamesOpenOneSessionAndFindItAgain(t *testing.T) {
 		{name: ".conf/app", stored: "_conf/app"},
 		{name: "foo.bar", stored: "foo_bar"},
 		{name: "a:b", stored: "a-b"},
-		{name: "$dollar", stored: "$dollar"},
+		{name: "$dollar", stored: "_dollar"},
+		{name: `back\slash`, stored: "back_slash"},
 		{name: "%pct", stored: "%pct"},
 		{name: "=eq", stored: "=eq"},
 		{name: "@at", stored: "@at"},
 		{name: "é-🎉", stored: "é-🎉"},
+		{name: "sp ace", stored: "sp ace"},
+		{name: `"quote`, stored: `"quote`},
+		{name: "'apos", stored: "'apos"},
+		{name: "~tilde", stored: "~tilde"},
+		{name: "*star", stored: "*star"},
+		{name: "[br]", stored: "[br]"},
+		{name: "!bang", stored: "!bang"},
+		{name: "{brace}", stored: "{brace}"},
 	}
 
 	for _, tt := range tests {

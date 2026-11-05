@@ -187,7 +187,8 @@ func TestNewSessionName(t *testing.T) {
 		"a:b":       "a-b",
 		".conf/app": "_conf/app",
 		"x.y/src":   "x_y/src",
-		"$dollar":   "$dollar",
+		"$dollar":   "_dollar",
+		"a\\b":      "a_b",
 		"=eq":       "=eq",
 	}
 

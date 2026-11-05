@@ -95,7 +95,7 @@ func TestPickingAwkwardNamesOpensOneSessionAndFindsItAgain(t *testing.T) {
 	}{
 		{name: "dot in a parent", dirs: []string{"x.y/src", "other/src"}, pick: "x.y/src", stored: "x_y/src", repick: true},
 		{name: "leading dot in a parent", dirs: []string{".conf/app", "other/app"}, pick: ".conf/app", stored: "_conf/app", repick: true},
-		{name: "dollar", dirs: []string{"$dollar"}, pick: "$dollar", stored: "$dollar"},
+		{name: "dollar", dirs: []string{"$dollar"}, pick: "$dollar", stored: "_dollar", repick: true},
 		{name: "percent", dirs: []string{"%pct"}, pick: "%pct", stored: "%pct"},
 		{name: "equals", dirs: []string{"=eq"}, pick: "=eq", stored: "=eq"},
 		{name: "at", dirs: []string{"@at"}, pick: "@at", stored: "@at"},
@@ -159,22 +159,27 @@ func TestSessionNameArgumentWithADot(t *testing.T) {
 	}
 }
 
-// The name from the picker has the prefix, and has to lose it to find the session.
+// The name from the picker has the prefix, and has to lose it to find the session. The
+// session here was made outside muxly, with whatever name this version of tmux gave it:
+// 3.2a stores this one as \$dollar. Either way, a $ can't be allowed to read as an id.
 func TestPickingARunningSessionSwitchesToIt(t *testing.T) {
-	c := newCLI(t).writeConfig(validConfig).setEnv("FAKE_PICK=[TMUX] $dollar")
+	c := newCLI(t).writeConfig(validConfig)
 	srv := c.withRealTmux()
 	shell := srv.NewSession("shell")
-	srv.NewSession("$dollar")
+	id := srv.NewSession("$dollar")
+	stored := srv.Run("display-message", "-p", "-t", id, "#{session_name}")
 	srv.Attach(shell)
-	c.insideTmux(srv, shell)
+	c.insideTmux(srv, shell).setEnv("FAKE_PICK=[TMUX] " + stored)
+	want := []string{"shell", stored}
+	slices.Sort(want)
 
 	got := c.run()
 
 	if got.code != 0 {
 		t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
 	}
-	srv.Eventually("the client to arrive", func() bool { return srv.ClientSession() == "$dollar" })
-	if sessions, want := srv.Sessions(), []string{"$dollar", "shell"}; !slices.Equal(sessions, want) {
+	srv.Eventually("the client to arrive", func() bool { return srv.ClientSession() == stored })
+	if sessions := srv.Sessions(); !slices.Equal(sessions, want) {
 		t.Errorf("sessions = %q, want %q", sessions, want)
 	}
 }

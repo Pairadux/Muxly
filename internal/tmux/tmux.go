@@ -189,13 +189,14 @@ func CreateAndSwitchSession(session models.Session) error {
 	return SwitchToSession(created)
 }
 
-// newSessionName returns the name muxly gives tmux for a new session. tmux handles "." and
-// ":" differently by version: before 3.2 it rejects them, up to 3.7 it replaces them with
-// "_", and from 3.7a it keeps them. Replacing them here means every version stores the same
-// name, so muxly can find the session again. The replacements match what muxly does to
-// directory names.
+// newSessionName returns the name muxly gives tmux for a new session, with the characters
+// tmux would store differently from how they were given. For "." and ":" it depends on the
+// version: up to 3.7 tmux replaces them with "_", and from 3.7a it keeps them. tmux 3.2a
+// stores "$name" as "\$name", and tmux doubles a backslash. Replacing them all here means
+// every version stores the name muxly asked for, so muxly can find the session again. "."
+// and ":" get the same replacements as in directory names.
 func newSessionName(name string) string {
-	return strings.NewReplacer(".", "_", ":", "-").Replace(name)
+	return strings.NewReplacer(".", "_", ":", "-", "$", "_", "\\", "_").Replace(name)
 }
 
 // attachToSession runs a tmux client on this terminal, until it detaches or its session
