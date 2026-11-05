@@ -4,6 +4,7 @@ package cmd
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -55,7 +56,7 @@ func TestDepthBelowOneIsRejected(t *testing.T) {
 }
 
 func TestDepthFlagStillWorks(t *testing.T) {
-	c := newCLI(t).withFakes()
+	c := newCLI(t).withFakes().setEnv("FAKE_FZF_EXIT=130")
 	c.mkdirs("scan/one/two/three")
 	c.writeConfig("scan_dirs:\n  - path: " + filepath.Join(c.home, "scan") + "\n" + validTemplates)
 
@@ -64,9 +65,9 @@ func TestDepthFlagStillWorks(t *testing.T) {
 	if got.code != 0 {
 		t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
 	}
-	picker := strings.Join(c.log("fzf"), "\n")
-	if !strings.Contains(picker, "two") || strings.Contains(picker, "three") {
-		t.Errorf("the picker offered:\n%s", picker)
+	labels := c.pickerLabels()
+	if !slices.Contains(labels, "two") || slices.Contains(labels, "three") {
+		t.Errorf("the picker offered %q", labels)
 	}
 }
 
