@@ -19,7 +19,8 @@ var switchCmd = &cobra.Command{
 	Long: `Switch to an active session
 
 Displays a fzf picker list of active sessions.
-If no other sessions found, exit.`,
+If no other sessions found, exit.
+SESSION must be the exact name of a session.`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		current, inside := tmux.CurrentSession()

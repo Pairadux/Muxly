@@ -165,6 +165,7 @@ Muxly sanitizes directory names to create valid tmux session names:
 
 - **Dotfiles**: Leading dots are stripped for display. `.config` appears as `config [dotdir]`
 - **Middle dots**: Replaced with underscores. `my.project` becomes `my_project`
+- **Names you type**: `muxly foo.bar` opens a session called `foo_bar`, and finds it again next time. Names must match exactly, so `muxly foo` won't open a running `foobar`
 - **Colons**: Replaced with dashes. `project:v2` becomes `project-v2`
 
 **Unsupported characters**: Directory names containing emojis or other special Unicode characters may cause unexpected behavior. Stick to alphanumeric characters, dashes, underscores, and dots for best results.
