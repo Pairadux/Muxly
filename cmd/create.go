@@ -72,13 +72,7 @@ var createCmd = &cobra.Command{
 			Path:   sessionPath,
 			Layout: models.SessionLayout{Windows: tmpl.Windows},
 		}
-		if err := tmux.CreateAndSwitchSession(sess); err != nil {
-			if errors.Is(err, tmux.ErrGracefulExit) {
-				return nil
-			}
-			return err
-		}
-		return nil
+		return tmux.CreateAndSwitchSession(sess)
 	},
 }
 

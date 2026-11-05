@@ -79,9 +79,6 @@ Outside tmux there is no current session, so only --kill-server does anything.`,
 		}
 
 		if err := tmux.SwitchToSession(target); err != nil {
-			if errors.Is(err, tmux.ErrGracefulExit) {
-				return nil
-			}
 			return fmt.Errorf("failed to switch session: %w", err)
 		}
 

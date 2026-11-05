@@ -21,11 +21,6 @@ import (
 	"github.com/Pairadux/muxly/internal/utility"
 )
 
-// ErrGracefulExit signals that the program should exit successfully (exit code 0).
-// This is used when attaching to a tmux session completes normally, as the attach
-// operation takes over the terminal and the Go program should terminate.
-var ErrGracefulExit = errors.New("graceful exit")
-
 // DefaultShell runs window commands when $SHELL isn't set.
 const DefaultShell = "/bin/bash"
 
@@ -202,8 +197,8 @@ func newSessionName(name string) string {
 	return strings.NewReplacer(".", "_", ":", "_").Replace(name)
 }
 
-// attachToSession attaches to a session when not currently in tmux.
-// Returns ErrGracefulExit on successful attach or when server is not running.
+// attachToSession runs a tmux client on this terminal, until it detaches or its session
+// ends.
 func attachToSession(id string) error {
 	cmd := exec.Command("tmux", "attach-session", "-t", id)
 	var stderr bytes.Buffer
@@ -213,7 +208,7 @@ func attachToSession(id string) error {
 	err := cmd.Run()
 	// Killing the server from inside the session also ends this client with an error.
 	if err == nil || !IsTmuxServerRunning() {
-		return ErrGracefulExit
+		return nil
 	}
 	return &commandError{subcommand: "attach-session", stderr: stderr.String(), err: err}
 }

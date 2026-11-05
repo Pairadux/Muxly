@@ -124,9 +124,6 @@ var rootCmd = &cobra.Command{
 		}
 
 		if err := tmux.CreateAndSwitchSession(sess); err != nil {
-			if errors.Is(err, tmux.ErrGracefulExit) {
-				return nil
-			}
 			return fmt.Errorf("failed to switch session: %w", err)
 		}
 
