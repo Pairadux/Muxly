@@ -17,6 +17,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Install tmux and fzf
+        run: sudo apt-get update && sudo apt-get install -y tmux fzf
+
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
@@ -44,3 +47,25 @@ jobs:
 
       - name: Check for known vulnerabilities
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+
+  # Runs the tests on the oldest tmux muxly supports, which is minTmuxVersion in
+  # internal/checks/external.go. Ubuntu 22.04 happens to ship that version.
+  oldest-tmux:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install tmux and fzf
+        run: sudo apt-get update && sudo apt-get install -y tmux fzf
+
+      - name: Check this is still the oldest supported tmux
+        run: test "$(tmux -V)" = "tmux 3.2a"
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Run tests
+        run: go test -race ./...
