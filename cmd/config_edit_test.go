@@ -42,7 +42,7 @@ ignore_dirs: [ target, 'build' ]
 templates:
   - name: default
     label:   'Quoted label'
-    default: true
+    default: yes
     windows:
       - {name: main, cmd: "echo hi"}
 

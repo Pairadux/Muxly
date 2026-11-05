@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	cliconfig "github.com/Pairadux/muxly/cmd/config"
 	"github.com/Pairadux/muxly/internal/checks"
@@ -18,7 +17,6 @@ import (
 	"github.com/Pairadux/muxly/internal/tmux"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var cfgFileFlag string
@@ -64,12 +62,18 @@ Based on ThePrimeagen's tmux-sessionizer script.`,
 			return nil
 		}
 
+		if err := loadConfig(); err != nil {
+			return err
+		}
+
 		if !hasAnnotation(cmd, constants.AnnotationSkipUtilsCheck) {
 			if err := checks.VerifyExternalUtils(); err != nil {
 				return err
 			}
 		}
 		if !hasAnnotation(cmd, constants.AnnotationSkipConfigCheck) {
+			// The picker hasn't opened yet, so this can't draw over it.
+			printWarnings(state.CfgLoad.Warnings)
 			if err := validateConfig(); err != nil {
 				return err
 			}
@@ -136,7 +140,6 @@ func Execute() {
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
 	rootCmd.AddCommand(cliconfig.Cmd)
 	for _, name := range []string{"add", "edit", "init", "remove"} {
 		rootCmd.AddCommand(configCommandPointer(name))
@@ -165,65 +168,24 @@ func configCommandPointer(name string) *cobra.Command {
 	}
 }
 
-// initConfig reads in config file and ENV variables if set.
-func initConfig() {
-	if cfgFileFlag != "" {
-		state.CfgFilePath = cfgFileFlag
-		viper.SetConfigFile(state.CfgFilePath)
-	} else {
-		var configDir string
-
-		xdg_config_home := os.Getenv(constants.EnvXdgConfigHome)
-		if xdg_config_home != "" {
-			configDir = xdg_config_home
-		} else {
-			var err error
-			configDir, err = os.UserConfigDir()
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "UserConfigDir cannot be found: %v\n", err)
-			}
+// loadConfig finds and loads the config, for the commands to share. What's wrong with it
+// goes in state.CfgLoad, since some commands are how you'd fix it. It only fails if there's
+// no working out where the config would be.
+func loadConfig() error {
+	state.CfgFilePath = cfgFileFlag
+	if state.CfgFilePath == "" {
+		path, err := config.DefaultPath()
+		if err != nil {
+			return err
 		}
-
-		cfgDir := filepath.Join(configDir, "muxly")
-		viper.AddConfigPath(cfgDir)
-		viper.SetConfigType("yaml")
-		viper.SetConfigName("config")
-		state.CfgFilePath = filepath.Join(cfgDir, "config.yaml")
+		state.CfgFilePath = path
 	}
 
-	viper.AutomaticEnv() // read in environment variables that match
-
-	// Bind environment variables for config overrides
-	// Allows MUXLY_* environment variables to override config file values
-	// BindEnv only fails when called with no arguments, so its error can't occur here.
-	viper.SetEnvPrefix("MUXLY")
-	_ = viper.BindEnv("settings.editor", "MUXLY_EDITOR")
-	_ = viper.BindEnv("settings.default_depth")               // MUXLY_DEFAULT_DEPTH
-	_ = viper.BindEnv("settings.tmux_session_prefix")         // MUXLY_TMUX_SESSION_PREFIX
-	_ = viper.BindEnv("settings.always_kill_on_last_session") // MUXLY_ALWAYS_KILL_ON_LAST_SESSION
-
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			fmt.Fprintln(os.Stderr, "Config file is corrupted or unreadable:", err)
-			os.Exit(1)
-		}
-	} else if state.Verbose {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+	state.Cfg, state.CfgLoad = config.Load(state.CfgFilePath)
+	if state.Verbose && state.CfgLoad.FileErr == nil {
+		fmt.Fprintln(os.Stderr, "Using config file:", state.CfgFilePath)
 	}
-
-	if err := viper.Unmarshal(&state.Cfg); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to parse config file: %v\n", err)
-		os.Exit(1)
-	}
-
-	config.ApplyDefaults(&state.Cfg)
-
-	// Sync cfgFilePath with the actual config file that was loaded
-	// This ensures 'muxly config edit' opens the correct file
-	if viper.ConfigFileUsed() != "" {
-		state.CfgFilePath = viper.ConfigFileUsed()
-	}
+	return nil
 }
 
 // isCompletionCommand reports whether cmd is one of cobra's shell completion commands.
@@ -254,13 +216,14 @@ func hasAnnotation(cmd *cobra.Command, key string) bool {
 	return false
 }
 
-// validateConfig ensures that the application configuration is valid and complete.
-// It checks for the presence of a config file and validates the config structure.
-// Returns an error with helpful instructions if validation fails.
+// validateConfig returns everything that stops the config being used, along with what to
+// do about it.
 func validateConfig() error {
-	if viper.ConfigFileUsed() == "" {
-		return fmt.Errorf("no config file found\nRun 'muxly config init' to create one, or use --config to specify a path")
+	if err := state.CfgLoad.Err(); err != nil {
+		return err
 	}
-
-	return config.Validate(&state.Cfg)
+	if err := config.Validate(&state.Cfg); err != nil {
+		return config.InvalidFileError(state.CfgFilePath, err)
+	}
+	return nil
 }

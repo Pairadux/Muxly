@@ -373,7 +373,7 @@ templates:
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			path := tt.setup()
-			cfg, err := ValidateConfigFile(path)
+			_, err := ValidateConfigFile(path)
 
 			if tt.expectError {
 				if err == nil {
@@ -381,15 +381,9 @@ templates:
 				} else if !strings.Contains(err.Error(), tt.errContains) {
 					t.Errorf("ValidateConfigFile() error = %q, want error containing %q", err.Error(), tt.errContains)
 				}
-				if cfg != nil {
-					t.Errorf("ValidateConfigFile() expected nil config on error, got %v", cfg)
-				}
 			} else {
 				if err != nil {
 					t.Errorf("ValidateConfigFile() unexpected error: %v", err)
-				}
-				if cfg == nil {
-					t.Error("ValidateConfigFile() expected non-nil config, got nil")
 				}
 			}
 		})

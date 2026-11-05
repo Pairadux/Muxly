@@ -30,11 +30,12 @@ such as "code --wait".`,
 			return fmt.Errorf("editor exited with error: %w", err)
 		}
 
-		// Validate the edited config file
-		if _, err := config.ValidateConfigFile(state.CfgFilePath); err != nil {
-			fmt.Fprintf(os.Stderr, "\nWarning: Config validation failed: %v\n", err)
-			fmt.Fprintln(os.Stderr, "Please fix the issues above or your config may not work correctly.")
-			return fmt.Errorf("config validation failed")
+		warnings, err := config.ValidateConfigFile(state.CfgFilePath)
+		for _, warning := range warnings {
+			fmt.Fprintln(os.Stderr, "Warning:", warning)
+		}
+		if err != nil {
+			return fmt.Errorf("the config still has problems:\n%w\nRun 'muxly config edit' again to fix them", err)
 		}
 
 		fmt.Fprintln(os.Stderr, "Config file validated successfully")

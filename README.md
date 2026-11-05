@@ -211,7 +211,7 @@ Override config values temporarily using environment variables:
 # Override editor for a single command
 MUXLY_EDITOR=emacs muxly config edit
 
-# Override scan depth
+# Override default_depth
 MUXLY_DEFAULT_DEPTH=3 muxly
 
 # Override tmux session prefix
@@ -225,11 +225,19 @@ EDITOR='code --wait' muxly config edit
 
 **Supported Environment Variables:**
 - `MUXLY_EDITOR` - Editor for `muxly config edit`, ahead of `settings.editor`
-- `MUXLY_DEFAULT_DEPTH` - Default scanning depth
+- `MUXLY_DEFAULT_DEPTH` - Replaces `default_depth`, so a `scan_dirs` entry with its own `depth` keeps it
 - `MUXLY_TMUX_SESSION_PREFIX` - Prefix for active sessions in selector
 - `MUXLY_ALWAYS_KILL_ON_LAST_SESSION` - Skip fallback prompt (true/false)
 
+An empty variable counts as not set. One muxly can't use, such as `MUXLY_DEFAULT_DEPTH=abc`, is an error that names it.
+
 ### Configuration File
+
+Muxly reads `config.yaml` in `$XDG_CONFIG_HOME/muxly/`, or the file you name with `--config`.
+
+It's strict about what's in there, so a typo can't silently do nothing: a key it doesn't recognise is an error naming the line. `muxly doctor` lists everything that's wrong. `muxly config edit`, `config init`, `doctor` and `completion` all still run with a broken file, so you can always fix it.
+
+`settings.tmux_base` was removed in 0.27.0. A config that still has it works, with a warning saying which line to delete.
 
 #### Default Configuration
 
@@ -412,6 +420,8 @@ ignore_dirs:
 | `settings.always_kill_on_last_session` | bool | no | Skip fallback prompt and kill server on last session (default: `false`) |
 
 \* At least one of `scan_dirs` or `entry_dirs` must be configured.
+
+In the config file, a path with no `~` or leading `/` starts from your home directory, and `$NAME` expands to that environment variable. So a directory with a `$` in its name can't be listed, though `scan_dirs` can still find it.
 
 ## Usage Examples
 
