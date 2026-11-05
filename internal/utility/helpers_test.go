@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/Pairadux/muxly/internal/models"
-	"github.com/mitchellh/go-homedir"
 )
 
 func TestResolvePath(t *testing.T) {
@@ -53,6 +52,12 @@ func TestResolvePath(t *testing.T) {
 			name:     "home tilde with path",
 			input:    "~/Dev/project",
 			expected: filepath.Join(home, "Dev/project"),
+		},
+		{
+			name:        "another user's home errors",
+			input:       "~other/Dev",
+			expectError: true,
+			errContains: "only ~ and ~/ are supported",
 		},
 		{
 			name:        "relative dot path errors",
@@ -405,8 +410,6 @@ func TestResolveArgumentPath(t *testing.T) {
 	t.Chdir(cwd)
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	homedir.Reset()
-	t.Cleanup(homedir.Reset)
 	t.Setenv("MUXLY_TEST_VAR", "expanded")
 
 	tests := map[string]string{

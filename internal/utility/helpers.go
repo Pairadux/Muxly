@@ -12,7 +12,6 @@ import (
 
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/charlievieth/fastwalk"
-	"github.com/mitchellh/go-homedir"
 )
 
 // ResolvePath takes an "unknown" path pattern and returns a clean absolute path.
@@ -33,7 +32,7 @@ func ResolvePath(p string) (string, error) {
 		return filepath.Clean(p), nil
 	}
 	if strings.HasPrefix(p, "~") {
-		return homedir.Expand(p)
+		return expandHome(p)
 	}
 	if strings.HasPrefix(p, "./") || strings.HasPrefix(p, "../") || p == "." || p == ".." {
 		return "", fmt.Errorf("relative paths (%q) are not allowed", p)
@@ -65,9 +64,22 @@ func IsExplicitPath(arg string) bool {
 // would in a shell. The shell has also already expanded it, so a "$" in it is a real "$".
 func ResolveArgumentPath(arg string) (string, error) {
 	if arg == "~" || strings.HasPrefix(arg, "~/") {
-		return homedir.Expand(arg)
+		return expandHome(arg)
 	}
 	return filepath.Abs(arg)
+}
+
+// expandHome replaces the "~" that starts "~" or "~/...". "~name" would mean another
+// user's home, which muxly doesn't look up.
+func expandHome(p string) (string, error) {
+	if p != "~" && !strings.HasPrefix(p, "~/") {
+		return "", fmt.Errorf("cannot expand %q: only ~ and ~/ are supported", p)
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, p[1:]), nil
 }
 
 // IsWithin reports whether path is one of paths, or inside one of them.

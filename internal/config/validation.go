@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/Pairadux/muxly/internal/models"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // Validate ensures that the application configuration is valid and complete.
