@@ -211,23 +211,33 @@ Override config values temporarily using environment variables:
 # Override editor for a single command
 MUXLY_EDITOR=emacs muxly config edit
 
-# Override scan depth
+# Override default_depth
 MUXLY_DEFAULT_DEPTH=3 muxly
 
 # Override tmux session prefix
 MUXLY_TMUX_SESSION_PREFIX="[WORK] " muxly
 
-# Standard $EDITOR works too (fallback if MUXLY_EDITOR not set)
-EDITOR=nano muxly config edit
+# Standard $VISUAL and $EDITOR work too, if nothing above sets an editor
+EDITOR='code --wait' muxly config edit
 ```
 
+`muxly config edit` uses the first of these that's set: an editor you pass it, `$MUXLY_EDITOR`, `settings.editor`, `$VISUAL`, `$EDITOR`, then `vi`.
+
 **Supported Environment Variables:**
-- `MUXLY_EDITOR` or `EDITOR` - Editor for config editing
-- `MUXLY_DEFAULT_DEPTH` - Default scanning depth
+- `MUXLY_EDITOR` - Editor for `muxly config edit`, ahead of `settings.editor`
+- `MUXLY_DEFAULT_DEPTH` - Replaces `default_depth`, so a `scan_dirs` entry with its own `depth` keeps it
 - `MUXLY_TMUX_SESSION_PREFIX` - Prefix for active sessions in selector
 - `MUXLY_ALWAYS_KILL_ON_LAST_SESSION` - Skip fallback prompt (true/false)
 
+An empty variable counts as not set. One muxly can't use, such as `MUXLY_DEFAULT_DEPTH=abc`, is an error that names it.
+
 ### Configuration File
+
+Muxly reads `config.yaml` in `$XDG_CONFIG_HOME/muxly/`, or the file you name with `--config`.
+
+It's strict about what's in there, so a typo can't silently do nothing: a key it doesn't recognise is an error naming the line. `muxly doctor` lists everything that's wrong. `muxly config edit`, `config init`, `doctor` and `completion` all still run with a broken file, so you can always fix it.
+
+`settings.tmux_base` was removed in 0.27.0. A config that still has it works, with a warning saying which line to delete.
 
 #### Default Configuration
 
@@ -258,8 +268,6 @@ templates:
 
 # General settings
 settings:
-  # Editor for 'muxly config edit' (falls back to $EDITOR, then 'vi')
-  editor: vi
   # Default scanning depth for directories
   default_depth: 1
   # Prefix for active tmux sessions in the selector
@@ -322,7 +330,7 @@ templates:
 
 # General settings
 settings:
-  # Editor for 'muxly config edit' (falls back to $EDITOR, then 'vi')
+  # Editor for 'muxly config edit' (beats $VISUAL and $EDITOR)
   editor: nvim
   # Default scanning depth for scan_dirs (can be overridden per directory)
   default_depth: 1
@@ -388,12 +396,12 @@ ignore_dirs:
 
 | Option | Type | Required | Description |
 |--------|------|----------|-------------|
-| `scan_dirs` | array | yes* | Directories to scan for projects |
+| `scan_dirs` | array | yes* | Directories to scan for projects. Each is a mapping like the ones below, or just the path: `- ~/Dev` |
 | `scan_dirs[].path` | string | yes | Directory path to scan (supports `~` and environment variables) |
 | `scan_dirs[].depth` | int | no | Scan depth for this directory, at least 1 (overrides `settings.default_depth`) |
 | `scan_dirs[].alias` | string | no | Prefix for directories from here, in the picker and in session names (e.g., "dev" shows as "dev/project-name" and names the session "dev-project-name") |
 | `scan_dirs[].template` | string | no | Template name to use for sessions created from this scan directory |
-| `entry_dirs` | array | yes* | Directories always included without scanning |
+| `entry_dirs` | array | yes* | Directories always included without scanning. Each is a mapping like the ones below, or just the path: `- ~/notes`, or `- "~"` for your home directory |
 | `entry_dirs[].path` | string | yes | Directory path (supports `~` and environment variables) |
 | `entry_dirs[].template` | string | no | Template name to use for sessions created from this directory |
 | `ignore_dirs` | array | no | Additional directories to exclude from scanning, additive to built-in `.git`/`node_modules` filters (see [Ignore Rules](#ignore-rules)) |
@@ -406,12 +414,14 @@ ignore_dirs:
 | `templates[].windows[].name` | string | yes | Window name |
 | `templates[].windows[].cmd` | string | no | Command to run in window (empty string opens default shell) |
 | `settings` | object | no | General application settings |
-| `settings.editor` | string | no | Editor for config editing, falls back to `$EDITOR` (default: `"vi"`) |
+| `settings.editor` | string | no | Editor for `muxly config edit`, and it can include arguments. Falls back to `$VISUAL`, `$EDITOR`, then `vi` |
 | `settings.default_depth` | int | no | Default scanning depth for `scan_dirs` (default: `1`) |
 | `settings.tmux_session_prefix` | string | no | Prefix for active sessions in selector (default: `"[TMUX] "`) |
 | `settings.always_kill_on_last_session` | bool | no | Skip fallback prompt and kill server on last session (default: `false`) |
 
 \* At least one of `scan_dirs` or `entry_dirs` must be configured.
+
+In the config file, a path with no `~` or leading `/` starts from your home directory, and `$NAME` expands to that environment variable. So a directory with a `$` in its name can't be listed, though `scan_dirs` can still find it.
 
 ## Usage Examples
 
@@ -455,6 +465,10 @@ muxly config add entry .
 muxly config remove scan ~/projects
 muxly config remove entry ~/Documents
 ```
+
+Paths you type work as they would in a shell: `.`, `./foo` and `foo` start from the current folder. They go in the config starting with `~` if they're in your home directory.
+
+These commands only change the lines they need to, so your comments, blank lines and everything else stay as they are. If a list is written in a way they can't safely change, such as `entry_dirs: [{path: ~/a}]`, they say so and leave the file alone. `config remove` won't remove your last directory, because muxly needs at least one.
 
 ### Opening Without the Picker
 

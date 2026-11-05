@@ -4,7 +4,6 @@ package cmd
 
 import (
 	"slices"
-	"strconv"
 	"strings"
 	"testing"
 )
@@ -150,10 +149,8 @@ func TestKillSwitchesThenKillsCurrent(t *testing.T) {
 
 // Picking a session whose name holds syntax tmux would misread must kill the right one.
 func TestKillWithAwkwardSessionNames(t *testing.T) {
-	// The subtests are numbered because t.TempDir puts their names in the path of HOME,
-	// where viper would read $dollar as a variable.
-	for i, name := range []string{"$dollar", "%pct", "=eq", "@at"} {
-		t.Run(strconv.Itoa(i), func(t *testing.T) {
+	for _, name := range []string{"$dollar", "%pct", "=eq", "@at"} {
+		t.Run(name, func(t *testing.T) {
 			c := newCLI(t).writeConfig(validConfig)
 			srv := c.withRealTmux()
 			current := srv.NewSession(name)

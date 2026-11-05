@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/Pairadux/muxly/internal/models"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // LoadMuxlyFile attempts to load a .muxly file from the given directory.

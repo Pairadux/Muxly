@@ -3,14 +3,13 @@ package config
 import (
 	"errors"
 	"fmt"
-	"slices"
 
+	"github.com/Pairadux/muxly/internal/config"
 	"github.com/Pairadux/muxly/internal/forms"
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/Pairadux/muxly/internal/state"
 	"github.com/Pairadux/muxly/internal/utility"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // removeEntryCmd removes a directory from entry_dirs
@@ -20,8 +19,8 @@ var removeEntryCmd = &cobra.Command{
 	Short:   "Remove a directory from entry_dirs",
 	Long: `Remove a directory from entry_dirs in the configuration file.
 
-The path can be absolute, relative, or use tilde expansion.
-Relative paths (like . or ..) will be converted to absolute paths.
+The path can be absolute, start with ~, be relative to the current folder, or be
+exactly as 'muxly config list' shows it.
 
 If a .muxly file exists in the directory, you will be prompted to delete it
 in interactive mode. In non-interactive environments, you must explicitly
@@ -34,36 +33,40 @@ Examples:
   muxly config remove entry -d ~/old-project       # Remove, delete .muxly (non-interactive)`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		inputPath := args[0]
-
-		resolvedPath, err := resolveInputPath(inputPath)
+		resolvedPath, err := utility.ResolveArgumentPath(args[0])
 		if err != nil {
 			return err
 		}
 
-		idx := slices.IndexFunc(state.Cfg.EntryDirs, func(ed models.EntryDir) bool {
-			existingPath, err := utility.ResolvePath(ed.Path)
-			return err == nil && existingPath == resolvedPath
-		})
+		idx := findConfigured(state.Cfg.EntryDirs, func(ed models.EntryDir) string { return ed.Path }, args[0], resolvedPath)
 		if idx == -1 {
 			return fmt.Errorf("path %q is not in entry_dirs", resolvedPath)
 		}
+		written := state.Cfg.EntryDirs[idx].Path
 
-		if err := handleMuxlyFile(cmd, resolvedPath); err != nil {
+		// The entry's own path says where its .muxly file would be, since it may not be what
+		// was typed. An entry that doesn't resolve has no directory to look in.
+		deleteMuxly := false
+		dir, resolveErr := utility.ResolvePath(written)
+		if resolveErr == nil {
+			deleteMuxly, err = shouldDeleteMuxlyFile(cmd, dir)
 			if errors.Is(err, forms.ErrCancelled) {
 				return nil
 			}
+			if err != nil {
+				return err
+			}
+		}
+
+		// The .muxly file goes last, so a config that can't be changed costs nothing.
+		if err := config.RemoveEntryDir(state.CfgFilePath, idx); err != nil {
 			return err
 		}
-
-		updatedEntryDirs := slices.Delete(state.Cfg.EntryDirs, idx, idx+1)
-		viper.Set("entry_dirs", updatedEntryDirs)
-
-		if err := viper.WriteConfig(); err != nil {
-			return fmt.Errorf("failed to write config: %w", err)
+		if deleteMuxly {
+			deleteMuxlyFile(dir)
 		}
 
-		fmt.Printf("Removed %q from entry_dirs\n", resolvedPath)
+		fmt.Printf("Removed %q from entry_dirs\n", written)
 		return nil
 	},
 }

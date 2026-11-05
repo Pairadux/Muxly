@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/Pairadux/muxly/internal/models"
@@ -33,21 +34,33 @@ func init() {
 	Cmd.AddCommand(addCmd)
 }
 
-// resolveInputPath handles path resolution including special handling for relative paths like "." and ".."
-func resolveInputPath(inputPath string) (string, error) {
-	// Handle relative paths like "." and ".."
-	// filepath.Abs converts them to absolute paths based on current working directory
-	if inputPath == "." || inputPath == ".." {
-		absPath, err := filepath.Abs(inputPath)
-		if err != nil {
-			return "", fmt.Errorf("failed to resolve relative path %q: %w", inputPath, err)
-		}
-		// Still pass through ResolvePath to handle any env vars and path cleaning
-		return utility.ResolvePath(absPath)
-	}
+// resolvesTo reports whether a path as written in the config means the given clean,
+// absolute path.
+func resolvesTo(configured, resolved string) bool {
+	existing, err := utility.ResolvePath(configured)
+	return err == nil && existing == resolved
+}
 
-	// For absolute paths, tilde paths, or paths with env vars
-	return utility.ResolvePath(inputPath)
+// findConfigured returns the position of the item a path on the command line means, or -1.
+// What the path resolves to comes first, as it does when adding. Failing that, it can be
+// exactly as the item is written, which is how "muxly config list" shows it, and the only
+// way to name one that doesn't resolve, or whose bare path is measured from somewhere else.
+func findConfigured[T any](items []T, path func(T) string, arg, resolved string) int {
+	if i := slices.IndexFunc(items, func(item T) bool { return resolvesTo(path(item), resolved) }); i != -1 {
+		return i
+	}
+	return slices.IndexFunc(items, func(item T) bool { return path(item) == arg })
+}
+
+// pathForConfig returns how to write a directory in the config file. Paths there are read
+// differently from those on the command line, because a "$" in one expands, so it makes
+// sure this one will still mean the same directory when it's read back.
+func pathForConfig(resolved string) (string, error) {
+	written := utility.TildePath(resolved)
+	if !resolvesTo(written, resolved) {
+		return "", fmt.Errorf("%s can't be listed in the config, because $ and \\ in paths there don't mean themselves", resolved)
+	}
+	return written, nil
 }
 
 // wouldBeFoundByScanDirs checks if a target path would be discovered by any configured scan_dir.

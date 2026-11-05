@@ -11,8 +11,9 @@ import (
 	"github.com/Pairadux/muxly/internal/constants"
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/Pairadux/muxly/internal/state"
+	"github.com/Pairadux/muxly/internal/utility"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // initCmd represents the init command
@@ -65,7 +66,7 @@ func writeNewConfig(path, content string, force bool) error {
 	if err := os.MkdirAll(filepath.Dir(path), constants.DirectoryPermissions); err != nil {
 		return fmt.Errorf("creating config directory: %w", err)
 	}
-	if err := os.WriteFile(path, []byte(content), constants.FilePermissions); err != nil {
+	if err := utility.WriteFileAtomic(path, []byte(content), constants.FilePermissions); err != nil {
 		return fmt.Errorf("writing config: %w", err)
 	}
 	return nil
@@ -75,15 +76,17 @@ func generateConfigYAML(cfg models.Config) (string, error) {
 	header := `# Configuration for muxly
 #
 # scan_dirs: Directories to scan for projects (supports depth, alias, and template per directory)
-#   Example: - path: ~/Dev
+#   Each is a path, or a path with options:
+#   Example: - ~/Dev
 #            - path: ~/.config
 #              depth: 2
 #              alias: config
 #              template: minimal
 #
 # entry_dirs: Additional directories always included (not scanned)
-#   Supports optional template assignment:
-#   Example: - path: ~/special-project
+#   Each is a path, or a path with a template:
+#   Example: - ~/notes
+#            - path: ~/special-project
 #              template: minimal
 #
 # ignore_dirs: Directories to exclude from scanning (additive)

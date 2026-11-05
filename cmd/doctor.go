@@ -1,16 +1,20 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
-	"os"
 
 	"github.com/Pairadux/muxly/internal/checks"
+	"github.com/Pairadux/muxly/internal/config"
 	"github.com/Pairadux/muxly/internal/constants"
 	"github.com/Pairadux/muxly/internal/state"
 	"github.com/spf13/cobra"
 )
 
 var doctorQuiet bool
+
+// errDoctorFoundProblems makes muxly exit 1 after "muxly doctor" reports an error.
+var errDoctorFoundProblems = errors.New("doctor found problems")
 
 var doctorCmd = &cobra.Command{
 	Use:   "doctor",
@@ -19,8 +23,11 @@ var doctorCmd = &cobra.Command{
 
 Checks performed:
   • External dependencies (tmux, fzf, editor)
-  • Configuration file validity
+  • Configuration file validity, by the same rules as muxly itself
   • Directory accessibility
+
+The config file doesn't have to load for this to run, which makes it the place to find
+out what's wrong with one.
 
 Exit codes:
   0 - All checks pass (warnings allowed)
@@ -41,13 +48,11 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 	var allResults []checks.CheckResult
 
 	externalResults := checks.CheckExternalUtils()
-	externalResults = append(externalResults, checks.CheckEditor(state.Cfg.Settings.Editor))
+	externalResults = append(externalResults, checks.CheckEditor(config.Editor(state.Cfg.Settings.Editor)))
 	allResults = append(allResults, externalResults...)
 	fmt.Print(checks.FormatSection("External Dependencies", externalResults, doctorQuiet))
 
-	var configResults []checks.CheckResult
-	configResults = append(configResults, checks.CheckConfigFile(state.CfgFilePath))
-	configResults = append(configResults, checks.ValidateConfig(&state.Cfg)...)
+	configResults := checks.CheckConfig(state.CfgFilePath, &state.Cfg, state.CfgLoad)
 	allResults = append(allResults, configResults...)
 	fmt.Print(checks.FormatSection("Configuration", configResults, doctorQuiet))
 
@@ -61,7 +66,9 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 	fmt.Println(checks.FormatSummary(allResults))
 
 	if checks.HasErrors(allResults) {
-		os.Exit(1)
+		// The summary has said it all, so this only sets the exit code.
+		cmd.SilenceErrors = true
+		return errDoctorFoundProblems
 	}
 
 	return nil

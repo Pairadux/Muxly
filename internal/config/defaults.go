@@ -70,7 +70,6 @@ func NewDefaultConfig() models.Config {
 		IgnoreDirs: DefaultIgnoreDirs,
 		Templates:  DefaultTemplates,
 		Settings: models.Settings{
-			Editor:                  DefaultEditor,
 			DefaultDepth:            DefaultScanDepth,
 			TmuxSessionPrefix:       DefaultTmuxSessionPrefix,
 			AlwaysKillOnLastSession: DefaultAlwaysKillOnLastSession,
@@ -83,9 +82,6 @@ func NewDefaultConfig() models.Config {
 // templates and directories are left alone — validation will catch
 // those so the user can fix them intentionally (or use config init).
 func ApplyDefaults(cfg *models.Config) {
-	if cfg.Settings.Editor == "" {
-		cfg.Settings.Editor = DefaultEditor
-	}
 	if cfg.Settings.TmuxSessionPrefix == "" {
 		cfg.Settings.TmuxSessionPrefix = DefaultTmuxSessionPrefix
 	}

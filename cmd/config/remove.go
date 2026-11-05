@@ -31,7 +31,8 @@ func init() {
 	Cmd.AddCommand(removeCmd)
 }
 
-// handleMuxlyFile manages .muxly file deletion when removing an entry directory.
+// shouldDeleteMuxlyFile decides what happens to a directory's .muxly file when its entry
+// is removed. It reports false if there isn't one.
 //
 // Behavior depends on flags and environment:
 //   - --keep flag: Keeps .muxly file
@@ -41,11 +42,10 @@ func init() {
 //
 // This prevents accidental .muxly deletion in scripts while providing a smooth
 // interactive experience. Returns error if --keep and --delete are both specified.
-func handleMuxlyFile(cmd *cobra.Command, resolvedPath string) error {
-	muxlyFile := filepath.Join(resolvedPath, ".muxly")
-	if _, err := os.Stat(muxlyFile); err != nil {
+func shouldDeleteMuxlyFile(cmd *cobra.Command, dir string) (bool, error) {
+	if _, err := os.Stat(filepath.Join(dir, ".muxly")); err != nil {
 		// No .muxly file, nothing to do
-		return nil
+		return false, nil
 	}
 
 	keep, _ := cmd.Flags().GetBool("keep")
@@ -53,42 +53,35 @@ func handleMuxlyFile(cmd *cobra.Command, resolvedPath string) error {
 
 	// Check for conflicting flags
 	if keep && deleteMuxly {
-		return fmt.Errorf("cannot use both --keep and --delete flags")
+		return false, fmt.Errorf("cannot use both --keep and --delete flags")
+	}
+
+	if keep || deleteMuxly {
+		return deleteMuxly, nil
+	}
+
+	if !term.IsTerminal(int(os.Stdin.Fd())) {
+		return false, fmt.Errorf(".muxly file found in %s\nFor non-interactive use, specify: --keep (-k) to keep or --delete (-d) to delete", dir)
 	}
 
 	var shouldDelete bool
-
-	// Determine behavior based on flags and environment
-	if keep {
-		shouldDelete = false
-	} else if deleteMuxly {
-		shouldDelete = true
-	} else {
-		// No flags specified - check if interactive
-		if term.IsTerminal(int(os.Stdin.Fd())) {
-			// Interactive: prompt user
-			form := forms.ConfirmationForm(
-				"Delete .muxly file?",
-				fmt.Sprintf("Found .muxly file in %s", resolvedPath),
-				&shouldDelete,
-			)
-
-			if err := form.Run(); err != nil {
-				return fmt.Errorf("failed to run confirmation form: %w", err)
-			}
-		} else {
-			// Non-interactive without flags: error
-			return fmt.Errorf(".muxly file found in %s\nFor non-interactive use, specify: --keep (-k) to keep or --delete (-d) to delete", resolvedPath)
-		}
+	form := forms.ConfirmationForm(
+		"Delete .muxly file?",
+		fmt.Sprintf("Found .muxly file in %s", dir),
+		&shouldDelete,
+	)
+	if err := form.Run(); err != nil {
+		return false, fmt.Errorf("failed to run confirmation form: %w", err)
 	}
+	return shouldDelete, nil
+}
 
-	if shouldDelete {
-		if err := os.Remove(muxlyFile); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to delete .muxly file: %v\n", err)
-		} else {
-			fmt.Println("Deleted .muxly file")
-		}
+// deleteMuxlyFile removes a directory's .muxly file. By now its entry is gone from the
+// config, so failing here only earns a warning.
+func deleteMuxlyFile(dir string) {
+	if err := os.Remove(filepath.Join(dir, ".muxly")); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to delete .muxly file: %v\n", err)
+		return
 	}
-
-	return nil
+	fmt.Println("Deleted .muxly file")
 }

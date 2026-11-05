@@ -3,11 +3,11 @@ package config
 import (
 	"fmt"
 
+	"github.com/Pairadux/muxly/internal/config"
 	"github.com/Pairadux/muxly/internal/models"
 	"github.com/Pairadux/muxly/internal/state"
 	"github.com/Pairadux/muxly/internal/utility"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // addScanCmd adds a directory to scan_dirs
@@ -20,8 +20,9 @@ var addScanCmd = &cobra.Command{
 Scan directories are scanned recursively to find projects. Use --depth to
 control how many levels deep to scan, and --alias to add a prefix in the selector.
 
-The path can be absolute, relative, or use tilde expansion.
-Relative paths (like . or ..) will be converted to absolute paths.
+The path can be absolute, start with ~, or be relative to the current folder.
+It's written to the config starting with ~ if it's in your home directory.
+The rest of the file, including comments, stays as it is.
 
 Examples:
   muxly config add scan ~/Dev                      # Add with default depth
@@ -29,9 +30,7 @@ Examples:
   muxly config add scan ~/.config --depth 1 --alias config`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		inputPath := args[0]
-
-		resolvedPath, err := resolveInputPath(inputPath)
+		resolvedPath, err := utility.ResolveArgumentPath(args[0])
 		if err != nil {
 			return err
 		}
@@ -49,19 +48,20 @@ Examples:
 
 		// Check if already in scan_dirs
 		for _, scanDir := range state.Cfg.ScanDirs {
-			existingPath, err := utility.ResolvePath(scanDir.Path)
-			if err != nil {
-				continue
-			}
-			if existingPath == resolvedPath {
+			if resolvesTo(scanDir.Path, resolvedPath) {
 				fmt.Printf("Path %q is already in scan_dirs\n", resolvedPath)
 				return nil
 			}
 		}
 
+		written, err := pathForConfig(resolvedPath)
+		if err != nil {
+			return err
+		}
+
 		// Create new ScanDir entry
 		newScanDir := models.ScanDir{
-			Path: resolvedPath,
+			Path: written,
 		}
 
 		// Only set depth if explicitly provided (nil means use default_depth)
@@ -74,15 +74,11 @@ Examples:
 			newScanDir.Alias = alias
 		}
 
-		// Add to scan_dirs and write config using viper
-		updatedScanDirs := append(state.Cfg.ScanDirs, newScanDir)
-		viper.Set("scan_dirs", updatedScanDirs)
-
-		if err := viper.WriteConfig(); err != nil {
-			return fmt.Errorf("failed to write config: %w", err)
+		if err := config.AddScanDir(state.CfgFilePath, newScanDir); err != nil {
+			return err
 		}
 
-		fmt.Printf("Added %q to scan_dirs\n", resolvedPath)
+		fmt.Printf("Added %q to scan_dirs\n", written)
 		return nil
 	},
 }

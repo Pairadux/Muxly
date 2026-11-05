@@ -15,8 +15,8 @@ import (
 	"github.com/Pairadux/muxly/internal/utility"
 )
 
-// printWarnings reports problems found while looking for directories. Printing them while
-// the picker is open would draw over it, so callers wait until it has closed.
+// printWarnings reports what's worth knowing but doesn't stop anything. Printing while the
+// picker is open would draw over it, so callers do this before it opens or after it closes.
 func printWarnings(warnings []string) {
 	for _, warning := range warnings {
 		fmt.Fprintln(os.Stderr, "Warning:", warning)
