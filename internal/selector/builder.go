@@ -39,8 +39,18 @@ func NewBuilder(cfg *models.Config, verbose bool) *Builder {
 // Returns a map where keys are display names and values are resolved paths
 // or session names for existing tmux sessions.
 func (b *Builder) BuildEntries(flagDepth int) (map[string]models.DirEntry, error) {
-	existingSessions := tmux.GetTmuxSessionSet()
-	currentSession := tmux.GetCurrentTmuxSession()
+	sessions, err := tmux.ListSessions()
+	if err != nil {
+		return nil, fmt.Errorf("listing tmux sessions: %w", err)
+	}
+	existingSessions := make(map[string]bool, len(sessions))
+	for _, name := range tmux.Names(sessions) {
+		existingSessions[name] = true
+	}
+
+	// Outside tmux this is the zero value, and no session has an empty name to hide.
+	current, _ := tmux.CurrentSession()
+	currentSession := current.Name
 
 	ignorePaths, ignoreNames := b.buildIgnoreSets()
 	allPaths := b.collectAllPaths(flagDepth, ignorePaths, ignoreNames)

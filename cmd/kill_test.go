@@ -4,18 +4,10 @@ package cmd
 
 import (
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 )
-
-// insideTmux makes muxly believe it's running in session current, with sessions alive.
-func (c *cli) insideTmux(current string, sessions ...string) *cli {
-	return c.setEnv(
-		"TMUX=/fake/socket,1,0",
-		"FAKE_CURRENT="+current,
-		"FAKE_SESSIONS="+strings.Join(sessions, ","),
-	)
-}
 
 // alwaysKillConfig skips the last-session prompt, which needs a real terminal.
 const alwaysKillConfig = "entry_dirs:\n  - path: /tmp\n" + `templates:
@@ -30,7 +22,9 @@ settings:
 func TestKillOutsideTmuxNeverOffersToKillServer(t *testing.T) {
 	for _, args := range [][]string{{"kill"}, {"kill", "precious"}} {
 		t.Run(strings.Join(args, " "), func(t *testing.T) {
-			c := newCLI(t).withFakes().writeConfig(validConfig).setEnv("FAKE_SESSIONS=precious")
+			c := newCLI(t).writeConfig(validConfig)
+			srv := c.withRealTmux()
+			srv.NewSession("precious")
 
 			got := c.run(args...)
 
@@ -40,54 +34,59 @@ func TestKillOutsideTmuxNeverOffersToKillServer(t *testing.T) {
 			if !strings.Contains(got.stderr, "muxly kill -k") {
 				t.Errorf("stderr %q should point at -k", got.stderr)
 			}
-			if c.tmuxCalled("kill-server") || c.tmuxCalled("kill-session") {
-				t.Errorf("something was killed: %q", c.log("tmux"))
+			if sessions := srv.Sessions(); !slices.Equal(sessions, []string{"precious"}) {
+				t.Errorf("sessions = %q, want precious left alone", sessions)
 			}
 		})
 	}
 }
 
 func TestKillServerFlagKillsServer(t *testing.T) {
-	c := newCLI(t).withFakes().writeConfig(validConfig).setEnv("FAKE_SESSIONS=precious")
+	c := newCLI(t).writeConfig(validConfig)
+	srv := c.withRealTmux()
+	srv.NewSession("precious")
 
 	got := c.run("kill", "-k")
 
 	if got.code != 0 {
 		t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
 	}
-	if !c.tmuxCalled("kill-server") {
-		t.Errorf("kill-server wasn't called: %q", c.log("tmux"))
+	if srv.HasServer() {
+		t.Errorf("the server is still running: %q", srv.Sessions())
 	}
 }
 
 func TestKillWithNoServer(t *testing.T) {
-	c := newCLI(t).withFakes().writeConfig(validConfig)
+	c := newCLI(t).writeConfig(validConfig)
+	srv := c.withRealTmux()
 
 	got := c.run("kill")
 
 	if got.code != 0 {
 		t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
 	}
-	if c.tmuxCalled("kill-server") || c.tmuxCalled("kill-session") {
-		t.Errorf("something was killed: %q", c.log("tmux"))
+	if !strings.Contains(got.stdout, "No tmux server running") {
+		t.Errorf("stdout = %q", got.stdout)
+	}
+	if calls := srv.Calls(); len(calls) != 1 {
+		t.Errorf("want only the check for a server, got %q", calls)
 	}
 }
 
 func TestKillLastSessionDoesNotFallThroughToPicker(t *testing.T) {
 	for _, args := range [][]string{{"kill"}, {"kill", "only"}} {
 		t.Run(strings.Join(args, " "), func(t *testing.T) {
-			c := newCLI(t).withFakes().writeConfig(alwaysKillConfig).insideTmux("only", "only")
+			c := newCLI(t).writeConfig(alwaysKillConfig)
+			srv := c.withRealTmux()
+			c.insideTmux(srv, srv.NewSession("only"))
 
 			got := c.run(args...)
 
 			if got.code != 0 {
 				t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
 			}
-			if !c.tmuxCalled("kill-server") {
-				t.Errorf("kill-server wasn't called: %q", c.log("tmux"))
-			}
-			if c.tmuxCalled("switch-client") {
-				t.Errorf("tried to switch: %q", c.log("tmux"))
+			if srv.HasServer() {
+				t.Errorf("the server is still running: %q", srv.Sessions())
 			}
 			if c.log("fzf") != nil {
 				t.Error("the picker opened")
@@ -99,15 +98,17 @@ func TestKillLastSessionDoesNotFallThroughToPicker(t *testing.T) {
 // Without a terminal the prompt can't be answered, and that must not count as a "no",
 // which would kill the server.
 func TestKillLastSessionPromptFailureKillsNothing(t *testing.T) {
-	c := newCLI(t).withFakes().writeConfig(validConfig).insideTmux("only", "only")
+	c := newCLI(t).writeConfig(validConfig)
+	srv := c.withRealTmux()
+	c.insideTmux(srv, srv.NewSession("only"))
 
 	got := c.run("kill")
 
 	if got.code == 0 {
 		t.Error("want a non-zero exit")
 	}
-	if c.tmuxCalled("kill-server") || c.tmuxCalled("kill-session") {
-		t.Errorf("something was killed: %q", c.log("tmux"))
+	if sessions := srv.Sessions(); !slices.Equal(sessions, []string{"only"}) {
+		t.Errorf("sessions = %q, want only left alone", sessions)
 	}
 }
 
@@ -124,22 +125,49 @@ func TestKillSwitchesThenKillsCurrent(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := newCLI(t).withFakes().writeConfig(validConfig).
-				insideTmux("current", "current", "other").setEnv("FAKE_PICK=" + tt.pick)
+			c := newCLI(t).writeConfig(validConfig).setEnv("FAKE_PICK=" + tt.pick)
+			srv := c.withRealTmux()
+			current := srv.NewSession("current")
+			srv.NewSession("other")
+			srv.Attach(current)
+			c.insideTmux(srv, current)
 
 			got := c.run(tt.args...)
 
 			if got.code != 0 {
 				t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
 			}
-			calls := c.log("tmux")
-			switched := slices.Index(calls, "switch-client -t other:0")
-			killed := slices.Index(calls, "kill-session -t current")
-			if switched == -1 || killed == -1 || switched > killed {
-				t.Errorf("want a switch to other, then the kill: %q", calls)
+			if sessions := srv.Sessions(); !slices.Equal(sessions, []string{"other"}) {
+				t.Errorf("sessions = %q, want only other", sessions)
 			}
+			srv.Eventually("the client to reach other", func() bool { return srv.ClientSession() == "other" })
 			if opened := c.log("fzf") != nil; opened != (tt.pick != "") {
 				t.Errorf("picker opened = %v", opened)
+			}
+		})
+	}
+}
+
+// Picking a session whose name holds syntax tmux would misread must kill the right one.
+func TestKillWithAwkwardSessionNames(t *testing.T) {
+	// The subtests are numbered because t.TempDir puts their names in the path of HOME,
+	// where viper would read $dollar as a variable.
+	for i, name := range []string{"$dollar", "%pct", "=eq", "@at"} {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			c := newCLI(t).writeConfig(validConfig)
+			srv := c.withRealTmux()
+			current := srv.NewSession(name)
+			srv.NewSession("other")
+			srv.Attach(current)
+			c.insideTmux(srv, current)
+
+			got := c.run("kill", "other")
+
+			if got.code != 0 {
+				t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
+			}
+			if sessions := srv.Sessions(); !slices.Equal(sessions, []string{"other"}) {
+				t.Errorf("sessions = %q, want only other", sessions)
 			}
 		})
 	}
@@ -150,30 +178,88 @@ func TestKillSwitchesThenKillsCurrent(t *testing.T) {
 func TestKillRejectsNamesThatAreNotExactlyAnotherSession(t *testing.T) {
 	for _, name := range []string{"defau", "nope"} {
 		t.Run(name, func(t *testing.T) {
-			c := newCLI(t).withFakes().writeConfig(validConfig).insideTmux("default", "default")
+			c := newCLI(t).writeConfig(validConfig)
+			srv := c.withRealTmux()
+			c.insideTmux(srv, srv.NewSession("default"))
 
 			got := c.run("kill", name)
 
 			if got.code == 0 || !strings.Contains(got.stderr, name) {
 				t.Errorf("exit %d, stderr %q", got.code, got.stderr)
 			}
-			if c.tmuxCalled("kill-server") || c.tmuxCalled("kill-session") || c.tmuxCalled("switch-client") {
-				t.Errorf("unexpected tmux calls: %q", c.log("tmux"))
+			if sessions := srv.Sessions(); !slices.Equal(sessions, []string{"default"}) {
+				t.Errorf("sessions = %q, want default left alone", sessions)
 			}
 		})
 	}
 }
 
 func TestKillPickerCancelKillsNothing(t *testing.T) {
-	c := newCLI(t).withFakes().writeConfig(validConfig).
-		insideTmux("current", "current", "other").setEnv("FAKE_FZF_EXIT=130")
+	c := newCLI(t).writeConfig(validConfig).setEnv("FAKE_FZF_EXIT=130")
+	srv := c.withRealTmux()
+	current := srv.NewSession("current")
+	srv.NewSession("other")
+	c.insideTmux(srv, current)
 
 	got := c.run("kill")
 
 	if got.code != 0 || got.stdout != "" || got.stderr != "" {
 		t.Errorf("exit %d, stdout %q, stderr %q: want a silent exit 0", got.code, got.stdout, got.stderr)
 	}
-	if c.tmuxCalled("kill-session") || c.tmuxCalled("kill-server") {
-		t.Errorf("something was killed: %q", c.log("tmux"))
+	if sessions := srv.Sessions(); !slices.Equal(sessions, []string{"current", "other"}) {
+		t.Errorf("sessions changed: %q", sessions)
 	}
+}
+
+// From a real pane, killing the session ends the pane muxly runs in, so the kill has to
+// be the last thing it does.
+func TestKillFromARealPane(t *testing.T) {
+	c := newCLI(t).writeConfig(validConfig).setEnv("FAKE_PICK=other")
+	srv := c.withRealTmux()
+	current := srv.NewSession("current")
+	srv.NewSession("other")
+	srv.Attach(current)
+
+	typeInPane(srv, current, c.installMuxly()+" kill")
+
+	srv.Eventually("only other to remain", func() bool { return slices.Equal(srv.Sessions(), []string{"other"}) })
+	srv.Eventually("the client to reach other", func() bool { return srv.ClientSession() == "other" })
+}
+
+// The prompt is real here, answered with real keys through a real terminal.
+func TestKillLastSessionAnswerYesFromARealPane(t *testing.T) {
+	for _, name := range []string{"default", "default-x", "other"} {
+		t.Run(name, func(t *testing.T) {
+			c := newCLI(t).writeConfig(validConfig)
+			srv := c.withRealTmux()
+			old := srv.NewSession(name)
+			srv.Attach(old)
+
+			typeInPane(srv, old, c.installMuxly()+" kill")
+			srv.Eventually("the prompt", func() bool { return strings.Contains(srv.PaneText(old), "Create session") })
+			srv.Run("send-keys", "-t", old, "y")
+
+			srv.Eventually("a fresh session named default", func() bool {
+				return slices.Equal(srv.Sessions(), []string{"default"}) &&
+					srv.Run("display-message", "-p", "-t", "=default:", "#{session_id}") != old
+			})
+			srv.Eventually("the client to reach it", func() bool { return srv.ClientSession() == "default" })
+			if !srv.HasServer() {
+				t.Error("the server died")
+			}
+		})
+	}
+}
+
+func TestKillLastSessionAnswerNoKillsTheServer(t *testing.T) {
+	c := newCLI(t).writeConfig(validConfig)
+	srv := c.withRealTmux()
+	old := srv.NewSession("only")
+	srv.Attach(old)
+
+	typeInPane(srv, old, c.installMuxly()+" kill")
+	srv.Eventually("the prompt", func() bool { return strings.Contains(srv.PaneText(old), "Create session") })
+	srv.Run("send-keys", "-t", old, "n")
+
+	srv.Eventually("the server to end", func() bool { return !srv.HasServer() })
 }

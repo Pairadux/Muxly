@@ -123,7 +123,7 @@ var rootCmd = &cobra.Command{
 			Layout: sessionLayout,
 		}
 
-		if err := tmux.CreateAndSwitchSession(&state.Cfg, sess); err != nil {
+		if err := tmux.CreateAndSwitchSession(sess); err != nil {
 			if errors.Is(err, tmux.ErrGracefulExit) {
 				return nil
 			}

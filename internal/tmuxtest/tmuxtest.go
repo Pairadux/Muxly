@@ -221,9 +221,11 @@ func (s *Server) Attach(sessionID string) {
 
 // InTerminal runs a command on a real terminal. A tmux client or fzf needs one, and Go's
 // standard library can't create one, so this uses a pane of a second private server.
+// tmux marks its panes through the environment, which env removes so the command is
+// outside tmux as far as it can tell.
 func (s *Server) InTerminal(args ...string) {
 	s.t.Helper()
-	full := append([]string{"new-session", "-d", "-x", "100", "-y", "30", "--"}, args...)
+	full := append([]string{"new-session", "-d", "-x", "100", "-y", "30", "--", "/usr/bin/env", "-u", "TMUX", "-u", "TMUX_PANE"}, args...)
 	if out, err := s.command(s.terminal, full...).CombinedOutput(); err != nil {
 		s.t.Fatalf("starting a terminal: %v: %s", err, out)
 	}

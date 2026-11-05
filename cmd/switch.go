@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/Pairadux/muxly/internal/fzf"
-	"github.com/Pairadux/muxly/internal/state"
 	"github.com/Pairadux/muxly/internal/tmux"
 
 	"github.com/spf13/cobra"
@@ -23,10 +22,14 @@ Displays a fzf picker list of active sessions.
 If no other sessions found, exit.`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		currentSession := tmux.GetCurrentTmuxSession()
-
-		if currentSession == "" {
+		current, inside := tmux.CurrentSession()
+		if !inside {
 			return fmt.Errorf("not in Tmux, use 'muxly' to get started")
+		}
+
+		sessions, err := tmux.ListSessions()
+		if err != nil {
+			return fmt.Errorf("failed to list sessions: %w", err)
 		}
 
 		var choiceStr string
@@ -34,9 +37,9 @@ If no other sessions found, exit.`,
 			choiceStr = args[0]
 		}
 		if choiceStr == "" {
-			sessions := tmux.GetSessionsExceptCurrent(currentSession)
+			others := tmux.Without(sessions, current)
 
-			if len(sessions) == 0 {
+			if len(others) == 0 {
 				fmt.Println("No other sessions available. Press 'Enter' to continue...")
 				_, err := fmt.Scanln()
 				if err != nil {
@@ -45,8 +48,7 @@ If no other sessions found, exit.`,
 				return nil
 			}
 
-			var err error
-			choiceStr, err = fzf.SelectWithFzf(sessions)
+			choiceStr, err = fzf.SelectWithFzf(tmux.Names(others))
 			if err != nil {
 				if errors.Is(err, fzf.ErrCancelled) {
 					return nil
@@ -58,8 +60,13 @@ If no other sessions found, exit.`,
 				return nil
 			}
 		}
-		sessionName := choiceStr
-		if err := tmux.SwitchToExistingSession(&state.Cfg, sessionName); err != nil {
+
+		target, found := tmux.FindSession(sessions, choiceStr)
+		if !found {
+			return fmt.Errorf("no session is named %q\nRun 'muxly switch' to pick one", choiceStr)
+		}
+
+		if err := tmux.SwitchToSession(target); err != nil {
 			if errors.Is(err, tmux.ErrGracefulExit) {
 				return nil
 			}

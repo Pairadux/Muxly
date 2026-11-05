@@ -3,7 +3,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"slices"
 
 	"github.com/Pairadux/muxly/internal/forms"
 	"github.com/Pairadux/muxly/internal/fzf"
@@ -39,29 +38,29 @@ Outside tmux there is no current session, so only --kill-server does anything.`,
 			return killTmuxServer()
 		}
 
-		currentSession := tmux.GetCurrentTmuxSession()
-		if currentSession == "" {
+		current, inside := tmux.CurrentSession()
+		if !inside {
 			return errors.New("not inside a tmux session, so there is no session to kill\nRun 'muxly kill -k' to kill the tmux server")
 		}
 
-		otherSessions := tmux.GetSessionsExceptCurrent(currentSession)
+		sessions, err := tmux.ListSessions()
+		if err != nil {
+			return fmt.Errorf("failed to list sessions: %w", err)
+		}
+		others := tmux.Without(sessions, current)
 
 		// Naming the current session is the same as naming none: it can't replace itself.
 		var choiceStr string
-		if len(args) == 1 && args[0] != currentSession {
+		if len(args) == 1 && args[0] != current.Name {
 			choiceStr = args[0]
-			if !slices.Contains(otherSessions, choiceStr) {
-				return fmt.Errorf("no other session is named %q\nRun 'muxly kill' to pick one", choiceStr)
-			}
 		}
 
 		if choiceStr == "" {
-			if len(otherSessions) == 0 {
-				return killLastSession(currentSession)
+			if len(others) == 0 {
+				return killLastSession(current)
 			}
 
-			var err error
-			choiceStr, err = fzf.SelectWithFzf(otherSessions)
+			choiceStr, err = fzf.SelectWithFzf(tmux.Names(others))
 			if err != nil {
 				if errors.Is(err, fzf.ErrCancelled) {
 					return nil
@@ -74,14 +73,19 @@ Outside tmux there is no current session, so only --kill-server does anything.`,
 			}
 		}
 
-		if err := tmux.SwitchToExistingSession(&state.Cfg, choiceStr); err != nil {
+		target, found := tmux.FindSession(others, choiceStr)
+		if !found {
+			return fmt.Errorf("no other session is named %q\nRun 'muxly kill' to pick one", choiceStr)
+		}
+
+		if err := tmux.SwitchToSession(target); err != nil {
 			if errors.Is(err, tmux.ErrGracefulExit) {
 				return nil
 			}
 			return fmt.Errorf("failed to switch session: %w", err)
 		}
 
-		if err := tmux.KillSession(currentSession); err != nil {
+		if err := tmux.KillSession(current); err != nil {
 			return fmt.Errorf("failed to kill session: %w", err)
 		}
 
@@ -91,7 +95,7 @@ Outside tmux there is no current session, so only --kill-server does anything.`,
 
 // killLastSession handles killing the only session left, which would also end the
 // server. Unless the config says to just do that, it offers a fresh session instead.
-func killLastSession(currentSession string) error {
+func killLastSession(current tmux.Session) error {
 	if state.Cfg.Settings.AlwaysKillOnLastSession {
 		return killTmuxServer()
 	}
@@ -109,7 +113,7 @@ func killLastSession(currentSession string) error {
 		return killTmuxServer()
 	}
 
-	if err := tmux.ReplaceLastSession(&state.Cfg, currentSession); err != nil {
+	if err := tmux.ReplaceLastSession(&state.Cfg, current); err != nil {
 		return fmt.Errorf("failed to replace session: %w", err)
 	}
 	return nil

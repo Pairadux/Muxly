@@ -66,7 +66,7 @@ func TestReplaceLastSession(t *testing.T) {
 			srv.Attach(old)
 			runInside(t, srv, old)
 
-			err := ReplaceLastSession(replaceConfig("/tmp"), current)
+			err := ReplaceLastSession(replaceConfig("/tmp"), Session{ID: old, Name: current})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -105,7 +105,7 @@ func TestReplaceLastSessionFailureLeavesTheOldSession(t *testing.T) {
 			runInside(t, srv, old)
 			srv.FailOn(tt.failOn)
 
-			err := ReplaceLastSession(replaceConfig("/tmp"), tt.current)
+			err := ReplaceLastSession(replaceConfig("/tmp"), Session{ID: old, Name: tt.current})
 
 			if err == nil || !strings.Contains(err.Error(), tmuxtest.InjectedFailure) {
 				t.Errorf("err = %v, want tmux's message", err)
@@ -123,10 +123,31 @@ func TestReplaceLastSessionFailureLeavesTheOldSession(t *testing.T) {
 func TestReplaceLastSessionNoDefaultTemplate(t *testing.T) {
 	srv := privateServer(t)
 
-	if err := ReplaceLastSession(&models.Config{}, "current"); err == nil {
+	if err := ReplaceLastSession(&models.Config{}, Session{ID: "$0", Name: "current"}); err == nil {
 		t.Error("want an error")
 	}
 	if got := srv.Calls(); got != nil {
 		t.Errorf("tmux was called: %q", got)
+	}
+}
+
+// A template's name can hold characters tmux can't target, or changes on some versions.
+// The failed new session must still be found and removed, leaving no orphan.
+func TestReplaceLastSessionWithAnUntargetableTemplateNameLeavesNoOrphan(t *testing.T) {
+	srv := privateServer(t)
+	old := srv.NewSession("current")
+	srv.Attach(old)
+	runInside(t, srv, old)
+	srv.FailOn("new-window")
+	cfg := replaceConfig("/tmp")
+	cfg.Templates[0].Name = "x.y"
+
+	err := ReplaceLastSession(cfg, Session{ID: old, Name: "current"})
+
+	if err == nil {
+		t.Fatal("want an error")
+	}
+	if got := srv.Sessions(); !slices.Equal(got, []string{"current"}) {
+		t.Errorf("sessions = %q, want only current", got)
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +14,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/Pairadux/muxly/internal/tmuxtest"
 )
 
 // runAsMuxlyEnv makes the test binary behave as muxly. CLI tests re-run the binary
@@ -41,20 +44,13 @@ settings:
 // validConfig is a minimal config that passes validation.
 const validConfig = "entry_dirs:\n  - path: /tmp\n" + validTemplates
 
-// fakeTmuxScript logs each call and answers the few queries muxly makes. Sessions come
-// from FAKE_SESSIONS (comma separated), and an empty list behaves like no server.
+// fakeTmuxScript logs each call. It's for tests where tmux should never matter, such as
+// "muxly add" creating no session. Tests of how muxly uses tmux use withRealTmux.
 const fakeTmuxScript = `#!/bin/sh
 PATH=/usr/bin:/bin
 [ "$1" = "-u" ] && shift
 printf '%s\n' "$*" >> "$FAKE_LOG_DIR/tmux"
-case "$1" in
-  list-sessions)
-    [ -n "$FAKE_SESSIONS" ] || exit 1
-    printf '%s\n' "$FAKE_SESSIONS" | tr ',' '\n'
-    ;;
-  display-message) printf '%s\n' "$FAKE_CURRENT" ;;
-  -V) echo "tmux 3.8" ;;
-esac
+[ "$1" = "-V" ] && echo "tmux ${FAKE_TMUX_VERSION:-3.8}"
 exit 0
 `
 
@@ -102,6 +98,75 @@ func (c *cli) withFakes() *cli {
 	c.writeFile(filepath.Join(c.bin, "tmux"), fakeTmuxScript, 0o755)
 	c.writeFile(filepath.Join(c.bin, "fzf"), fakeFzfScript, 0o755)
 	return c
+}
+
+// withRealTmux installs a real tmux on a private socket, and a fake fzf, on PATH.
+func (c *cli) withRealTmux() *tmuxtest.Server {
+	c.t.Helper()
+	srv := tmuxtest.New(c.t, c.bin)
+	c.writeFile(filepath.Join(c.bin, "fzf"), fakeFzfScript, 0o755)
+	return srv
+}
+
+// withRealFzf replaces the fake fzf with the real one.
+func (c *cli) withRealFzf() *cli {
+	c.t.Helper()
+	target := filepath.Join(c.bin, "fzf")
+	if err := os.Remove(target); err != nil && !errors.Is(err, os.ErrNotExist) {
+		c.t.Fatal(err)
+	}
+	if err := os.Symlink(tmuxtest.Require(c.t, "fzf"), target); err != nil {
+		c.t.Fatal(err)
+	}
+	return c
+}
+
+// insideTmux makes later runs believe they're in a session's active pane.
+func (c *cli) insideTmux(srv *tmuxtest.Server, sessionID string) *cli {
+	c.t.Helper()
+	return c.setEnv(srv.Inside(sessionID)...)
+}
+
+// baseEnv is the environment every run gets, before anything added with setEnv.
+func (c *cli) baseEnv() []string {
+	return []string{
+		runAsMuxlyEnv + "=1",
+		"PATH=" + c.bin,
+		"HOME=" + c.home,
+		"XDG_CONFIG_HOME=" + filepath.Join(c.home, ".config"),
+		"FAKE_LOG_DIR=" + c.logDir,
+		// With -race, each process otherwise sleeps a second as it exits.
+		"GORACE=atexit_sleep_ms=0",
+		// With -cover, each process otherwise prints a warning to stderr as it exits.
+		"GOCOVERDIR=" + c.logDir,
+	}
+}
+
+// installMuxly puts a "muxly" command on PATH for running in a real pane, where the
+// environment comes from tmux and can't be set per run as it is in run. It returns the
+// command's path.
+func (c *cli) installMuxly() string {
+	c.t.Helper()
+	self, err := os.Executable()
+	if err != nil {
+		c.t.Fatal(err)
+	}
+	var script strings.Builder
+	script.WriteString("#!/bin/sh\n")
+	for _, pair := range append(c.baseEnv(), c.env...) {
+		key, value, _ := strings.Cut(pair, "=")
+		fmt.Fprintf(&script, "export %s=%q\n", key, value)
+	}
+	fmt.Fprintf(&script, "exec %q \"$@\"\n", self)
+	path := filepath.Join(c.bin, "muxly")
+	c.writeFile(path, script.String(), 0o755)
+	return path
+}
+
+// typeInPane types a command line into a session's active pane and presses Enter.
+func typeInPane(srv *tmuxtest.Server, sessionID, line string) {
+	srv.Run("send-keys", "-t", sessionID, "-l", line)
+	srv.Run("send-keys", "-t", sessionID, "Enter")
 }
 
 func (c *cli) writeFile(path, content string, mode os.FileMode) {
@@ -176,17 +241,7 @@ func (c *cli) run(args ...string) result {
 
 	cmd := exec.CommandContext(ctx, os.Args[0], args...)
 	cmd.Dir = c.cwd
-	cmd.Env = append([]string{
-		runAsMuxlyEnv + "=1",
-		"PATH=" + c.bin,
-		"HOME=" + c.home,
-		"XDG_CONFIG_HOME=" + filepath.Join(c.home, ".config"),
-		"FAKE_LOG_DIR=" + c.logDir,
-		// With -race, each process otherwise sleeps a second as it exits.
-		"GORACE=atexit_sleep_ms=0",
-		// With -cover, each process otherwise prints a warning to stderr as it exits.
-		"GOCOVERDIR=" + c.logDir,
-	}, c.env...)
+	cmd.Env = append(c.baseEnv(), c.env...)
 	// A new session has no controlling terminal, so an unexpected prompt fails at once
 	// instead of waiting on the developer's real terminal.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
