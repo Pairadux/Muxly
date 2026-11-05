@@ -52,7 +52,7 @@ Muxly is a highly configurable Tmux Session Manager based on ThePrimeagen's tmux
 
 ### Prerequisites
 
-- `tmux` - Terminal multiplexer
+- `tmux` 3.2 or newer - Terminal multiplexer
 - `fzf` - Fuzzy finder for interactive selection
 
 ### Package Managers (Recommended)

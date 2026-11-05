@@ -205,3 +205,35 @@ func TestCheckEditor(t *testing.T) {
 		})
 	}
 }
+
+func TestTmuxBelowMinimum(t *testing.T) {
+	tests := []struct {
+		version string
+		want    bool
+	}{
+		{version: "1.8", want: true},
+		{version: "2.9a", want: true},
+		{version: "3.0a", want: true},
+		{version: "3.1c", want: true},
+		{version: "3.2"},
+		{version: "3.2a"},
+		{version: "3.3a"},
+		{version: "3.8"},
+		// Compared as numbers: as text, "10" sorts before "2".
+		{version: "3.10"},
+		{version: "4.0"},
+		{version: "next-3.9"},
+		{version: "next-3.1", want: true},
+		{version: "master"},
+		{version: "openbsd-7.4"},
+		{version: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.version, func(t *testing.T) {
+			if got := tmuxBelowMinimum(tt.version); got != tt.want {
+				t.Errorf("tmuxBelowMinimum(%q) = %v, want %v", tt.version, got, tt.want)
+			}
+		})
+	}
+}
