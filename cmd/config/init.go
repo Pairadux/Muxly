@@ -76,7 +76,8 @@ func generateConfigYAML(cfg models.Config) (string, error) {
 	header := `# Configuration for muxly
 #
 # scan_dirs: Directories to scan for projects (supports depth, alias, and template per directory)
-#   Example: - path: ~/Dev
+#   Each is a path, or a path with options:
+#   Example: - ~/Dev
 #            - path: ~/.config
 #              depth: 2
 #              alias: config

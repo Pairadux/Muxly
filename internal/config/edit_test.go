@@ -155,6 +155,22 @@ entry_dirs:
 	}
 }
 
+func TestShortFormScanDirs(t *testing.T) {
+	path := writeConfigFile(t, "scan_dirs:\n  - ~/a\n  - ~/b\n"+editTemplates)
+
+	if err := AddScanDir(path, models.ScanDir{Path: "~/new"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := RemoveScanDir(path, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "scan_dirs:\n  - ~/b\n  - path: ~/new\n" + editTemplates
+	if got := readConfigFile(t, path); got != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+}
+
 func TestAddScanDirWritesEveryOption(t *testing.T) {
 	depth := 2
 	path := writeConfigFile(t, "entry_dirs:\n  - path: ~/a\nscan_dirs: []\n"+editTemplates)

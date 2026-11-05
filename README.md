@@ -396,7 +396,7 @@ ignore_dirs:
 
 | Option | Type | Required | Description |
 |--------|------|----------|-------------|
-| `scan_dirs` | array | yes* | Directories to scan for projects |
+| `scan_dirs` | array | yes* | Directories to scan for projects. Each is a mapping like the ones below, or just the path: `- ~/Dev` |
 | `scan_dirs[].path` | string | yes | Directory path to scan (supports `~` and environment variables) |
 | `scan_dirs[].depth` | int | no | Scan depth for this directory, at least 1 (overrides `settings.default_depth`) |
 | `scan_dirs[].alias` | string | no | Prefix for directories from here, in the picker and in session names (e.g., "dev" shows as "dev/project-name" and names the session "dev-project-name") |

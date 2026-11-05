@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/Pairadux/muxly/internal/models"
@@ -63,7 +64,7 @@ func decodeStrict(data []byte, cfg *models.Config) error {
 		return newParseError(err)
 	}
 	problems = append(problems, emptyListItems(&doc)...)
-	problems = append(problems, unknownEntryDirKeys(&doc)...)
+	problems = append(problems, unknownDirKeys(&doc)...)
 
 	var extra yaml.Node
 	err = decoder.Decode(&extra)
@@ -95,28 +96,34 @@ func emptyListItems(node *yaml.Node) []string {
 	return problems
 }
 
-// unknownEntryDirKeys does for entry_dirs what strict decoding does everywhere else. It
-// can't do it there, because EntryDir decodes itself to allow for the short form. Reporting
-// these here rather than from EntryDir also keeps the item, where an error would drop it,
-// and doctor would go on to say there were no directories.
-func unknownEntryDirKeys(doc *yaml.Node) []string {
+// unknownDirKeys does for the directory lists what strict decoding does everywhere else. It
+// can't do it there, because their items decode themselves to allow for the short form.
+// Reporting these here rather than from those items also keeps the item, where an error
+// would drop it, and doctor would go on to say there were no directories.
+func unknownDirKeys(doc *yaml.Node) []string {
 	if len(doc.Content) == 0 {
 		return nil
 	}
-	_, list := findKey(doc.Content[0], "entry_dirs")
-	if list == nil {
-		return nil
-	}
 	var problems []string
-	for _, item := range list.Content {
-		if item.Kind != yaml.MappingNode {
+	for _, list := range []struct {
+		key   string
+		known []string
+	}{
+		{key: "scan_dirs", known: []string{"path", "depth", "alias", "template"}},
+		{key: "entry_dirs", known: []string{"path", "template"}},
+	} {
+		_, items := findKey(doc.Content[0], list.key)
+		if items == nil {
 			continue
 		}
-		for i := 0; i+1 < len(item.Content); i += 2 {
-			switch key := item.Content[i]; key.Value {
-			case "path", "template":
-			default:
-				problems = append(problems, fmt.Sprintf("line %d: unknown key %q", key.Line, key.Value))
+		for _, item := range items.Content {
+			if item.Kind != yaml.MappingNode {
+				continue
+			}
+			for i := 0; i+1 < len(item.Content); i += 2 {
+				if key := item.Content[i]; !slices.Contains(list.known, key.Value) {
+					problems = append(problems, fmt.Sprintf("line %d: unknown key %q", key.Line, key.Value))
+				}
 			}
 		}
 	}

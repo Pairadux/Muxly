@@ -140,6 +140,45 @@ func TestEntryDirsCanBeJustAPath(t *testing.T) {
 	}
 }
 
+func TestScanDirsCanBeJustAPath(t *testing.T) {
+	depth := 2
+	cfg, _, err := Parse([]byte("scan_dirs:\n  - ~/a\n  - path: ~/b\n    depth: 2\n    alias: b\n  - \"~/c d\"\n"))
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.ScanDirs) != 3 || cfg.ScanDirs[0].Path != "~/a" || cfg.ScanDirs[2].Path != "~/c d" {
+		t.Fatalf("scan_dirs = %+v", cfg.ScanDirs)
+	}
+	if b := cfg.ScanDirs[1]; b.Path != "~/b" || b.Depth == nil || *b.Depth != depth || b.Alias != "b" {
+		t.Errorf("scan_dirs[1] = %+v", b)
+	}
+}
+
+func TestScanDirsStayStrict(t *testing.T) {
+	tests := []struct {
+		name string
+		text string
+		want string
+	}{
+		{name: "an unknown key", text: "scan_dirs:\n  - path: ~/a\n    alais: b\n", want: `line 3: unknown key "alais"`},
+		{name: "a misspelled path", text: "scan_dirs:\n  - pth: ~/a\n", want: `line 2: unknown key "pth"`},
+		{name: "a key only entry_dirs lacks", text: "entry_dirs:\n  - path: ~/a\n    depth: 2\n", want: `line 3: unknown key "depth"`},
+		{name: "a list inside the list", text: "scan_dirs:\n  - - ~/a\n", want: "line 2: scan_dirs items must be a path"},
+		{name: "a value of the wrong type", text: "scan_dirs:\n  - path: ~/a\n    depth: lots\n", want: "line 3:"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, _, err := Parse([]byte(tt.text))
+
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Errorf("error = %v, want one mentioning %q", err, tt.want)
+			}
+		})
+	}
+}
+
 func TestEntryDirsStayStrict(t *testing.T) {
 	tests := []struct {
 		name string
@@ -149,7 +188,7 @@ func TestEntryDirsStayStrict(t *testing.T) {
 		{name: "an unknown key", text: "entry_dirs:\n  - path: ~/a\n    tempalte: t\n", want: []string{`line 3: unknown key "tempalte"`}},
 		{name: "a misspelled path", text: "entry_dirs:\n  - pth: ~/a\n", want: []string{`line 2: unknown key "pth"`}},
 		{name: "several, with others elsewhere", text: "entry_dirs:\n  - pth: ~/a\n  - path: ~/b\n    nope: 1\nsettings:\n  edtior: x\n", want: []string{`line 2: unknown key "pth"`, `line 4: unknown key "nope"`, `line 6: unknown key "edtior"`}},
-		{name: "a list inside the list", text: "entry_dirs:\n  - - ~/a\n", want: []string{"line 2: an entry_dirs item must be a path"}},
+		{name: "a list inside the list", text: "entry_dirs:\n  - - ~/a\n", want: []string{"line 2: entry_dirs items must be a path"}},
 		{name: "a value of the wrong type", text: "entry_dirs:\n  - path: [a]\n", want: []string{"line 2:"}},
 	}
 
@@ -169,16 +208,20 @@ func TestEntryDirsStayStrict(t *testing.T) {
 	}
 }
 
-// The list of keys in unknownEntryDirKeys has to keep up with the fields of EntryDir.
-func TestEveryEntryDirFieldIsAKnownKey(t *testing.T) {
-	fields := reflect.TypeFor[models.EntryDir]()
-	for i := range fields.NumField() {
-		key, _, _ := strings.Cut(fields.Field(i).Tag.Get("yaml"), ",")
+// The lists of keys in unknownDirKeys have to keep up with the fields of these types.
+func TestEveryDirFieldIsAKnownKey(t *testing.T) {
+	for list, fields := range map[string]reflect.Type{
+		"entry_dirs": reflect.TypeFor[models.EntryDir](),
+		"scan_dirs":  reflect.TypeFor[models.ScanDir](),
+	} {
+		for i := range fields.NumField() {
+			key, _, _ := strings.Cut(fields.Field(i).Tag.Get("yaml"), ",")
 
-		_, _, err := Parse([]byte("entry_dirs:\n  - " + key + ": x\n"))
+			_, _, err := Parse([]byte(list + ":\n  - " + key + ": 1\n"))
 
-		if err != nil {
-			t.Errorf("key %q: %v", key, err)
+			if err != nil {
+				t.Errorf("%s key %q: %v", list, key, err)
+			}
 		}
 	}
 }

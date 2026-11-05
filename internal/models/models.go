@@ -80,17 +80,29 @@ func (s ScanDir) String() string {
 	return result
 }
 
-// UnmarshalYAML accepts "- ~/notes" as well as "- path: ~/notes". Decoding from a node isn't
-// strict about keys, so config.Parse checks those.
+// UnmarshalYAML accepts "- ~/notes" as well as "- path: ~/notes".
 func (e *EntryDir) UnmarshalYAML(value *yaml.Node) error {
+	type plain EntryDir
+	return decodeDirItem(value, "entry_dirs", &e.Path, (*plain)(e))
+}
+
+// UnmarshalYAML accepts "- ~/Dev" as well as "- path: ~/Dev".
+func (s *ScanDir) UnmarshalYAML(value *yaml.Node) error {
+	type plain ScanDir
+	return decodeDirItem(value, "scan_dirs", &s.Path, (*plain)(s))
+}
+
+// decodeDirItem decodes an item of a directory list, which is either just its path or a
+// mapping of its options. Decoding from a node isn't strict about keys, so config.Parse
+// checks those.
+func decodeDirItem(value *yaml.Node, list string, path *string, mapping any) error {
 	switch value.Kind {
 	case yaml.ScalarNode:
-		return value.Decode(&e.Path)
+		return value.Decode(path)
 	case yaml.MappingNode:
-		type plain EntryDir
-		return value.Decode((*plain)(e))
+		return value.Decode(mapping)
 	}
-	return &yaml.TypeError{Errors: []string{fmt.Sprintf("line %d: an entry_dirs item must be a path, or a mapping with a path key", value.Line)}}
+	return &yaml.TypeError{Errors: []string{fmt.Sprintf("line %d: %s items must be a path, or a mapping with a path key", value.Line, list)}}
 }
 
 // String returns the string representation
