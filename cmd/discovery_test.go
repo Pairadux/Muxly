@@ -302,9 +302,46 @@ func TestTemplatesAndMuxlyFilesStillChooseTheLayout(t *testing.T) {
 	}
 }
 
-// With real fzf on a real terminal: anything printed while it's open would land on top of
-// the picker. Permissions don't stop root, so this can't be tested as root.
-func TestScanWarningsWaitUntilThePickerCloses(t *testing.T) {
+// fzf inherits muxly's stderr, so a marker written there shows what came before it opened.
+// Looking at the screen can't show that: fzf draws on the alternate screen, which hides
+// anything printed earlier, but without one that text would sit above the picker.
+func TestScanWarningsComeAfterThePicker(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root can read anything")
+	}
+	const marker = "PICKER-OPEN"
+	c := newCLI(t).withFakes()
+	c.writeFile(filepath.Join(c.bin, "fzf"), "#!/bin/sh\necho "+marker+" >&2\nexit 130\n", 0o755)
+	locked := c.mkdirs("scan/locked")[0]
+	if err := os.Chmod(locked, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chmod(locked, 0o755); err != nil {
+			t.Error(err)
+		}
+	})
+	c.writeConfig("scan_dirs:\n  - path: ~/scan\n    depth: 2\n  - path: ~/gone\n" + validTemplates)
+
+	got := c.run()
+
+	if got.code != 0 {
+		t.Fatalf("exit %d, stderr %q", got.code, got.stderr)
+	}
+	opened := strings.Index(got.stderr, marker)
+	if opened < 0 {
+		t.Fatalf("the picker never opened: stderr %q", got.stderr)
+	}
+	for _, warning := range []string{"permission denied", "gone does not exist"} {
+		if at := strings.Index(got.stderr, warning); at < opened {
+			t.Errorf("want %q after the picker opened, stderr %q", warning, got.stderr)
+		}
+	}
+}
+
+// The same with real fzf on a real terminal, where the warning has to reach the screen once
+// the picker closes. Permissions don't stop root, so this can't be tested as root.
+func TestScanWarningsAppearWhenThePickerCloses(t *testing.T) {
 	if os.Geteuid() == 0 {
 		t.Skip("root can read anything")
 	}
