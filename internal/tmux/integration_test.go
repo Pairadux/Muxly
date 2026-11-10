@@ -234,6 +234,27 @@ func TestSwitchKeepsTheActiveWindow(t *testing.T) {
 	}
 }
 
+func TestNewSessionOpensOnItsFirstWindow(t *testing.T) {
+	for _, baseIndex := range []string{"0", "1"} {
+		t.Run("base-index "+baseIndex, func(t *testing.T) {
+			srv := privateServer(t)
+			shell := srv.NewSession("shell")
+			srv.Run("set-option", "-g", "base-index", baseIndex)
+			srv.Attach(shell)
+			runInside(t, srv, shell)
+
+			if err := CreateAndSwitchSession(sessionNamed("proj", "/tmp", "first", "second", "third")); err != nil {
+				t.Fatal(err)
+			}
+
+			srv.Eventually("the client to reach proj", func() bool { return srv.ClientSession() == "proj" })
+			if got := srv.Run("display-message", "-p", "-t", "=proj:", "#{window_name}"); got != "first" {
+				t.Errorf("active window is %q, want first", got)
+			}
+		})
+	}
+}
+
 func TestCreatedSessionHasTheLayoutInTheRightPlace(t *testing.T) {
 	srv := privateServer(t)
 	dir := t.TempDir()

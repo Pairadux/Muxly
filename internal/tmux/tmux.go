@@ -305,8 +305,9 @@ func attachToSession(id string) error {
 // window, and returns it. It removes the session again if a later window fails, so a
 // failure never leaves half a session behind.
 //
-// The first window comes from the new-session command, and the rest from new-window.
-// Each window can optionally specify a command to run upon creation.
+// The first window comes from the new-session command, and the rest from new-window,
+// detached so the session opens on its first window. Each window can optionally specify
+// a command to run upon creation.
 func createSession(session models.Session) (Session, error) {
 	if len(session.Layout.Windows) == 0 {
 		return Session{}, errors.New("no windows defined in session layout")
@@ -346,7 +347,7 @@ func buildWindowArgs(isFirst bool, session, windowName, dir, cmd string) []strin
 	if isFirst {
 		args = []string{"new-session", "-d", "-P", "-F", sessionFormat, "-s", session, "-n", windowName, "-c", dir}
 	} else {
-		args = []string{"new-window", "-t", session, "-n", windowName, "-c", dir}
+		args = []string{"new-window", "-d", "-t", session, "-n", windowName, "-c", dir}
 	}
 
 	if cmd != "" {

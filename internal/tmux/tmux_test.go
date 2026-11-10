@@ -34,7 +34,7 @@ func TestBuildWindowArgs(t *testing.T) {
 			windowName: "editor",
 			dir:        "/home/user/project",
 			cmd:        "",
-			expected:   []string{"new-window", "-t", "$1", "-n", "editor", "-c", "/home/user/project"},
+			expected:   []string{"new-window", "-d", "-t", "$1", "-n", "editor", "-c", "/home/user/project"},
 		},
 		{
 			name:       "first window with command",
@@ -52,7 +52,7 @@ func TestBuildWindowArgs(t *testing.T) {
 			windowName: "server",
 			dir:        "/home/user/code",
 			cmd:        "npm run dev",
-			expected:   []string{"new-window", "-t", "$1", "-n", "server", "-c", "/home/user/code", "--", "/bin/zsh", "-lc", "npm run dev; exec /bin/zsh"},
+			expected:   []string{"new-window", "-d", "-t", "$1", "-n", "server", "-c", "/home/user/code", "--", "/bin/zsh", "-lc", "npm run dev; exec /bin/zsh"},
 		},
 	}
 
